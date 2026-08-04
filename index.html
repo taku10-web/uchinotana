@@ -1,0 +1,1276 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>うちのボードゲーム棚</title>
+<style>
+  :root {
+    --navy: #1e2f4d;
+    --navy-light: #2c4570;
+    --accent: #2f6fed;
+    --accent-soft: #eaf0fe;
+    --green: #1f8a5f;
+    --bg: #f7f8fa;
+    --card-bg: #ffffff;
+    --border: #e3e6ec;
+    --text: #1e2430;
+    --text-sub: #6b7280;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Yu Gothic", sans-serif;
+    background: var(--bg);
+    color: var(--text);
+  }
+  header {
+    background: var(--navy);
+    color: #fff;
+    padding: 20px 16px 16px;
+  }
+  header .eyebrow {
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    color: #9db4e0;
+    font-weight: 600;
+    margin-bottom: 4px;
+  }
+  header h1 {
+    margin: 0 0 4px;
+    font-size: 22px;
+  }
+  header .count {
+    font-size: 13px;
+    color: #c4d1ea;
+  }
+  .user-badge {
+    margin-top: 8px;
+    font-size: 12px;
+    color: #c4d1ea;
+  }
+  .user-badge button {
+    background: none;
+    border: none;
+    color: #7ee0a8;
+    font-size: 12px;
+    font-weight: 600;
+    text-decoration: underline;
+    cursor: pointer;
+    padding: 0 0 0 6px;
+  }
+
+  .controls {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background: #fff;
+    border-bottom: 1px solid var(--border);
+    padding: 12px 16px;
+  }
+  .search-box {
+    width: 100%;
+    padding: 10px 14px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    font-size: 15px;
+    margin-bottom: 10px;
+  }
+  .search-box:focus {
+    outline: none;
+    border-color: var(--accent);
+  }
+
+  .filter-row {
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    padding-bottom: 4px;
+    -webkit-overflow-scrolling: touch;
+  }
+  .filter-group {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+  }
+  .filter-label {
+    font-size: 12px;
+    color: var(--text-sub);
+    white-space: nowrap;
+    margin-right: 2px;
+  }
+  .chip {
+    border: 1px solid var(--border);
+    background: #fff;
+    color: var(--text);
+    padding: 7px 12px;
+    border-radius: 999px;
+    font-size: 13px;
+    white-space: nowrap;
+    cursor: pointer;
+  }
+  .chip.active {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #fff;
+  }
+  .divider {
+    width: 1px;
+    background: var(--border);
+    align-self: stretch;
+    flex-shrink: 0;
+  }
+
+  select.sort-select {
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 7px 10px;
+    font-size: 13px;
+    background: #fff;
+    flex-shrink: 0;
+  }
+
+  main {
+    padding: 12px 16px 40px;
+    max-width: 720px;
+    margin: 0 auto;
+  }
+
+  .result-count {
+    font-size: 13px;
+    color: var(--text-sub);
+    margin: 4px 4px 10px;
+  }
+
+  .card-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .card {
+    display: flex;
+    gap: 12px;
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 10px;
+    align-items: flex-start;
+  }
+  .card-main {
+    display: flex;
+    gap: 12px;
+    flex: 1;
+    min-width: 0;
+    text-decoration: none;
+    color: inherit;
+  }
+  .card-main:active { opacity: 0.7; }
+  .card img {
+    width: 64px;
+    height: 64px;
+    object-fit: contain;
+    border-radius: 8px;
+    background: #f1f2f5;
+    flex-shrink: 0;
+  }
+  .card-body {
+    min-width: 0;
+    flex: 1;
+  }
+  .card-title-jp {
+    font-size: 15px;
+    font-weight: 600;
+    line-height: 1.35;
+    margin-bottom: 2px;
+  }
+  .detail-badge-mini {
+    display: inline-block;
+    vertical-align: middle;
+    margin-left: 6px;
+    font-size: 9.5px;
+    font-weight: 600;
+    color: var(--green);
+    background: #eaf7f1;
+    padding: 2px 6px;
+    border-radius: 999px;
+  }
+  .card-title-en {
+    font-size: 11px;
+    color: var(--text-sub);
+    margin-bottom: 6px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .spec-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .spec {
+    font-size: 11.5px;
+    background: var(--accent-soft);
+    color: var(--navy-light);
+    padding: 3px 8px;
+    border-radius: 6px;
+    font-weight: 500;
+  }
+  .spec.unknown {
+    background: #f1f2f5;
+    color: var(--text-sub);
+  }
+
+  .rule-link {
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    text-decoration: none;
+    color: var(--green);
+    font-size: 10.5px;
+    font-weight: 600;
+    padding: 6px 8px;
+    border-radius: 8px;
+    background: #eaf7f1;
+    white-space: nowrap;
+  }
+  .rule-link:active { background: #d7f0e4; }
+  .rule-link .icon { font-size: 16px; line-height: 1; }
+
+  .empty-state {
+    text-align: center;
+    padding: 60px 20px;
+    color: var(--text-sub);
+    font-size: 14px;
+  }
+
+  footer {
+    text-align: center;
+    font-size: 11px;
+    color: var(--text-sub);
+    padding: 20px;
+  }
+  footer a { color: var(--text-sub); }
+
+  /* --- detail view (AOMEL-style) --- */
+  .detail-back {
+    display: inline-block;
+    color: var(--green);
+    font-size: 13px;
+    font-weight: 600;
+    text-decoration: none;
+    margin-bottom: 18px;
+  }
+  .detail-title {
+    font-size: 24px;
+    font-weight: 700;
+    margin: 0 0 4px;
+    line-height: 1.3;
+  }
+  .detail-title-en {
+    font-size: 13px;
+    color: var(--text-sub);
+    margin-bottom: 14px;
+  }
+  .detail-underline {
+    width: 60px;
+    height: 4px;
+    background: var(--accent);
+    border-radius: 2px;
+    margin-bottom: 24px;
+  }
+  .detail-image-wrap {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 24px;
+  }
+  .detail-image-wrap img {
+    max-width: 260px;
+    width: 100%;
+    height: auto;
+    border-radius: 10px;
+    background: #f1f2f5;
+  }
+  .detail-spec-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    margin-bottom: 18px;
+  }
+  .detail-spec-box {
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 10px 8px;
+    text-align: center;
+  }
+  .detail-spec-box .label {
+    font-size: 11px;
+    color: var(--accent);
+    font-weight: 600;
+    margin-bottom: 4px;
+  }
+  .detail-spec-box .value {
+    font-size: 14px;
+    font-weight: 600;
+  }
+  .detail-badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 28px;
+  }
+  .detail-badge {
+    border: 1px solid var(--accent);
+    color: var(--accent);
+    background: var(--accent-soft);
+    font-size: 12px;
+    font-weight: 600;
+    padding: 6px 12px;
+    border-radius: 999px;
+  }
+  .detail-worldview {
+    font-size: 14.5px;
+    line-height: 1.8;
+    color: var(--text);
+    margin-bottom: 28px;
+  }
+  .detail-section-eyebrow {
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    color: var(--accent);
+    font-weight: 700;
+    margin-bottom: 6px;
+  }
+  .detail-section-title {
+    font-size: 19px;
+    font-weight: 700;
+    margin: 0 0 16px;
+  }
+  .detail-section-title-sm {
+    font-size: 15px;
+    font-weight: 700;
+    margin: 22px 0 8px;
+    color: var(--navy);
+  }
+  .detail-section-title-sm:first-of-type { margin-top: 0; }
+  .detail-win-box {
+    background: var(--accent-soft);
+    border-radius: 10px;
+    padding: 12px 14px;
+    font-size: 13.5px;
+    line-height: 1.7;
+    color: var(--navy);
+    margin-bottom: 4px;
+  }
+  .detail-list {
+    margin: 0;
+    padding-left: 20px;
+    font-size: 13.5px;
+    line-height: 1.9;
+    color: var(--text);
+  }
+  .detail-list li { margin-bottom: 2px; }
+  .detail-sources {
+    font-size: 11px;
+    color: var(--text-sub);
+    line-height: 1.8;
+    margin: 24px 0 4px;
+    padding-top: 14px;
+    border-top: 1px solid var(--border);
+  }
+  .detail-sources a { color: var(--text-sub); }
+
+  /* --- my reviews (local, per-device) --- */
+  .review-card {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 16px;
+    margin-bottom: 20px;
+  }
+  .review-header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    margin-bottom: 4px;
+  }
+  .review-title {
+    font-size: 15px;
+    font-weight: 700;
+  }
+  .review-avg {
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--accent);
+  }
+  .review-avg span {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text-sub);
+  }
+  .review-count {
+    font-size: 11px;
+    color: var(--text-sub);
+    margin-bottom: 12px;
+  }
+  .review-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-bottom: 14px;
+  }
+  .review-item {
+    background: var(--bg);
+    border-radius: 8px;
+    padding: 9px 10px;
+    font-size: 13px;
+  }
+  .review-item-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .review-item-name { font-weight: 600; }
+  .review-item-date {
+    font-weight: 400;
+    color: var(--text-sub);
+    font-size: 11px;
+    margin-left: 6px;
+  }
+  .review-item-score { color: var(--accent); font-weight: 700; }
+  .review-item-level {
+    color: var(--accent);
+    font-weight: 700;
+    font-size: 12.5px;
+    background: var(--accent-soft);
+    padding: 3px 9px;
+    border-radius: 999px;
+  }
+  .review-item-members {
+    font-size: 11.5px;
+    color: var(--text-sub);
+    margin-top: 4px;
+  }
+  .review-item-memo {
+    font-size: 12.5px;
+    color: var(--text);
+    margin-top: 4px;
+    line-height: 1.5;
+    white-space: pre-wrap;
+  }
+  .review-item-del {
+    border: none;
+    background: none;
+    color: var(--text-sub);
+    font-size: 16px;
+    line-height: 1;
+    padding: 0 0 0 10px;
+    cursor: pointer;
+  }
+  .review-form {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .review-form-row {
+    display: flex;
+    gap: 8px;
+  }
+  .review-form label {
+    display: block;
+    font-size: 11px;
+    color: var(--text-sub);
+    margin-bottom: 3px;
+  }
+  .review-form-field { flex: 1; min-width: 0; }
+  .review-form input[type="text"],
+  .review-form input[type="date"],
+  .review-form textarea {
+    width: 100%;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 9px 10px;
+    font-size: 13px;
+    font-family: inherit;
+  }
+  .review-form textarea {
+    resize: vertical;
+    min-height: 44px;
+  }
+  .review-form input[type="number"] {
+    width: 100%;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 9px 6px;
+    font-size: 13px;
+    text-align: center;
+  }
+  .review-form-score { max-width: 72px; }
+  .review-form button {
+    border: none;
+    background: var(--accent);
+    color: #fff;
+    font-size: 13px;
+    font-weight: 700;
+    border-radius: 8px;
+    padding: 10px 14px;
+    cursor: pointer;
+  }
+  .rating-choice-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 4px;
+  }
+  .rating-choice { cursor: pointer; }
+  .rating-choice input {
+    position: absolute;
+    opacity: 0;
+    width: 0;
+    height: 0;
+  }
+  .rating-choice span {
+    display: inline-block;
+    padding: 9px 13px;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--text);
+    background: #fff;
+  }
+  .rating-choice input:checked + span {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #fff;
+  }
+  .review-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    margin-left: 6px;
+    font-size: 11px;
+    font-weight: 700;
+    color: #b8860b;
+    vertical-align: middle;
+  }
+
+  /* --- quick reference card (glanceable during play) --- */
+  .quickref-card {
+    background: var(--navy);
+    color: #fff;
+    border-radius: 14px;
+    padding: 16px 16px 18px;
+    margin-bottom: 20px;
+  }
+  .quickref-title {
+    font-size: 13px;
+    font-weight: 700;
+    color: #9db4e0;
+    letter-spacing: 0.06em;
+    margin-bottom: 14px;
+  }
+  .quickref-sub {
+    font-size: 12px;
+    font-weight: 700;
+    color: #9db4e0;
+    margin: 14px 0 6px;
+  }
+  .quickref-sub:first-of-type { margin-top: 0; }
+  .quickref-win {
+    font-size: 14px;
+    line-height: 1.7;
+    background: rgba(255,255,255,0.08);
+    border-radius: 8px;
+    padding: 10px 12px;
+  }
+  .quickref-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+  }
+  .quickref-table tr {
+    border-bottom: 1px solid rgba(255,255,255,0.12);
+  }
+  .quickref-table tr:last-child { border-bottom: none; }
+  .quickref-table td {
+    padding: 7px 2px;
+    vertical-align: top;
+  }
+  .quickref-table td:first-child {
+    color: #e4e9f5;
+  }
+  .quickref-table td:last-child {
+    text-align: right;
+    font-weight: 700;
+    color: #7ee0a8;
+    white-space: nowrap;
+    padding-left: 10px;
+  }
+  .quickref-formula {
+    font-size: 13.5px;
+    line-height: 1.8;
+    color: #e4e9f5;
+  }
+  .quickref-list {
+    margin: 0;
+    padding-left: 18px;
+    font-size: 13.5px;
+    line-height: 1.9;
+    color: #e4e9f5;
+  }
+  .quickref-list li { margin-bottom: 4px; }
+
+  .detail-cta {
+    display: block;
+    text-align: center;
+    text-decoration: none;
+    border-radius: 12px;
+    padding: 15px;
+    font-size: 15px;
+    font-weight: 700;
+    margin-bottom: 12px;
+  }
+  .detail-cta-primary {
+    background: var(--green);
+    color: #fff;
+  }
+  .detail-cta-secondary {
+    background: #fff;
+    color: var(--navy);
+    border: 1px solid var(--border);
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="eyebrow">OUR BOARD GAME SHELF</div>
+  <h1>うちのボードゲーム棚</h1>
+  <div class="count"><span id="totalCount">-</span>件所蔵 ・ ゲーム名タップで詳細、▶ルールで動画検索</div>
+  <div class="user-badge" id="userBadge"></div>
+</header>
+
+<div class="controls" id="controls">
+  <input id="search" class="search-box" type="search" placeholder="ゲーム名で検索（日本語 / 英語）">
+
+  <div class="filter-row">
+    <div class="filter-group">
+      <span class="filter-label">人数</span>
+      <button class="chip" data-players="">指定なし</button>
+      <button class="chip" data-players="1">1人</button>
+      <button class="chip" data-players="2">2人</button>
+      <button class="chip" data-players="3">3人</button>
+      <button class="chip" data-players="4">4人</button>
+      <button class="chip" data-players="5">5人</button>
+      <button class="chip" data-players="6">6人</button>
+      <button class="chip" data-players="7">7人</button>
+      <button class="chip" data-players="8">8人+</button>
+    </div>
+    <div class="divider"></div>
+    <div class="filter-group">
+      <span class="filter-label">時間</span>
+      <button class="chip" data-time="">指定なし</button>
+      <button class="chip" data-time="15">〜15分</button>
+      <button class="chip" data-time="30">〜30分</button>
+      <button class="chip" data-time="60">〜60分</button>
+      <button class="chip" data-time="9999">60分〜</button>
+    </div>
+    <div class="divider"></div>
+    <div class="filter-group">
+      <span class="filter-label">並び順</span>
+      <select id="sort" class="sort-select">
+        <option value="default">登録順</option>
+        <option value="players_asc">人数：少ない順</option>
+        <option value="time_asc">時間：短い順</option>
+        <option value="time_desc">時間：長い順</option>
+        <option value="aiueo">あ→ん順</option>
+        <option value="rating_desc">評価が高い順</option>
+      </select>
+    </div>
+  </div>
+</div>
+
+<main>
+  <div id="listView">
+    <div class="result-count" id="resultCount"></div>
+    <div class="card-list" id="cardList"></div>
+    <div class="empty-state" id="emptyState" style="display:none;">条件に合うゲームが見つかりませんでした。</div>
+  </div>
+  <div id="detailView" style="display:none;"></div>
+</main>
+
+<footer>
+  所有データは <a href="https://bodoge.hoobby.net/" target="_blank" rel="noopener">ボドゲーマ</a> より
+</footer>
+
+<!-- Firebase (みんなの評価の共有保存に使用) -->
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+<script>
+// TODO: Firebaseプロジェクト作成後、コンソールの「ウェブアプリの構成」に表示される値に置き換える
+const firebaseConfig = {
+  apiKey: "AIzaSyDdx12wxad6NFIugC4KZej5AjU-wKnk4Q8",
+  authDomain: "boardgame-b8503.firebaseapp.com",
+  projectId: "boardgame-b8503",
+  storageBucket: "boardgame-b8503.firebasestorage.app",
+  messagingSenderId: "164264544283",
+  appId: "1:164264544283:web:c1bb300c4dc9a4943bd0be"
+};
+
+let db = null;
+let firebaseReady = false;
+try {
+  if (firebaseConfig.apiKey !== "YOUR_API_KEY") {
+    firebase.initializeApp(firebaseConfig);
+    db = firebase.firestore();
+    firebaseReady = true;
+  } else {
+    console.warn("Firebaseが未設定です。firebaseConfigを設定するまで「みんなの評価」は使えません。");
+  }
+} catch (e) {
+  console.error("Firebase初期化エラー", e);
+}
+</script>
+
+<script>
+let games = [];
+let rulesData = {};
+let reviewsCache = {};
+let historyCache = {};
+let state = { q: "", players: "", time: "", sort: "default" };
+
+const RATINGS_CACHE_KEY = "bg_ratings_cache_v1";
+const HISTORY_CACHE_KEY = "bg_history_cache_v1";
+const MY_NAME_KEY = "bg_myname";
+
+const RATING_LEVELS = [
+  { value: 5, label: "最高", emoji: "🤩" },
+  { value: 4, label: "またやりたい", emoji: "😊" },
+  { value: 3, label: "普通", emoji: "😐" },
+  { value: 2, label: "苦手", emoji: "😕" },
+  { value: 1, label: "やりたくない", emoji: "😩" }
+];
+function ratingLabel(value) {
+  const l = RATING_LEVELS.find(r => r.value === value);
+  return l ? `${l.emoji} ${l.label}` : `${value}`;
+}
+
+Promise.all([
+  fetch("data/games.json").then(r => r.json()),
+  fetch("data/rules.json").then(r => r.ok ? r.json() : {}).catch(() => ({})),
+  fetchAllReviews()
+]).then(([gamesData, rules]) => {
+  games = gamesData;
+  rulesData = rules;
+  document.getElementById("totalCount").textContent = games.length;
+  renderUserBadge();
+  render();
+  router();
+});
+
+document.getElementById("search").addEventListener("input", e => {
+  state.q = e.target.value.trim();
+  render();
+});
+
+document.querySelectorAll('[data-players]').forEach(btn => {
+  btn.addEventListener("click", () => {
+    document.querySelectorAll('[data-players]').forEach(b => b.classList.remove("active"));
+    btn.classList.add("active");
+    state.players = btn.dataset.players;
+    render();
+  });
+});
+document.querySelector('[data-players=""]').classList.add("active");
+
+document.querySelectorAll('[data-time]').forEach(btn => {
+  btn.addEventListener("click", () => {
+    document.querySelectorAll('[data-time]').forEach(b => b.classList.remove("active"));
+    btn.classList.add("active");
+    state.time = btn.dataset.time;
+    render();
+  });
+});
+document.querySelector('[data-time=""]').classList.add("active");
+
+document.getElementById("sort").addEventListener("change", e => {
+  state.sort = e.target.value;
+  render();
+});
+
+function matches(g) {
+  if (state.q) {
+    const q = state.q.toLowerCase();
+    const hay = (g.jp + " " + g.en).toLowerCase();
+    if (!hay.includes(q)) return false;
+  }
+  if (state.players) {
+    const n = parseInt(state.players, 10);
+    if (g.playersMin == null) return false;
+    if (n === 8) {
+      if (g.playersMax < 8) return false;
+    } else {
+      if (n < g.playersMin || n > g.playersMax) return false;
+    }
+  }
+  if (state.time) {
+    const t = parseInt(state.time, 10);
+    if (g.timeMin == null) return false;
+    if (t === 9999) {
+      if (g.timeMax < 60) return false;
+    } else {
+      if (g.timeMin > t) return false;
+    }
+  }
+  return true;
+}
+
+function sortGames(list) {
+  const arr = list.slice();
+  switch (state.sort) {
+    case "players_asc":
+      arr.sort((a, b) => (a.playersMin ?? 999) - (b.playersMin ?? 999));
+      break;
+    case "time_asc":
+      arr.sort((a, b) => (a.timeMin ?? 9999) - (b.timeMin ?? 9999));
+      break;
+    case "time_desc":
+      arr.sort((a, b) => (b.timeMax ?? -1) - (a.timeMax ?? -1));
+      break;
+    case "aiueo":
+      arr.sort((a, b) => a.jp.localeCompare(b.jp, "ja"));
+      break;
+    case "rating_desc":
+      arr.sort((a, b) => (averageScore(slugOf(b)) ?? -1) - (averageScore(slugOf(a)) ?? -1));
+      break;
+    default:
+      break;
+  }
+  return arr;
+}
+
+function specHtml(value, cls) {
+  const isUnknown = value === "－" || !value;
+  return `<span class="spec${isUnknown ? " unknown" : ""}">${isUnknown ? "不明" : value}</span>`;
+}
+
+function render() {
+  const filtered = sortGames(games.filter(matches));
+  document.getElementById("resultCount").textContent = `${filtered.length}件`;
+  const list = document.getElementById("cardList");
+  const empty = document.getElementById("emptyState");
+
+  if (filtered.length === 0) {
+    list.innerHTML = "";
+    empty.style.display = "block";
+    return;
+  }
+  empty.style.display = "none";
+
+  list.innerHTML = filtered.map(g => {
+    const ruleUrl = ruleVideoUrl(g);
+    const slug = slugOf(g);
+    const avg = averageScore(slug);
+    return `
+    <div class="card">
+      <a class="card-main" href="#game/${encodeURIComponent(slug)}">
+        <img src="${g.img}" alt="${g.jp}" loading="lazy" onerror="this.style.visibility='hidden'">
+        <div class="card-body">
+          <div class="card-title-jp">${g.jp}${rulesData[slug] ? '<span class="detail-badge-mini">詳しいルールあり</span>' : ""}</div>
+          <div class="card-title-en">${g.en}</div>
+          <div class="spec-row">
+            ${specHtml(g.playersRaw)}
+            ${specHtml(g.timeRaw)}
+            ${avg != null ? `<span class="spec">★ ${avg}/5</span>` : `<span class="spec unknown">未評価</span>`}
+          </div>
+        </div>
+      </a>
+      <a class="rule-link" href="${ruleUrl}" target="_blank" rel="noopener">
+        <span class="icon">▶</span>ルール
+      </a>
+    </div>
+  `;
+  }).join("");
+}
+
+function slugOf(g) {
+  return g.url.split("/").filter(Boolean).pop();
+}
+
+function ruleVideoUrl(g) {
+  const q = encodeURIComponent(`${g.jp} ルール 説明`);
+  return `https://www.youtube.com/results?search_query=${q}`;
+}
+
+function computeBadges(g) {
+  const badges = [];
+  if (g.playersMin === 1) badges.push("ソロ可");
+  if (g.playersMin != null && g.playersMin <= 2 && (g.playersMax == null || g.playersMax >= 2)) badges.push("2人でも遊べる");
+  if (g.playersMax != null && g.playersMax >= 8) badges.push("大人数向け");
+  if (g.timeMax != null && g.timeMax <= 15) badges.push("サクッと〜15分");
+  if (g.timeMin != null && g.timeMin >= 60) badges.push("じっくり60分〜");
+  return badges;
+}
+
+function fetchCollectionCache(collectionName, cacheKey) {
+  if (!firebaseReady) {
+    try {
+      return Promise.resolve(JSON.parse(localStorage.getItem(cacheKey)) || {});
+    } catch (e) {
+      return Promise.resolve({});
+    }
+  }
+  return db.collection(collectionName).get().then(snapshot => {
+    const cache = {};
+    snapshot.forEach(doc => {
+      const d = doc.data();
+      if (!cache[d.slug]) cache[d.slug] = [];
+      cache[d.slug].push(Object.assign({ id: doc.id }, d));
+    });
+    Object.values(cache).forEach(list => list.sort((a, b) => (b.date || "").localeCompare(a.date || "")));
+    localStorage.setItem(cacheKey, JSON.stringify(cache));
+    return cache;
+  }).catch(err => {
+    console.error(`${collectionName}取得エラー`, err);
+    try {
+      return JSON.parse(localStorage.getItem(cacheKey)) || {};
+    } catch (e) {
+      return {};
+    }
+  });
+}
+
+function fetchAllReviews() {
+  return Promise.all([
+    fetchCollectionCache("ratings", RATINGS_CACHE_KEY).then(c => { reviewsCache = c; }),
+    fetchCollectionCache("history", HISTORY_CACHE_KEY).then(c => { historyCache = c; })
+  ]);
+}
+
+function getReviews(slug) {
+  return reviewsCache[slug] || [];
+}
+
+function getHistory(slug) {
+  return historyCache[slug] || [];
+}
+
+function addRating(slug, name, level) {
+  localStorage.setItem(MY_NAME_KEY, name);
+  if (!firebaseReady) {
+    alert("Firebaseが未設定のため、まだ「評価」は使えません。");
+    return Promise.resolve();
+  }
+  return db.collection("ratings").add({
+    slug, name, level,
+    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+  }).then(fetchAllReviews);
+}
+
+function deleteRating(slug, id) {
+  if (!firebaseReady) return Promise.resolve();
+  return db.collection("ratings").doc(id).delete().then(fetchAllReviews);
+}
+
+function addHistory(slug, date, members, memo) {
+  if (!firebaseReady) {
+    alert("Firebaseが未設定のため、まだ「プレイ履歴」は使えません。");
+    return Promise.resolve();
+  }
+  return db.collection("history").add({
+    slug, date, members, memo,
+    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+  }).then(fetchAllReviews);
+}
+
+function deleteHistory(slug, id) {
+  if (!firebaseReady) return Promise.resolve();
+  return db.collection("history").doc(id).delete().then(fetchAllReviews);
+}
+
+function averageScore(slug) {
+  const reviews = getReviews(slug);
+  if (reviews.length === 0) return null;
+  const sum = reviews.reduce((a, r) => a + r.level, 0);
+  return Math.round((sum / reviews.length) * 10) / 10;
+}
+
+function getMyName() {
+  return localStorage.getItem(MY_NAME_KEY) || "";
+}
+
+function renderUserBadge() {
+  const el = document.getElementById("userBadge");
+  const name = getMyName();
+  el.innerHTML = name
+    ? `あなたの名前: ${name} <button id="changeNameBtn" type="button">変更</button>`
+    : `評価を送ると名前が登録されます`;
+  const btn = document.getElementById("changeNameBtn");
+  if (btn) {
+    btn.addEventListener("click", () => {
+      const next = prompt("表示名を変更", name);
+      if (next && next.trim()) {
+        localStorage.setItem(MY_NAME_KEY, next.trim());
+        renderUserBadge();
+      }
+    });
+  }
+}
+
+function todayStr() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+function buildRatingSection(g) {
+  const slug = slugOf(g);
+  const reviews = getReviews(slug);
+  const avg = averageScore(slug);
+  return `
+    <div class="review-card">
+      <div class="review-header">
+        <div class="review-title">みんなの評価</div>
+        ${avg != null ? `<div class="review-avg">${avg}<span>/5</span></div>` : ""}
+      </div>
+      <div class="review-count">${reviews.length}件の評価${reviews.length ? "" : "（まだ評価がありません）"}${!firebaseReady ? " ・ ⚠️ Firebase未設定" : ""}</div>
+      ${reviews.length ? `
+      <div class="review-list">
+        ${reviews.map(r => `
+          <div class="review-item">
+            <div class="review-item-top">
+              <span class="review-item-name">${r.name}</span>
+              <span>
+                <span class="review-item-level">${ratingLabel(r.level)}</span>
+                <button class="review-item-del" data-del-rating-id="${r.id}" data-del-slug="${slug}" title="削除">×</button>
+              </span>
+            </div>
+          </div>
+        `).join("")}
+      </div>` : ""}
+      <form class="rating-form" data-rating-slug="${slug}">
+        <div class="review-form-field">
+          <label>プレイヤー名</label>
+          <input type="text" name="name" placeholder="あなたの名前" required maxlength="20" value="${getMyName()}">
+        </div>
+        <div class="rating-choice-row">
+          ${RATING_LEVELS.map(l => `
+            <label class="rating-choice">
+              <input type="radio" name="level" value="${l.value}" required>
+              <span>${l.emoji} ${l.label}</span>
+            </label>
+          `).join("")}
+        </div>
+        <button type="submit">評価を送る</button>
+      </form>
+    </div>
+  `;
+}
+
+function buildHistorySection(g) {
+  const slug = slugOf(g);
+  const history = getHistory(slug);
+  return `
+    <div class="review-card">
+      <div class="review-header">
+        <div class="review-title">プレイ履歴</div>
+      </div>
+      <div class="review-count">${history.length}件の記録${history.length ? "" : "（まだ記録がありません）"}${!firebaseReady ? " ・ ⚠️ Firebase未設定" : ""}</div>
+      ${history.length ? `
+      <div class="review-list">
+        ${history.map(h => `
+          <div class="review-item">
+            <div class="review-item-top">
+              <span class="review-item-name">${h.date || "日付なし"}</span>
+              <button class="review-item-del" data-del-history-id="${h.id}" data-del-slug="${slug}" title="削除">×</button>
+            </div>
+            ${h.members ? `<div class="review-item-members">👥 ${h.members}</div>` : ""}
+            ${h.memo ? `<div class="review-item-memo">${h.memo}</div>` : ""}
+          </div>
+        `).join("")}
+      </div>` : ""}
+      <form class="history-form" data-history-slug="${slug}">
+        <div class="review-form-row">
+          <div class="review-form-field">
+            <label>日付</label>
+            <input type="date" name="date" value="${todayStr()}">
+          </div>
+          <div class="review-form-field">
+            <label>メンバー</label>
+            <input type="text" name="members" placeholder="例: たくと・友達A・友達B" maxlength="60">
+          </div>
+        </div>
+        <div class="review-form-field">
+          <label>メモ（勝敗など自由に）</label>
+          <textarea name="memo" placeholder="例: 接戦の末たくとの勝ち" maxlength="200"></textarea>
+        </div>
+        <button type="submit">記録を追加</button>
+      </form>
+    </div>
+  `;
+}
+
+function buildQuickRef(g) {
+  const r = rulesData[slugOf(g)];
+  if (!r) return "";
+
+  let scoreHtml = "";
+  if (r.scoreTable) {
+    scoreHtml = `
+      <div class="quickref-sub">得点の数え方（目標: ${r.scoreTable.target}）</div>
+      <table class="quickref-table">
+        ${r.scoreTable.items.map(it => `<tr><td>${it.label}</td><td>${it.points}</td></tr>`).join("")}
+      </table>
+    `;
+  } else if (r.scoreFormula) {
+    scoreHtml = `
+      <div class="quickref-sub">得点の数え方</div>
+      <div class="quickref-formula">${r.scoreFormula}</div>
+    `;
+  }
+
+  return `
+    <div class="quickref-card">
+      <div class="quickref-title">🎯 プレイ中の早見表</div>
+      <div class="quickref-sub">勝利条件</div>
+      <div class="quickref-win">${r.winCondition}</div>
+      ${scoreHtml}
+      <div class="quickref-sub">自分の手番でできること</div>
+      <ul class="quickref-list">${r.rules.map(s => `<li>${s}</li>`).join("")}</ul>
+    </div>
+  `;
+}
+
+function buildRuleSection(g) {
+  const slug = slugOf(g);
+  const r = rulesData[slug];
+  if (!r) return "";
+  return `
+    <p class="detail-worldview">${r.worldview}</p>
+    <div class="detail-section-eyebrow">DESCRIPTION</div>
+    <h2 class="detail-section-title">簡単ルール</h2>
+    <div class="detail-section-title-sm">ゲームの準備</div>
+    <ol class="detail-list">${r.setup.map(s => `<li>${s}</li>`).join("")}</ol>
+    ${r.sources && r.sources.length ? `
+    <div class="detail-sources">
+      参考: ${r.sources.map(u => `<a href="${u}" target="_blank" rel="noopener">${new URL(u).hostname}</a>`).join(" ・ ")}
+    </div>` : ""}
+  `;
+}
+
+function showDetail(g) {
+  document.getElementById("controls").style.display = "none";
+  document.getElementById("listView").style.display = "none";
+  const dv = document.getElementById("detailView");
+  dv.style.display = "block";
+
+  const badges = computeBadges(g);
+  const avg = averageScore(slugOf(g));
+  dv.innerHTML = `
+    <a class="detail-back" href="#">← 一覧へ戻る</a>
+    <h1 class="detail-title">${g.jp}</h1>
+    <div class="detail-title-en">${g.en}</div>
+    <div class="detail-underline"></div>
+    <div class="detail-image-wrap">
+      <img src="${g.img}" alt="${g.jp}" onerror="this.style.visibility='hidden'">
+    </div>
+    <div class="detail-spec-grid">
+      <div class="detail-spec-box">
+        <div class="label">人数</div>
+        <div class="value">${g.playersRaw || "不明"}</div>
+      </div>
+      <div class="detail-spec-box">
+        <div class="label">プレイ時間</div>
+        <div class="value">${g.timeRaw || "不明"}</div>
+      </div>
+      <div class="detail-spec-box">
+        <div class="label">平均評価</div>
+        <div class="value">${avg != null ? `★ ${avg}/5` : "未評価"}</div>
+      </div>
+    </div>
+    ${badges.length ? `<div class="detail-badges">${badges.map(b => `<span class="detail-badge">${b}</span>`).join("")}</div>` : ""}
+    ${buildRatingSection(g)}
+    ${buildHistorySection(g)}
+    ${buildQuickRef(g)}
+    <a class="detail-cta detail-cta-primary" href="${ruleVideoUrl(g)}" target="_blank" rel="noopener">▶ ルールを動画で確認</a>
+    <a class="detail-cta detail-cta-secondary" href="${g.url}" target="_blank" rel="noopener">ボドゲーマで詳細を見る</a>
+    ${buildRuleSection(g)}
+  `;
+  window.scrollTo(0, 0);
+}
+
+document.getElementById("detailView").addEventListener("submit", async e => {
+  const ratingForm = e.target.closest("[data-rating-slug]");
+  const historyForm = e.target.closest("[data-history-slug]");
+  if (!ratingForm && !historyForm) return;
+  e.preventDefault();
+
+  if (ratingForm) {
+    const slug = ratingForm.dataset.ratingSlug;
+    const name = ratingForm.elements.name.value.trim();
+    const levelInput = ratingForm.querySelector('input[name="level"]:checked');
+    if (!name || !levelInput) return;
+    const level = parseInt(levelInput.value, 10);
+    const submitBtn = ratingForm.querySelector("button[type=submit]");
+    submitBtn.disabled = true;
+    await addRating(slug, name, level);
+    renderUserBadge();
+    const g = games.find(x => slugOf(x) === slug);
+    if (g) showDetail(g);
+    return;
+  }
+
+  if (historyForm) {
+    const slug = historyForm.dataset.historySlug;
+    const date = historyForm.elements.date.value || "";
+    const members = historyForm.elements.members.value.trim();
+    const memo = historyForm.elements.memo.value.trim();
+    const submitBtn = historyForm.querySelector("button[type=submit]");
+    submitBtn.disabled = true;
+    await addHistory(slug, date, members, memo);
+    const g = games.find(x => slugOf(x) === slug);
+    if (g) showDetail(g);
+  }
+});
+
+document.getElementById("detailView").addEventListener("click", async e => {
+  const ratingDel = e.target.closest("[data-del-rating-id]");
+  const historyDel = e.target.closest("[data-del-history-id]");
+  const btn = ratingDel || historyDel;
+  if (!btn) return;
+  btn.disabled = true;
+  if (ratingDel) {
+    await deleteRating(btn.dataset.delSlug, btn.dataset.delRatingId);
+  } else {
+    await deleteHistory(btn.dataset.delSlug, btn.dataset.delHistoryId);
+  }
+  const g = games.find(x => slugOf(x) === btn.dataset.delSlug);
+  if (g) showDetail(g);
+});
+
+function showListView() {
+  document.getElementById("controls").style.display = "";
+  document.getElementById("listView").style.display = "";
+  document.getElementById("detailView").style.display = "none";
+}
+
+function router() {
+  const m = location.hash.match(/^#game\/(.+)$/);
+  if (m) {
+    const slug = decodeURIComponent(m[1]);
+    const g = games.find(x => slugOf(x) === slug);
+    if (g) {
+      showDetail(g);
+      return;
+    }
+  }
+  showListView();
+}
+
+window.addEventListener("hashchange", router);
+</script>
+
+</body>
+</html>
