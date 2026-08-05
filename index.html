@@ -16,6 +16,24 @@
     --border: #e3e6ec;
     --text: #1e2430;
     --text-sub: #6b7280;
+    --pitch-bg: #fff7e8;
+    --pitch-border: #f3d9a4;
+    --pitch-text: #9a6b1a;
+  }
+  :root[data-theme="dark"] {
+    --navy: #141c2c;
+    --navy-light: #3a5a8c;
+    --accent: #5b8dff;
+    --accent-soft: #1c2c4d;
+    --green: #35b880;
+    --bg: #11151c;
+    --card-bg: #1c222c;
+    --border: #2e3644;
+    --text: #e8eaef;
+    --text-sub: #97a1b0;
+    --pitch-bg: #2b2313;
+    --pitch-border: #5c4a1e;
+    --pitch-text: #e0b85c;
   }
   * { box-sizing: border-box; }
   body {
@@ -28,6 +46,22 @@
     background: var(--navy);
     color: #fff;
     padding: 20px 16px 16px;
+    position: relative;
+  }
+  .theme-toggle-btn {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    border: 1px solid rgba(255,255,255,0.3);
+    background: rgba(255,255,255,0.08);
+    font-size: 16px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
   header .eyebrow {
     font-size: 11px;
@@ -74,7 +108,7 @@
     position: sticky;
     top: 0;
     z-index: 10;
-    background: #fff;
+    background: var(--card-bg);
     border-bottom: 1px solid var(--border);
     padding: 12px 16px;
   }
@@ -85,60 +119,67 @@
     border-radius: 10px;
     font-size: 15px;
     margin-bottom: 10px;
+    background: var(--card-bg);
+    color: var(--text);
   }
   .search-box:focus {
     outline: none;
     border-color: var(--accent);
   }
 
-  .filter-row {
+  .filter-row-compact {
     display: flex;
-    gap: 8px;
-    overflow-x: auto;
-    padding-bottom: 4px;
-    -webkit-overflow-scrolling: touch;
+    gap: 10px;
+    margin-bottom: 8px;
   }
-  .filter-group {
+  .filter-row-compact:last-child { margin-bottom: 0; }
+  .filter-select-group {
+    flex: 1;
+    min-width: 0;
+  }
+  .filter-select-group label {
+    display: block;
+    font-size: 11px;
+    color: var(--text-sub);
+    margin-bottom: 3px;
+  }
+  .filter-select {
+    width: 100%;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 9px 10px;
+    font-size: 13.5px;
+    background: var(--card-bg);
+    color: var(--text);
+  }
+  .filter-select:focus {
+    outline: none;
+    border-color: var(--accent);
+  }
+  .unplayed-toggle {
     display: flex;
     align-items: center;
     gap: 6px;
-    flex-shrink: 0;
-  }
-  .filter-label {
-    font-size: 12px;
-    color: var(--text-sub);
-    white-space: nowrap;
-    margin-right: 2px;
-  }
-  .chip {
-    border: 1px solid var(--border);
-    background: #fff;
+    font-size: 12.5px;
     color: var(--text);
-    padding: 7px 12px;
-    border-radius: 999px;
-    font-size: 13px;
-    white-space: nowrap;
     cursor: pointer;
+    flex-shrink: 0;
   }
-  .chip.active {
-    background: var(--accent);
-    border-color: var(--accent);
+  .unplayed-toggle input {
+    width: 16px;
+    height: 16px;
+    accent-color: var(--accent);
+  }
+  .random-pick-btn {
+    flex: 1;
+    border: none;
+    background: linear-gradient(135deg, var(--accent), #7c4dff);
     color: #fff;
-  }
-  .divider {
-    width: 1px;
-    background: var(--border);
-    align-self: stretch;
-    flex-shrink: 0;
-  }
-
-  select.sort-select {
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 7px 10px;
     font-size: 13px;
-    background: #fff;
-    flex-shrink: 0;
+    font-weight: 700;
+    padding: 9px 12px;
+    border-radius: 999px;
+    cursor: pointer;
   }
 
   main {
@@ -151,6 +192,39 @@
     font-size: 13px;
     color: var(--text-sub);
     margin: 4px 4px 10px;
+  }
+  .tag-cloud-card {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 12px 14px;
+    margin-bottom: 14px;
+  }
+  .tag-cloud-title {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text-sub);
+    margin-bottom: 8px;
+  }
+  .tag-cloud {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .tag-cloud button {
+    border: 1px solid var(--border);
+    background: var(--bg);
+    color: var(--navy-light);
+    font-size: 12px;
+    font-weight: 600;
+    padding: 5px 11px;
+    border-radius: 999px;
+    cursor: pointer;
+  }
+  .tag-cloud button span {
+    color: var(--text-sub);
+    font-weight: 500;
+    margin-left: 2px;
   }
 
   .card-list {
@@ -334,7 +408,7 @@
   }
   .tag-chip {
     border: 1px solid var(--border);
-    background: #fff;
+    background: var(--card-bg);
     color: var(--navy-light);
     font-size: 12px;
     font-weight: 600;
@@ -344,8 +418,8 @@
   }
   .tag-chip:active { background: var(--accent-soft); }
   .pitch-card {
-    background: #fff7e8;
-    border: 1px solid #f3d9a4;
+    background: var(--pitch-bg);
+    border: 1px solid var(--pitch-border);
     border-radius: 12px;
     padding: 14px 16px;
     margin-bottom: 20px;
@@ -353,7 +427,7 @@
   .pitch-title {
     font-size: 13px;
     font-weight: 700;
-    color: #9a6b1a;
+    color: var(--pitch-text);
     margin-bottom: 8px;
   }
   .pitch-list {
@@ -563,6 +637,65 @@
     cursor: pointer;
     padding: 0 0 0 6px;
   }
+  .member-toggle-btn {
+    display: block;
+    width: 100%;
+    border: 1px solid var(--border);
+    background: var(--card-bg);
+    color: var(--text);
+    font-size: 13px;
+    text-align: left;
+    padding: 9px 10px;
+    border-radius: 8px;
+    cursor: pointer;
+  }
+  .section-toggle-btn {
+    display: block;
+    width: 100%;
+    border: 1px solid var(--border);
+    background: var(--bg);
+    color: var(--navy-light);
+    font-size: 13px;
+    font-weight: 600;
+    text-align: center;
+    padding: 10px;
+    border-radius: 8px;
+    cursor: pointer;
+    margin-bottom: 10px;
+  }
+  .section-toggle-btn-primary {
+    background: var(--accent-soft);
+    color: var(--accent);
+    border-color: var(--accent);
+  }
+  .member-check-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 8px;
+  }
+  .member-check { cursor: pointer; }
+  .member-check input {
+    position: absolute;
+    opacity: 0;
+    width: 0;
+    height: 0;
+  }
+  .member-check span {
+    display: inline-block;
+    padding: 7px 12px;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--text);
+    background: var(--card-bg);
+  }
+  .member-check input:checked + span {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #fff;
+  }
   .review-form input[type="text"],
   .review-form input[type="date"],
   .review-form textarea {
@@ -572,6 +705,8 @@
     padding: 9px 10px;
     font-size: 13px;
     font-family: inherit;
+    background: var(--card-bg);
+    color: var(--text);
   }
   .review-form textarea {
     resize: vertical;
@@ -584,6 +719,8 @@
     padding: 9px 6px;
     font-size: 13px;
     text-align: center;
+    background: var(--card-bg);
+    color: var(--text);
   }
   .review-form-score { max-width: 72px; }
   .review-form button {
@@ -617,7 +754,7 @@
     font-size: 12.5px;
     font-weight: 600;
     color: var(--text);
-    background: #fff;
+    background: var(--card-bg);
   }
   .rating-choice input:checked + span {
     background: var(--accent);
@@ -725,7 +862,7 @@
     color: #fff;
   }
   .detail-cta-secondary {
-    background: #fff;
+    background: var(--card-bg);
     color: var(--navy);
     border: 1px solid var(--border);
   }
@@ -734,6 +871,7 @@
 <body>
 
 <header>
+  <button type="button" id="themeToggleBtn" class="theme-toggle-btn" title="ダークモード切り替え">🌙</button>
   <div class="eyebrow">OUR BOARD GAME SHELF</div>
   <h1>うちのボードゲーム棚</h1>
   <div class="count"><span id="totalCount">-</span>件所蔵 ・ ゲーム名タップで詳細、▶ルールで動画検索</div>
@@ -741,47 +879,63 @@
 </header>
 
 <div class="controls" id="controls">
-  <input id="search" class="search-box" type="search" placeholder="ゲーム名で検索（日本語 / 英語）">
+  <input id="search" class="search-box" type="search" placeholder="ゲーム名 or #ハッシュタグで検索">
 
-  <div class="filter-row">
-    <div class="filter-group">
-      <span class="filter-label">人数</span>
-      <button class="chip" data-players="">指定なし</button>
-      <button class="chip" data-players="1">1人</button>
-      <button class="chip" data-players="2">2人</button>
-      <button class="chip" data-players="3">3人</button>
-      <button class="chip" data-players="4">4人</button>
-      <button class="chip" data-players="5">5人</button>
-      <button class="chip" data-players="6">6人</button>
-      <button class="chip" data-players="7">7人</button>
-      <button class="chip" data-players="8">8人+</button>
+  <div class="filter-row-compact">
+    <div class="filter-select-group">
+      <label>人数</label>
+      <select id="playersSelect" class="filter-select">
+        <option value="">指定なし</option>
+        <option value="1">1人</option>
+        <option value="2">2人</option>
+        <option value="3">3人</option>
+        <option value="4">4人</option>
+        <option value="5">5人</option>
+        <option value="6">6人</option>
+        <option value="7">7人</option>
+        <option value="8">8人+</option>
+      </select>
     </div>
-    <div class="divider"></div>
-    <div class="filter-group">
-      <span class="filter-label">時間</span>
-      <button class="chip" data-time="">指定なし</button>
-      <button class="chip" data-time="15">〜15分</button>
-      <button class="chip" data-time="30">〜30分</button>
-      <button class="chip" data-time="60">〜60分</button>
-      <button class="chip" data-time="9999">60分〜</button>
+    <div class="filter-select-group">
+      <label>時間</label>
+      <select id="timeSelect" class="filter-select">
+        <option value="">指定なし</option>
+        <option value="15">〜15分</option>
+        <option value="30">〜30分</option>
+        <option value="60">〜60分</option>
+        <option value="9999">60分〜</option>
+      </select>
     </div>
-    <div class="divider"></div>
-    <div class="filter-group">
-      <span class="filter-label">並び順</span>
-      <select id="sort" class="sort-select">
+  </div>
+  <div class="filter-row-compact">
+    <div class="filter-select-group" style="flex: 1;">
+      <label>並び順</label>
+      <select id="sort" class="filter-select">
         <option value="default">登録順</option>
         <option value="players_asc">人数：少ない順</option>
         <option value="time_asc">時間：短い順</option>
         <option value="time_desc">時間：長い順</option>
         <option value="aiueo">あ→ん順</option>
         <option value="rating_desc">評価が高い順</option>
+        <option value="played_desc">プレイ回数が多い順</option>
       </select>
     </div>
+  </div>
+  <div class="filter-row-compact">
+    <label class="unplayed-toggle">
+      <input type="checkbox" id="unplayedOnly">
+      <span>🗄️ 積みゲー（未プレイ）のみ表示</span>
+    </label>
+    <button type="button" id="randomPickBtn" class="random-pick-btn">🎲 今日は何にする？</button>
   </div>
 </div>
 
 <main>
   <div id="listView">
+    <div class="tag-cloud-card">
+      <div class="tag-cloud-title">🔥 人気タグ</div>
+      <div class="tag-cloud" id="tagCloud"></div>
+    </div>
     <div class="result-count" id="resultCount"></div>
     <div class="card-list" id="cardList"></div>
     <div class="empty-state" id="emptyState" style="display:none;">条件に合うゲームが見つかりませんでした。</div>
@@ -824,12 +978,31 @@ try {
 </script>
 
 <script>
+const THEME_KEY = "bg_theme";
+function applyTheme(theme) {
+  document.documentElement.setAttribute("data-theme", theme);
+  const btn = document.getElementById("themeToggleBtn");
+  if (btn) btn.textContent = theme === "dark" ? "☀️" : "🌙";
+}
+function initTheme() {
+  const saved = localStorage.getItem(THEME_KEY);
+  const theme = saved || (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+  applyTheme(theme);
+}
+initTheme();
+document.getElementById("themeToggleBtn").addEventListener("click", () => {
+  const current = document.documentElement.getAttribute("data-theme");
+  const next = current === "dark" ? "light" : "dark";
+  localStorage.setItem(THEME_KEY, next);
+  applyTheme(next);
+});
+
 let games = [];
 let rulesData = {};
 let genresData = {};
 let reviewsCache = {};
 let historyCache = {};
-let state = { q: "", players: "", time: "", sort: "default" };
+let state = { q: "", players: "", time: "", sort: "default", unplayedOnly: false };
 
 const RATINGS_CACHE_KEY = "bg_ratings_cache_v1";
 const HISTORY_CACHE_KEY = "bg_history_cache_v1";
@@ -858,6 +1031,7 @@ Promise.all([
   genresData = genres;
   document.getElementById("totalCount").textContent = games.length;
   renderUserBadge();
+  renderTagCloud();
   render();
   router();
 });
@@ -867,29 +1041,34 @@ document.getElementById("search").addEventListener("input", e => {
   render();
 });
 
-document.querySelectorAll('[data-players]').forEach(btn => {
-  btn.addEventListener("click", () => {
-    document.querySelectorAll('[data-players]').forEach(b => b.classList.remove("active"));
-    btn.classList.add("active");
-    state.players = btn.dataset.players;
-    render();
-  });
+document.getElementById("playersSelect").addEventListener("change", e => {
+  state.players = e.target.value;
+  render();
 });
-document.querySelector('[data-players=""]').classList.add("active");
 
-document.querySelectorAll('[data-time]').forEach(btn => {
-  btn.addEventListener("click", () => {
-    document.querySelectorAll('[data-time]').forEach(b => b.classList.remove("active"));
-    btn.classList.add("active");
-    state.time = btn.dataset.time;
-    render();
-  });
+document.getElementById("timeSelect").addEventListener("change", e => {
+  state.time = e.target.value;
+  render();
 });
-document.querySelector('[data-time=""]').classList.add("active");
 
 document.getElementById("sort").addEventListener("change", e => {
   state.sort = e.target.value;
   render();
+});
+
+document.getElementById("unplayedOnly").addEventListener("change", e => {
+  state.unplayedOnly = e.target.checked;
+  render();
+});
+
+document.getElementById("randomPickBtn").addEventListener("click", () => {
+  const candidates = games.filter(matches);
+  if (candidates.length === 0) {
+    alert("条件に合うゲームがありません。絞り込みを変えてみてください。");
+    return;
+  }
+  const pick = candidates[Math.floor(Math.random() * candidates.length)];
+  location.hash = `#game/${encodeURIComponent(slugOf(pick))}`;
 });
 
 function matches(g) {
@@ -917,6 +1096,9 @@ function matches(g) {
       if (g.timeMin > t) return false;
     }
   }
+  if (state.unplayedOnly) {
+    if (getHistory(slugOf(g)).length > 0) return false;
+  }
   return true;
 }
 
@@ -937,6 +1119,9 @@ function sortGames(list) {
       break;
     case "rating_desc":
       arr.sort((a, b) => (averageScore(slugOf(b)) ?? -1) - (averageScore(slugOf(a)) ?? -1));
+      break;
+    case "played_desc":
+      arr.sort((a, b) => getHistory(slugOf(b)).length - getHistory(slugOf(a)).length);
       break;
     default:
       break;
@@ -1020,6 +1205,29 @@ function goToTagSearch(tag) {
   render();
   window.scrollTo(0, 0);
 }
+
+function renderTagCloud() {
+  const counts = {};
+  games.forEach(g => {
+    getGameTags(g).all.forEach(t => {
+      counts[t] = (counts[t] || 0) + 1;
+    });
+  });
+  const top = Object.entries(counts)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 14);
+  const el = document.getElementById("tagCloud");
+  if (!el) return;
+  el.innerHTML = top.map(([tag, count]) => `
+    <button type="button" data-tag-search="${tag}">#${tag}<span>${count}</span></button>
+  `).join("");
+}
+
+document.getElementById("tagCloud").addEventListener("click", e => {
+  const btn = e.target.closest("[data-tag-search]");
+  if (!btn) return;
+  goToTagSearch(btn.dataset.tagSearch);
+});
 
 function buildTagsAndPitch(g) {
   const slug = slugOf(g);
@@ -1189,6 +1397,26 @@ function buildSubmitterLine() {
   `;
 }
 
+function buildOtherMembersPicker() {
+  const myName = getMyName();
+  const others = getAllKnownNames().filter(n => n !== myName);
+  if (others.length === 0) return "";
+  return `
+    <div class="review-form-field">
+      <label>他のメンバー（登録済みから選択）</label>
+      <button type="button" class="member-toggle-btn" data-toggle-members>タップして選択</button>
+      <div class="member-check-list" style="display:none;">
+        ${others.map(n => `
+          <label class="member-check">
+            <input type="checkbox" name="regMembers" value="${n}">
+            <span>${n}</span>
+          </label>
+        `).join("")}
+      </div>
+    </div>
+  `;
+}
+
 function buildRatingSection(g) {
   const slug = slugOf(g);
   const reviews = getReviews(slug);
@@ -1230,46 +1458,61 @@ function buildRatingSection(g) {
   `;
 }
 
+function buildHistoryItem(h, slug) {
+  return `
+    <div class="review-item">
+      <div class="review-item-top">
+        <span class="review-item-name">${h.name ? `<a href="#player/${encodeURIComponent(h.name)}">${h.name}</a>` : "―"}${h.date ? `<span class="review-item-date">${h.date}</span>` : ""}</span>
+        <button class="review-item-del" data-del-history-id="${h.id}" data-del-slug="${slug}" title="削除">×</button>
+      </div>
+      ${h.members ? `<div class="review-item-members">👥 ${h.members}</div>` : ""}
+      ${h.memo ? `<div class="review-item-memo">${h.memo}</div>` : ""}
+    </div>
+  `;
+}
+
 function buildHistorySection(g) {
   const slug = slugOf(g);
   const history = getHistory(slug);
+  const [recent, ...older] = history;
+
   return `
     <div class="review-card">
       <div class="review-header">
         <div class="review-title">プレイ履歴</div>
       </div>
       <div class="review-count">${history.length}件の記録${history.length ? "" : "（まだ記録がありません）"}${!firebaseReady ? " ・ ⚠️ Firebase未設定" : ""}</div>
-      ${history.length ? `
-      <div class="review-list">
-        ${history.map(h => `
-          <div class="review-item">
-            <div class="review-item-top">
-              <span class="review-item-name">${h.name ? `<a href="#player/${encodeURIComponent(h.name)}">${h.name}</a>` : "―"}${h.date ? `<span class="review-item-date">${h.date}</span>` : ""}</span>
-              <button class="review-item-del" data-del-history-id="${h.id}" data-del-slug="${slug}" title="削除">×</button>
+      ${recent ? `
+      <div class="review-list">${buildHistoryItem(recent, slug)}</div>
+      ` : ""}
+      ${older.length ? `
+      <button type="button" class="section-toggle-btn" data-toggle-section="history-older">過去の記録を見る（${older.length}件）</button>
+      <div class="review-list" data-section="history-older" style="display:none;">
+        ${older.map(h => buildHistoryItem(h, slug)).join("")}
+      </div>
+      ` : ""}
+      <button type="button" class="section-toggle-btn section-toggle-btn-primary" data-toggle-section="history-form">＋記録を追加する</button>
+      <div data-section="history-form" style="display:none;">
+        <form class="history-form" data-history-slug="${slug}">
+          ${buildSubmitterLine()}
+          ${buildOtherMembersPicker()}
+          <div class="review-form-row">
+            <div class="review-form-field">
+              <label>日付</label>
+              <input type="date" name="date" value="${todayStr()}">
             </div>
-            ${h.members ? `<div class="review-item-members">👥 ${h.members}</div>` : ""}
-            ${h.memo ? `<div class="review-item-memo">${h.memo}</div>` : ""}
-          </div>
-        `).join("")}
-      </div>` : ""}
-      <form class="history-form" data-history-slug="${slug}">
-        ${buildSubmitterLine()}
-        <div class="review-form-row">
-          <div class="review-form-field">
-            <label>日付</label>
-            <input type="date" name="date" value="${todayStr()}">
+            <div class="review-form-field">
+              <label>その他のメンバー（未登録の人）</label>
+              <input type="text" name="members" placeholder="例: 友達C・友達D" maxlength="60">
+            </div>
           </div>
           <div class="review-form-field">
-            <label>メンバー</label>
-            <input type="text" name="members" placeholder="例: たくと・友達A・友達B" maxlength="60">
+            <label>メモ（勝敗など自由に）</label>
+            <textarea name="memo" placeholder="例: 接戦の末たくとの勝ち" maxlength="200"></textarea>
           </div>
-        </div>
-        <div class="review-form-field">
-          <label>メモ（勝敗など自由に）</label>
-          <textarea name="memo" placeholder="例: 接戦の末たくとの勝ち" maxlength="200"></textarea>
-        </div>
-        <button type="submit">記録を追加</button>
-      </form>
+          <button type="submit">記録を追加</button>
+        </form>
+      </div>
     </div>
   `;
 }
@@ -1406,7 +1649,11 @@ document.getElementById("detailView").addEventListener("submit", async e => {
     const name = ensureMyName();
     if (!name) return;
     const date = historyForm.elements.date.value || "";
-    const members = historyForm.elements.members.value.trim();
+    const regMembers = Array.from(historyForm.querySelectorAll('input[name="regMembers"]:checked')).map(el => el.value);
+    const guestMembers = historyForm.elements.members.value.trim();
+    const memberParts = [name, ...regMembers];
+    if (guestMembers) memberParts.push(guestMembers);
+    const members = memberParts.join("・");
     const memo = historyForm.elements.memo.value.trim();
     const submitBtn = historyForm.querySelector("button[type=submit]");
     submitBtn.disabled = true;
@@ -1417,6 +1664,22 @@ document.getElementById("detailView").addEventListener("submit", async e => {
 });
 
 document.getElementById("detailView").addEventListener("click", e => {
+  const toggleBtn = e.target.closest("[data-toggle-members]");
+  if (toggleBtn) {
+    const list = toggleBtn.parentElement.querySelector(".member-check-list");
+    if (list) list.style.display = list.style.display === "none" ? "flex" : "none";
+    return;
+  }
+  const sectionToggle = e.target.closest("[data-toggle-section]");
+  if (sectionToggle) {
+    const key = sectionToggle.dataset.toggleSection;
+    const target = sectionToggle.parentElement.querySelector(`[data-section="${key}"]`);
+    if (target) {
+      const showing = target.style.display !== "none";
+      target.style.display = showing ? "none" : "";
+    }
+    return;
+  }
   const btn = e.target.closest("[data-change-submitter]");
   if (!btn) return;
   const current = getMyName();
