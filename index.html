@@ -1601,11 +1601,13 @@ function buildHistorySection(g) {
 function buildQuickRef(g) {
   const r = rulesData[slugOf(g)];
   if (!r) return "";
+  const hasRules = r.rules && r.rules.length;
+  if (!r.winCondition && !hasRules && !r.scoreTable && !r.scoreFormula) return "";
 
   let scoreHtml = "";
-  if (r.scoreTable) {
+  if (r.scoreTable && r.scoreTable.items && r.scoreTable.items.length) {
     scoreHtml = `
-      <div class="quickref-sub">得点の数え方（目標: ${r.scoreTable.target}）</div>
+      <div class="quickref-sub">得点の数え方${r.scoreTable.target ? `（目標: ${r.scoreTable.target}）` : ""}</div>
       <table class="quickref-table">
         ${r.scoreTable.items.map(it => `<tr><td>${it.label}</td><td>${it.points}</td></tr>`).join("")}
       </table>
@@ -1620,11 +1622,13 @@ function buildQuickRef(g) {
   return `
     <div class="quickref-card">
       <div class="quickref-title">🎯 プレイ中の早見表</div>
+      ${r.winCondition ? `
       <div class="quickref-sub">勝利条件</div>
-      <div class="quickref-win">${r.winCondition}</div>
+      <div class="quickref-win">${r.winCondition}</div>` : ""}
       ${scoreHtml}
+      ${hasRules ? `
       <div class="quickref-sub">自分の手番でできること</div>
-      <ul class="quickref-list">${r.rules.map(s => `<li>${s}</li>`).join("")}</ul>
+      <ul class="quickref-list">${r.rules.map(s => `<li>${s}</li>`).join("")}</ul>` : ""}
     </div>
   `;
 }
@@ -1636,18 +1640,30 @@ function buildWorldviewSection(g) {
   return `<p class="detail-worldview">${r.worldview}</p>`;
 }
 
+function hostOf(u) {
+  try {
+    return new URL(u).hostname;
+  } catch (e) {
+    return u;
+  }
+}
+
 function buildSetupSection(g) {
   const slug = slugOf(g);
   const r = rulesData[slug];
   if (!r) return "";
+  const hasSetup = r.setup && r.setup.length;
+  const hasSources = r.sources && r.sources.length;
+  if (!hasSetup && !hasSources) return "";
   return `
+    ${hasSetup ? `
     <div class="detail-section-eyebrow">DESCRIPTION</div>
     <h2 class="detail-section-title">簡単準備＆ルール</h2>
     <div class="detail-section-title-sm">ゲームの準備</div>
-    <ol class="detail-list">${r.setup.map(s => `<li>${s}</li>`).join("")}</ol>
-    ${r.sources && r.sources.length ? `
+    <ol class="detail-list">${r.setup.map(s => `<li>${s}</li>`).join("")}</ol>` : ""}
+    ${hasSources ? `
     <div class="detail-sources">
-      参考: ${r.sources.map(u => `<a href="${u}" target="_blank" rel="noopener">${new URL(u).hostname}</a>`).join(" ・ ")}
+      参考: ${r.sources.map(u => `<a href="${u}" target="_blank" rel="noopener">${hostOf(u)}</a>`).join(" ・ ")}
     </div>` : ""}
   `;
 }
