@@ -668,6 +668,61 @@
     color: var(--accent);
     border-color: var(--accent);
   }
+  .interest-bar {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 14px 0;
+  }
+  .interest-btn {
+    border: 1px solid var(--accent);
+    background: var(--card-bg);
+    color: var(--accent);
+    font-size: 13px;
+    font-weight: 700;
+    padding: 8px 16px;
+    border-radius: 999px;
+    cursor: pointer;
+  }
+  .interest-btn.active {
+    background: var(--accent);
+    color: #fff;
+  }
+  .interest-names {
+    width: 100%;
+    font-size: 12.5px;
+    color: var(--text-sub);
+    margin-top: 2px;
+  }
+  .interest-names a {
+    color: var(--navy);
+    text-decoration: none;
+    border-bottom: 1px dotted var(--text-sub);
+  }
+  .members-link {
+    color: #7ee0a8;
+    font-size: 12px;
+    font-weight: 600;
+    text-decoration: underline;
+    padding: 0 0 0 6px;
+  }
+  .members-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .member-chip {
+    display: block;
+    text-decoration: none;
+    color: var(--navy);
+    background: var(--bg);
+    border: 1px solid var(--border);
+    font-size: 13.5px;
+    font-weight: 600;
+    padding: 9px 16px;
+    border-radius: 999px;
+  }
   .member-check-list {
     display: flex;
     flex-wrap: wrap;
@@ -876,6 +931,7 @@
   <h1>うちのボードゲーム棚</h1>
   <div class="count"><span id="totalCount">-</span>件所蔵 ・ ゲーム名タップで詳細、▶ルールで動画検索</div>
   <div class="user-badge" id="userBadge"></div>
+  <a href="#members" class="members-link">👥 みんなのページ一覧</a>
 </header>
 
 <div class="controls" id="controls">
@@ -942,6 +998,7 @@
   </div>
   <div id="detailView" style="display:none;"></div>
   <div id="playerView" style="display:none;"></div>
+  <div id="membersView" style="display:none;"></div>
 </main>
 
 <footer>
@@ -1002,10 +1059,12 @@ let rulesData = {};
 let genresData = {};
 let reviewsCache = {};
 let historyCache = {};
+let interestsCache = {};
 let state = { q: "", players: "", time: "", sort: "default", unplayedOnly: false };
 
 const RATINGS_CACHE_KEY = "bg_ratings_cache_v1";
 const HISTORY_CACHE_KEY = "bg_history_cache_v1";
+const INTERESTS_CACHE_KEY = "bg_interests_cache_v1";
 const MY_NAME_KEY = "bg_myname";
 
 const RATING_LEVELS = [
@@ -1286,7 +1345,8 @@ function fetchCollectionCache(collectionName, cacheKey) {
 function fetchAllReviews() {
   return Promise.all([
     fetchCollectionCache("ratings", RATINGS_CACHE_KEY).then(c => { reviewsCache = c; }),
-    fetchCollectionCache("history", HISTORY_CACHE_KEY).then(c => { historyCache = c; })
+    fetchCollectionCache("history", HISTORY_CACHE_KEY).then(c => { historyCache = c; }),
+    fetchCollectionCache("interests", INTERESTS_CACHE_KEY).then(c => { interestsCache = c; })
   ]);
 }
 
@@ -1296,6 +1356,25 @@ function getReviews(slug) {
 
 function getHistory(slug) {
   return historyCache[slug] || [];
+}
+
+function getInterests(slug) {
+  return interestsCache[slug] || [];
+}
+
+function toggleInterest(slug, name) {
+  if (!firebaseReady) {
+    alert("Firebaseが未設定のため、まだ「興味あり」は使えません。");
+    return Promise.resolve();
+  }
+  const existing = getInterests(slug).find(i => i.name === name);
+  if (existing) {
+    return db.collection("interests").doc(existing.id).delete().then(fetchAllReviews);
+  }
+  return db.collection("interests").add({
+    slug, name,
+    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+  }).then(fetchAllReviews);
 }
 
 function addRating(slug, name, level) {
@@ -1379,6 +1458,8 @@ function todayStr() {
 function getAllKnownNames() {
   const names = new Set();
   Object.values(reviewsCache).forEach(list => list.forEach(r => { if (r.name) names.add(r.name); }));
+  Object.values(historyCache).forEach(list => list.forEach(h => { if (h.name) names.add(h.name); }));
+  Object.values(interestsCache).forEach(list => list.forEach(i => { if (i.name) names.add(i.name); }));
   const arr = Array.from(names).sort((a, b) => a.localeCompare(b, "ja"));
   const myName = getMyName();
   if (myName && arr.includes(myName)) {
@@ -1571,10 +1652,30 @@ function buildSetupSection(g) {
   `;
 }
 
+function buildInterestSection(g) {
+  const slug = slugOf(g);
+  const interests = getInterests(slug);
+  const myName = getMyName();
+  const iAmIn = myName && interests.some(i => i.name === myName);
+  return `
+    <div class="interest-bar">
+      <button type="button" class="interest-btn ${iAmIn ? "active" : ""}" data-toggle-interest="${slug}">
+        ${iAmIn ? "🌟 興味あり登録済み" : "☆ 興味あり"}${interests.length ? ` (${interests.length})` : ""}
+      </button>
+      ${interests.length ? `
+      <button type="button" class="link-btn" data-toggle-section="interest-names">誰が興味あり？</button>
+      <div class="interest-names" data-section="interest-names" style="display:none;">
+        ${interests.map(i => `<a href="#player/${encodeURIComponent(i.name)}">${i.name}</a>`).join("・")}
+      </div>` : ""}
+    </div>
+  `;
+}
+
 function showDetail(g) {
   document.getElementById("controls").style.display = "none";
   document.getElementById("listView").style.display = "none";
   document.getElementById("playerView").style.display = "none";
+  document.getElementById("membersView").style.display = "none";
   const dv = document.getElementById("detailView");
   dv.style.display = "block";
 
@@ -1601,6 +1702,7 @@ function showDetail(g) {
         <div class="value">${avg != null ? `★ ${avg}/5` : "未評価"}</div>
       </div>
     </div>
+    ${buildInterestSection(g)}
     ${buildTagsAndPitch(g)}
     ${buildWorldviewSection(g)}
     ${buildSetupSection(g)}
@@ -1664,6 +1766,18 @@ document.getElementById("detailView").addEventListener("submit", async e => {
 });
 
 document.getElementById("detailView").addEventListener("click", e => {
+  const interestBtn = e.target.closest("[data-toggle-interest]");
+  if (interestBtn) {
+    const slug = interestBtn.dataset.toggleInterest;
+    const name = ensureMyName();
+    if (!name) return;
+    interestBtn.disabled = true;
+    toggleInterest(slug, name).then(() => {
+      const g = games.find(x => slugOf(x) === slug);
+      if (g) showDetail(g);
+    });
+    return;
+  }
   const toggleBtn = e.target.closest("[data-toggle-members]");
   if (toggleBtn) {
     const list = toggleBtn.parentElement.querySelector(".member-check-list");
@@ -1722,6 +1836,32 @@ function showListView() {
   document.getElementById("listView").style.display = "";
   document.getElementById("detailView").style.display = "none";
   document.getElementById("playerView").style.display = "none";
+  document.getElementById("membersView").style.display = "none";
+}
+
+function buildMembersView() {
+  const names = getAllKnownNames();
+  return `
+    <a class="detail-back" href="#">← 一覧へ戻る</a>
+    <h1 class="detail-title">みんなのページ一覧</h1>
+    <div class="detail-underline"></div>
+    ${names.length ? `
+    <div class="members-grid">
+      ${names.map(n => `<a class="member-chip" href="#player/${encodeURIComponent(n)}">${n}</a>`).join("")}
+    </div>
+    ` : `<div class="review-count">まだ誰も登録していません。評価・履歴・興味ありのいずれかを送るとここに表示されます。</div>`}
+  `;
+}
+
+function showMembersView() {
+  document.getElementById("controls").style.display = "none";
+  document.getElementById("listView").style.display = "none";
+  document.getElementById("detailView").style.display = "none";
+  document.getElementById("playerView").style.display = "none";
+  const mv = document.getElementById("membersView");
+  mv.style.display = "block";
+  mv.innerHTML = buildMembersView();
+  window.scrollTo(0, 0);
 }
 
 function getPlayerRatings(name) {
@@ -1742,6 +1882,16 @@ function getPlayerHistory(name) {
     });
   });
   result.sort((a, b) => (b.date || "").localeCompare(a.date || ""));
+  return result;
+}
+
+function getPlayerInterests(name) {
+  const result = [];
+  Object.keys(interestsCache).forEach(slug => {
+    (interestsCache[slug] || []).forEach(i => {
+      if (i.name === name) result.push({ slug, id: i.id });
+    });
+  });
   return result;
 }
 
@@ -1787,6 +1937,20 @@ function buildPlayerPage(name) {
   const totalCount = playerRatings.length;
   const genreBreakdown = buildGenreBreakdown(playerRatings);
   const playerHistory = getPlayerHistory(name);
+  const playerInterests = getPlayerInterests(name);
+
+  const interestRows = playerInterests.map(pi => {
+    const g = games.find(x => slugOf(x) === pi.slug);
+    if (!g) return "";
+    return `
+      <a class="player-game-row" href="#game/${encodeURIComponent(pi.slug)}">
+        <img src="${g.img}" alt="${g.jp}" onerror="this.style.visibility='hidden'">
+        <div class="player-game-row-body">
+          <div class="player-game-row-title">${g.jp}</div>
+        </div>
+      </a>
+    `;
+  }).join("");
 
   const gameRows = playerRatings.map(pr => {
     const g = games.find(x => slugOf(x) === pr.slug);
@@ -1820,6 +1984,12 @@ function buildPlayerPage(name) {
         </table>
       ` : `<div class="quickref-formula">タグが付いているゲームをまだ評価していません。評価するとここに好みの傾向が表示されます。</div>`}
     </div>
+    ${playerInterests.length ? `
+    <div class="review-card">
+      <div class="review-header"><div class="review-title">🌟 興味あるゲーム</div></div>
+      <div class="player-game-list">${interestRows}</div>
+    </div>
+    ` : ""}
     <div class="review-card">
       <div class="review-header"><div class="review-title">評価したゲーム</div></div>
       ${totalCount ? `
@@ -1860,6 +2030,7 @@ function showPlayerPage(name) {
   document.getElementById("controls").style.display = "none";
   document.getElementById("listView").style.display = "none";
   document.getElementById("detailView").style.display = "none";
+  document.getElementById("membersView").style.display = "none";
   const pv = document.getElementById("playerView");
   pv.style.display = "block";
   pv.innerHTML = buildPlayerPage(name);
@@ -1887,6 +2058,10 @@ function router() {
   const playerMatch = location.hash.match(/^#player\/(.+)$/);
   if (playerMatch) {
     showPlayerPage(decodeURIComponent(playerMatch[1]));
+    return;
+  }
+  if (location.hash === "#members") {
+    showMembersView();
     return;
   }
   showListView();
