@@ -59,6 +59,16 @@
     cursor: pointer;
     padding: 0 0 0 6px;
   }
+  .user-badge #registerNameBtn {
+    background: rgba(255,255,255,0.12);
+    border: 1px solid rgba(255,255,255,0.3);
+    border-radius: 999px;
+    color: #fff;
+    text-decoration: none;
+    padding: 6px 14px;
+    font-size: 12px;
+    font-weight: 600;
+  }
 
   .controls {
     position: sticky;
@@ -315,21 +325,45 @@
     font-size: 14px;
     font-weight: 600;
   }
-  .detail-badges {
+  .tag-section { margin-bottom: 16px; }
+  .tag-row {
     display: flex;
     flex-wrap: wrap;
-    gap: 8px;
-    margin-bottom: 28px;
+    gap: 6px;
+    margin-bottom: 6px;
   }
-  .detail-badge {
-    border: 1px solid var(--accent);
-    color: var(--accent);
-    background: var(--accent-soft);
+  .tag-chip {
+    border: 1px solid var(--border);
+    background: #fff;
+    color: var(--navy-light);
     font-size: 12px;
     font-weight: 600;
-    padding: 6px 12px;
+    padding: 5px 11px;
     border-radius: 999px;
+    cursor: pointer;
   }
+  .tag-chip:active { background: var(--accent-soft); }
+  .pitch-card {
+    background: #fff7e8;
+    border: 1px solid #f3d9a4;
+    border-radius: 12px;
+    padding: 14px 16px;
+    margin-bottom: 20px;
+  }
+  .pitch-title {
+    font-size: 13px;
+    font-weight: 700;
+    color: #9a6b1a;
+    margin-bottom: 8px;
+  }
+  .pitch-list {
+    margin: 0;
+    padding-left: 18px;
+    font-size: 13.5px;
+    line-height: 1.9;
+    color: var(--text);
+  }
+  .pitch-list li { margin-bottom: 2px; }
   .detail-worldview {
     font-size: 14.5px;
     line-height: 1.8;
@@ -514,6 +548,21 @@
     margin-bottom: 3px;
   }
   .review-form-field { flex: 1; min-width: 0; }
+  .submitter-line {
+    font-size: 13px;
+    color: var(--text);
+    margin-bottom: 12px;
+  }
+  .link-btn {
+    background: none;
+    border: none;
+    color: var(--accent);
+    font-size: 12.5px;
+    font-weight: 600;
+    text-decoration: underline;
+    cursor: pointer;
+    padding: 0 0 0 6px;
+  }
   .review-form input[type="text"],
   .review-form input[type="date"],
   .review-form textarea {
@@ -845,9 +894,10 @@ document.getElementById("sort").addEventListener("change", e => {
 
 function matches(g) {
   if (state.q) {
-    const q = state.q.toLowerCase();
+    const q = state.q.toLowerCase().replace(/^#/, "");
     const hay = (g.jp + " " + g.en).toLowerCase();
-    if (!hay.includes(q)) return false;
+    const tagHay = getGameTags(g).all.join(" ").toLowerCase();
+    if (!hay.includes(q) && !tagHay.includes(q)) return false;
   }
   if (state.players) {
     const n = parseInt(state.players, 10);
@@ -947,14 +997,54 @@ function ruleVideoUrl(g) {
   return `https://www.youtube.com/results?search_query=${q}`;
 }
 
-function computeBadges(g) {
-  const badges = [];
-  if (g.playersMin === 1) badges.push("ソロ可");
-  if (g.playersMin != null && g.playersMin <= 2 && (g.playersMax == null || g.playersMax >= 2)) badges.push("2人でも遊べる");
-  if (g.playersMax != null && g.playersMax >= 8) badges.push("大人数向け");
-  if (g.timeMax != null && g.timeMax <= 15) badges.push("サクッと〜15分");
-  if (g.timeMin != null && g.timeMin >= 60) badges.push("じっくり60分〜");
-  return badges;
+function getGameTags(g) {
+  const slug = slugOf(g);
+  const genreTags = genresData[slug] || [];
+  const r = rulesData[slug];
+  const audienceTags = (r && r.audienceTags) || [];
+  const computedTags = [];
+  if (g.playersMin === 1) computedTags.push("ソロ可");
+  if (g.playersMax != null && g.playersMax >= 8) computedTags.push("大人数向け");
+  if (g.timeMax != null && g.timeMax <= 15) computedTags.push("サクッと〜15分");
+  if (g.timeMin != null && g.timeMin >= 60) computedTags.push("じっくり60分〜");
+  const mergedAudience = Array.from(new Set([...audienceTags, ...computedTags]));
+  return { genreTags, audienceTags: mergedAudience, all: [...genreTags, ...mergedAudience] };
+}
+
+function goToTagSearch(tag) {
+  state.q = tag;
+  location.hash = "";
+  showListView();
+  const searchInput = document.getElementById("search");
+  if (searchInput) searchInput.value = tag;
+  render();
+  window.scrollTo(0, 0);
+}
+
+function buildTagsAndPitch(g) {
+  const slug = slugOf(g);
+  const { genreTags, audienceTags } = getGameTags(g);
+  const r = rulesData[slug];
+  const sellingPoints = r && r.sellingPoints;
+
+  if (genreTags.length === 0 && audienceTags.length === 0 && (!sellingPoints || sellingPoints.length === 0)) {
+    return "";
+  }
+
+  const tagChip = t => `<button class="tag-chip" data-tag-search="${t}">#${t}</button>`;
+
+  return `
+    ${(genreTags.length || audienceTags.length) ? `
+    <div class="tag-section">
+      ${genreTags.length ? `<div class="tag-row">${genreTags.map(tagChip).join("")}</div>` : ""}
+      ${audienceTags.length ? `<div class="tag-row">${audienceTags.map(tagChip).join("")}</div>` : ""}
+    </div>` : ""}
+    ${sellingPoints && sellingPoints.length ? `
+    <div class="pitch-card">
+      <div class="pitch-title">✨ おすすめポイント</div>
+      <ul class="pitch-list">${sellingPoints.map(p => `<li>${p}</li>`).join("")}</ul>
+    </div>` : ""}
+  `;
 }
 
 function fetchCollectionCache(collectionName, cacheKey) {
@@ -1017,13 +1107,13 @@ function deleteRating(slug, id) {
   return db.collection("ratings").doc(id).delete().then(fetchAllReviews);
 }
 
-function addHistory(slug, date, members, memo) {
+function addHistory(slug, name, date, members, memo) {
   if (!firebaseReady) {
     alert("Firebaseが未設定のため、まだ「プレイ履歴」は使えません。");
     return Promise.resolve();
   }
   return db.collection("history").add({
-    slug, date, members, memo,
+    slug, name, date, members, memo,
     createdAt: firebase.firestore.FieldValue.serverTimestamp()
   }).then(fetchAllReviews);
 }
@@ -1049,14 +1139,25 @@ function renderUserBadge() {
   const name = getMyName();
   el.innerHTML = name
     ? `あなたの名前: <a href="#player/${encodeURIComponent(name)}" style="color:#fff;">${name}</a> <button id="changeNameBtn" type="button">変更</button>`
-    : `評価を送ると名前が登録されます`;
-  const btn = document.getElementById("changeNameBtn");
-  if (btn) {
-    btn.addEventListener("click", () => {
+    : `<button id="registerNameBtn" type="button">＋マイページを作る（名前を登録）</button>`;
+  const changeBtn = document.getElementById("changeNameBtn");
+  if (changeBtn) {
+    changeBtn.addEventListener("click", () => {
       const next = prompt("表示名を変更", name);
       if (next && next.trim()) {
         localStorage.setItem(MY_NAME_KEY, next.trim());
         renderUserBadge();
+      }
+    });
+  }
+  const registerBtn = document.getElementById("registerNameBtn");
+  if (registerBtn) {
+    registerBtn.addEventListener("click", () => {
+      const next = prompt("表示名を入力してください");
+      if (next && next.trim()) {
+        localStorage.setItem(MY_NAME_KEY, next.trim());
+        renderUserBadge();
+        location.hash = `#player/${encodeURIComponent(next.trim())}`;
       }
     });
   }
@@ -1078,25 +1179,12 @@ function getAllKnownNames() {
   return arr;
 }
 
-function buildNamePicker() {
-  const known = getAllKnownNames();
+function buildSubmitterLine() {
   const myName = getMyName();
   return `
-    <div class="review-form-field">
-      <label>プレイヤー</label>
-      <div class="rating-choice-row name-pick-row">
-        ${known.map(n => `
-          <label class="rating-choice name-choice">
-            <input type="radio" name="namePick" value="${n}" ${n === myName ? "checked" : ""}>
-            <span>${n}</span>
-          </label>
-        `).join("")}
-        <label class="rating-choice name-choice">
-          <input type="radio" name="namePick" value="__new__" ${known.length === 0 ? "checked" : ""}>
-          <span>＋新しい名前</span>
-        </label>
-      </div>
-      <input type="text" name="newName" class="new-name-input" placeholder="名前を入力" maxlength="20" style="${known.length === 0 ? "" : "display:none;"}">
+    <div class="submitter-line">
+      プレイヤー: <strong>${myName || "未登録"}</strong>
+      <button type="button" class="link-btn" data-change-submitter>${myName ? "変更" : "登録"}</button>
     </div>
   `;
 }
@@ -1127,7 +1215,7 @@ function buildRatingSection(g) {
         `).join("")}
       </div>` : ""}
       <form class="rating-form" data-rating-slug="${slug}">
-        ${buildNamePicker()}
+        ${buildSubmitterLine()}
         <div class="rating-choice-row">
           ${RATING_LEVELS.map(l => `
             <label class="rating-choice">
@@ -1156,7 +1244,7 @@ function buildHistorySection(g) {
         ${history.map(h => `
           <div class="review-item">
             <div class="review-item-top">
-              <span class="review-item-name">${h.date || "日付なし"}</span>
+              <span class="review-item-name">${h.name ? `<a href="#player/${encodeURIComponent(h.name)}">${h.name}</a>` : "―"}${h.date ? `<span class="review-item-date">${h.date}</span>` : ""}</span>
               <button class="review-item-del" data-del-history-id="${h.id}" data-del-slug="${slug}" title="削除">×</button>
             </div>
             ${h.members ? `<div class="review-item-members">👥 ${h.members}</div>` : ""}
@@ -1165,6 +1253,7 @@ function buildHistorySection(g) {
         `).join("")}
       </div>` : ""}
       <form class="history-form" data-history-slug="${slug}">
+        ${buildSubmitterLine()}
         <div class="review-form-row">
           <div class="review-form-field">
             <label>日付</label>
@@ -1216,14 +1305,20 @@ function buildQuickRef(g) {
   `;
 }
 
-function buildRuleSection(g) {
+function buildWorldviewSection(g) {
+  const slug = slugOf(g);
+  const r = rulesData[slug];
+  if (!r) return "";
+  return `<p class="detail-worldview">${r.worldview}</p>`;
+}
+
+function buildSetupSection(g) {
   const slug = slugOf(g);
   const r = rulesData[slug];
   if (!r) return "";
   return `
-    <p class="detail-worldview">${r.worldview}</p>
     <div class="detail-section-eyebrow">DESCRIPTION</div>
-    <h2 class="detail-section-title">簡単ルール</h2>
+    <h2 class="detail-section-title">簡単準備＆ルール</h2>
     <div class="detail-section-title-sm">ゲームの準備</div>
     <ol class="detail-list">${r.setup.map(s => `<li>${s}</li>`).join("")}</ol>
     ${r.sources && r.sources.length ? `
@@ -1240,7 +1335,6 @@ function showDetail(g) {
   const dv = document.getElementById("detailView");
   dv.style.display = "block";
 
-  const badges = computeBadges(g);
   const avg = averageScore(slugOf(g));
   dv.innerHTML = `
     <a class="detail-back" href="#">← 一覧へ戻る</a>
@@ -1264,15 +1358,27 @@ function showDetail(g) {
         <div class="value">${avg != null ? `★ ${avg}/5` : "未評価"}</div>
       </div>
     </div>
-    ${badges.length ? `<div class="detail-badges">${badges.map(b => `<span class="detail-badge">${b}</span>`).join("")}</div>` : ""}
-    ${buildRatingSection(g)}
-    ${buildHistorySection(g)}
+    ${buildTagsAndPitch(g)}
+    ${buildWorldviewSection(g)}
+    ${buildSetupSection(g)}
     ${buildQuickRef(g)}
     <a class="detail-cta detail-cta-primary" href="${ruleVideoUrl(g)}" target="_blank" rel="noopener">▶ ルールを動画で確認</a>
     <a class="detail-cta detail-cta-secondary" href="${g.url}" target="_blank" rel="noopener">ボドゲーマで詳細を見る</a>
-    ${buildRuleSection(g)}
+    ${buildRatingSection(g)}
+    ${buildHistorySection(g)}
   `;
   window.scrollTo(0, 0);
+}
+
+function ensureMyName() {
+  let name = getMyName();
+  if (name) return name;
+  const next = prompt("表示名を入力してください");
+  if (!next || !next.trim()) return null;
+  name = next.trim();
+  localStorage.setItem(MY_NAME_KEY, name);
+  renderUserBadge();
+  return name;
 }
 
 document.getElementById("detailView").addEventListener("submit", async e => {
@@ -1283,17 +1389,13 @@ document.getElementById("detailView").addEventListener("submit", async e => {
 
   if (ratingForm) {
     const slug = ratingForm.dataset.ratingSlug;
-    const namePickInput = ratingForm.querySelector('input[name="namePick"]:checked');
-    const name = namePickInput && namePickInput.value === "__new__"
-      ? ratingForm.elements.newName.value.trim()
-      : (namePickInput ? namePickInput.value : "");
+    const name = ensureMyName();
     const levelInput = ratingForm.querySelector('input[name="level"]:checked');
     if (!name || !levelInput) return;
     const level = parseInt(levelInput.value, 10);
     const submitBtn = ratingForm.querySelector("button[type=submit]");
     submitBtn.disabled = true;
     await addRating(slug, name, level);
-    renderUserBadge();
     const g = games.find(x => slugOf(x) === slug);
     if (g) showDetail(g);
     return;
@@ -1301,27 +1403,39 @@ document.getElementById("detailView").addEventListener("submit", async e => {
 
   if (historyForm) {
     const slug = historyForm.dataset.historySlug;
+    const name = ensureMyName();
+    if (!name) return;
     const date = historyForm.elements.date.value || "";
     const members = historyForm.elements.members.value.trim();
     const memo = historyForm.elements.memo.value.trim();
     const submitBtn = historyForm.querySelector("button[type=submit]");
     submitBtn.disabled = true;
-    await addHistory(slug, date, members, memo);
+    await addHistory(slug, name, date, members, memo);
     const g = games.find(x => slugOf(x) === slug);
     if (g) showDetail(g);
   }
 });
 
-document.getElementById("detailView").addEventListener("change", e => {
-  if (e.target.name !== "namePick") return;
-  const form = e.target.closest("form");
-  const newNameInput = form.querySelector(".new-name-input");
-  if (!newNameInput) return;
-  if (e.target.value === "__new__") {
-    newNameInput.style.display = "";
-    newNameInput.focus();
-  } else {
-    newNameInput.style.display = "none";
+document.getElementById("detailView").addEventListener("click", e => {
+  const btn = e.target.closest("[data-change-submitter]");
+  if (!btn) return;
+  const current = getMyName();
+  const next = prompt("表示名を変更", current);
+  if (next && next.trim()) {
+    localStorage.setItem(MY_NAME_KEY, next.trim());
+    renderUserBadge();
+    const m = location.hash.match(/^#game\/(.+)$/);
+    if (m) {
+      const g = games.find(x => slugOf(x) === decodeURIComponent(m[1]));
+      if (g) showDetail(g);
+    }
+  }
+});
+
+document.getElementById("detailView").addEventListener("click", e => {
+  const tagBtn = e.target.closest("[data-tag-search]");
+  if (tagBtn) {
+    goToTagSearch(tagBtn.dataset.tagSearch);
   }
 });
 
@@ -1357,15 +1471,28 @@ function getPlayerRatings(name) {
   return result;
 }
 
+function getPlayerHistory(name) {
+  const result = [];
+  Object.keys(historyCache).forEach(slug => {
+    (historyCache[slug] || []).forEach(h => {
+      if (h.name === name) result.push(Object.assign({ slug }, h));
+    });
+  });
+  result.sort((a, b) => (b.date || "").localeCompare(a.date || ""));
+  return result;
+}
+
 function buildGenreBreakdown(playerRatings) {
   const genreScores = {};
   playerRatings.forEach(pr => {
-    const genres = genresData[pr.slug];
-    if (!genres) return;
-    genres.forEach(g => {
-      if (!genreScores[g]) genreScores[g] = { sum: 0, count: 0 };
-      genreScores[g].sum += pr.level;
-      genreScores[g].count += 1;
+    const g = games.find(x => slugOf(x) === pr.slug);
+    if (!g) return;
+    const tags = getGameTags(g).all;
+    if (!tags.length) return;
+    tags.forEach(t => {
+      if (!genreScores[t]) genreScores[t] = { sum: 0, count: 0 };
+      genreScores[t].sum += pr.level;
+      genreScores[t].count += 1;
     });
   });
   return Object.entries(genreScores)
@@ -1373,12 +1500,30 @@ function buildGenreBreakdown(playerRatings) {
     .sort((a, b) => b.avg - a.avg || b.count - a.count);
 }
 
+let playerPageSort = "level_desc";
+
+function sortPlayerRatings(list) {
+  const arr = list.slice();
+  switch (playerPageSort) {
+    case "level_asc":
+      arr.sort((a, b) => a.level - b.level);
+      break;
+    case "recent":
+      arr.sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
+      break;
+    case "level_desc":
+    default:
+      arr.sort((a, b) => b.level - a.level);
+      break;
+  }
+  return arr;
+}
+
 function buildPlayerPage(name) {
-  const playerRatings = getPlayerRatings(name);
+  const playerRatings = sortPlayerRatings(getPlayerRatings(name));
   const totalCount = playerRatings.length;
-  const avgGiven = totalCount ? Math.round(playerRatings.reduce((a, r) => a + r.level, 0) / totalCount * 10) / 10 : null;
   const genreBreakdown = buildGenreBreakdown(playerRatings);
-  const taggedCount = playerRatings.filter(r => genresData[r.slug]).length;
+  const playerHistory = getPlayerHistory(name);
 
   const gameRows = playerRatings.map(pr => {
     const g = games.find(x => slugOf(x) === pr.slug);
@@ -1398,31 +1543,52 @@ function buildPlayerPage(name) {
     <a class="detail-back" href="#">← 一覧へ戻る</a>
     <h1 class="detail-title">${name} さんのページ</h1>
     <div class="detail-underline"></div>
-    <div class="detail-spec-grid">
+    <div class="detail-spec-grid" style="grid-template-columns: 1fr;">
       <div class="detail-spec-box">
-        <div class="label">評価した数</div>
+        <div class="label">遊んだ数</div>
         <div class="value">${totalCount}件</div>
-      </div>
-      <div class="detail-spec-box">
-        <div class="label">平均評価</div>
-        <div class="value">${avgGiven != null ? avgGiven : "-"}</div>
-      </div>
-      <div class="detail-spec-box">
-        <div class="label">タグ付きゲーム</div>
-        <div class="value">${taggedCount}件</div>
       </div>
     </div>
     <div class="quickref-card">
       <div class="quickref-title">🎯 好きなジャンル傾向</div>
       ${genreBreakdown.length ? `
         <table class="quickref-table">
-          ${genreBreakdown.map(gb => `<tr><td>${gb.genre}</td><td>★${gb.avg}（${gb.count}件）</td></tr>`).join("")}
+          ${genreBreakdown.slice(0, 5).map(gb => `<tr><td>#${gb.genre}</td><td>★${gb.avg}（${gb.count}件）</td></tr>`).join("")}
         </table>
-      ` : `<div class="quickref-formula">ジャンルタグが付いているゲーム（カタン・宝石の煌きなど）をまだ評価していません。評価するとここに好みの傾向が表示されます。</div>`}
+      ` : `<div class="quickref-formula">タグが付いているゲームをまだ評価していません。評価するとここに好みの傾向が表示されます。</div>`}
     </div>
     <div class="review-card">
       <div class="review-header"><div class="review-title">評価したゲーム</div></div>
-      ${totalCount ? `<div class="player-game-list">${gameRows}</div>` : `<div class="review-count">まだ評価がありません</div>`}
+      ${totalCount ? `
+        <div class="review-form-field" style="margin-bottom:12px;">
+          <label>並び順</label>
+          <select id="playerSortSelect" class="sort-select" style="width:100%;">
+            <option value="level_desc" ${playerPageSort === "level_desc" ? "selected" : ""}>評価が高い順</option>
+            <option value="level_asc" ${playerPageSort === "level_asc" ? "selected" : ""}>評価が低い順</option>
+            <option value="recent" ${playerPageSort === "recent" ? "selected" : ""}>最近評価した順</option>
+          </select>
+        </div>
+        <div class="player-game-list">${gameRows}</div>
+      ` : `<div class="review-count">まだ評価がありません</div>`}
+    </div>
+    <div class="review-card">
+      <div class="review-header"><div class="review-title">プレイ履歴</div></div>
+      ${playerHistory.length ? `
+        <div class="review-list">
+          ${playerHistory.map(h => {
+            const g = games.find(x => slugOf(x) === h.slug);
+            return `
+              <div class="review-item">
+                <div class="review-item-top">
+                  <span class="review-item-name">${g ? `<a href="#game/${encodeURIComponent(h.slug)}">${g.jp}</a>` : h.slug}${h.date ? `<span class="review-item-date">${h.date}</span>` : ""}</span>
+                </div>
+                ${h.members ? `<div class="review-item-members">👥 ${h.members}</div>` : ""}
+                ${h.memo ? `<div class="review-item-memo">${h.memo}</div>` : ""}
+              </div>
+            `;
+          }).join("")}
+        </div>
+      ` : `<div class="review-count">まだ記録がありません</div>`}
     </div>
   `;
 }
@@ -1436,6 +1602,14 @@ function showPlayerPage(name) {
   pv.innerHTML = buildPlayerPage(name);
   window.scrollTo(0, 0);
 }
+
+document.getElementById("playerView").addEventListener("change", e => {
+  if (e.target.id !== "playerSortSelect") return;
+  playerPageSort = e.target.value;
+  const m = location.hash.match(/^#player\/(.+)$/);
+  if (!m) return;
+  document.getElementById("playerView").innerHTML = buildPlayerPage(decodeURIComponent(m[1]));
+});
 
 function router() {
   const gameMatch = location.hash.match(/^#game\/(.+)$/);
