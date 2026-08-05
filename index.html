@@ -1074,7 +1074,7 @@
   <div class="filter-row-compact">
     <label class="unplayed-toggle">
       <input type="checkbox" id="unplayedOnly">
-      <span>🗄️ 積みゲー（未プレイ）のみ表示</span>
+      <span>🗄️ 積みゲー（自分が未評価）のみ表示</span>
     </label>
     <button type="button" id="randomPickBtn" class="random-pick-btn">🎲 今日は何にする？</button>
   </div>
@@ -1178,10 +1178,14 @@ function ratingLabel(value) {
   return l ? `${l.emoji} ${l.label}` : `${value}`;
 }
 
+// no-cache は「毎回サーバーに聞く」設定。変更が無ければ304が返るだけなので通信量はほぼ増えず、
+// データを差し替えたのに古い内容が表示され続ける事故を防げる。
+const NO_CACHE = { cache: "no-cache" };
+
 Promise.all([
-  fetch("data/games.json").then(r => r.json()),
-  fetch("data/rules.json").then(r => r.ok ? r.json() : {}).catch(() => ({})),
-  fetch("data/genres.json").then(r => r.ok ? r.json() : {}).catch(() => ({})),
+  fetch("data/games.json", NO_CACHE).then(r => r.json()),
+  fetch("data/rules.json", NO_CACHE).then(r => r.ok ? r.json() : {}).catch(() => ({})),
+  fetch("data/genres.json", NO_CACHE).then(r => r.ok ? r.json() : {}).catch(() => ({})),
   fetchAllReviews()
 ]).then(([gamesData, rules, genres]) => {
   games = gamesData;
@@ -1255,7 +1259,7 @@ function matches(g) {
     }
   }
   if (state.unplayedOnly) {
-    if (getHistory(slugOf(g)).length > 0) return false;
+    if (hasMyRating(slugOf(g))) return false;
   }
   return true;
 }
@@ -1518,6 +1522,13 @@ function averageScore(slug) {
 
 function getMyName() {
   return localStorage.getItem(MY_NAME_KEY) || "";
+}
+
+// 「積みゲー」判定は自分の評価の有無で見る。履歴の記録は手間がかかって続かないため。
+function hasMyRating(slug) {
+  const myName = getMyName();
+  if (!myName) return false;
+  return getReviews(slug).some(r => r.name === myName);
 }
 
 function renderUserBadge() {
