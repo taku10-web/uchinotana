@@ -723,6 +723,100 @@
     padding: 9px 16px;
     border-radius: 999px;
   }
+  .recommend-btn {
+    display: block;
+    width: 100%;
+    text-align: center;
+    text-decoration: none;
+    background: linear-gradient(135deg, var(--navy-light), var(--accent));
+    color: #fff;
+    font-size: 13.5px;
+    font-weight: 700;
+    padding: 11px 12px;
+    border-radius: 999px;
+  }
+  .rec-pick-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 10px;
+  }
+  .rec-pick {
+    border: 1px solid var(--border);
+    background: var(--bg);
+    color: var(--text);
+    font-size: 13.5px;
+    font-weight: 600;
+    padding: 9px 16px;
+    border-radius: 999px;
+    cursor: pointer;
+  }
+  .rec-pick.on {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #fff;
+  }
+  .rec-status {
+    font-size: 12.5px;
+    color: var(--text-sub);
+  }
+  .rec-item {
+    display: flex;
+    gap: 12px;
+    text-decoration: none;
+    color: inherit;
+    padding: 12px;
+    border-radius: 10px;
+    background: var(--bg);
+    margin-bottom: 8px;
+    align-items: flex-start;
+  }
+  .rec-rank {
+    flex-shrink: 0;
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    background: var(--accent);
+    color: #fff;
+    font-size: 13px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .rec-item img {
+    width: 52px;
+    height: 52px;
+    object-fit: contain;
+    border-radius: 6px;
+    background: #f1f2f5;
+    flex-shrink: 0;
+  }
+  .rec-body { min-width: 0; flex: 1; }
+  .rec-title { font-weight: 600; font-size: 14.5px; line-height: 1.35; }
+  .rec-spec { font-size: 11.5px; color: var(--text-sub); margin: 3px 0 5px; }
+  .rec-reason {
+    font-size: 12px;
+    color: var(--text);
+    line-height: 1.6;
+  }
+  .rec-reason span {
+    display: inline-block;
+    background: var(--accent-soft);
+    color: var(--navy-light);
+    border-radius: 5px;
+    padding: 1px 7px;
+    margin: 2px 4px 0 0;
+  }
+  .rec-reason span.hot {
+    background: #ffe9c7;
+    color: #a86b12;
+  }
+  .rec-excluded {
+    font-size: 12px;
+    color: var(--text-sub);
+    line-height: 1.7;
+  }
   .member-check-list {
     display: flex;
     flex-wrap: wrap;
@@ -984,6 +1078,9 @@
     </label>
     <button type="button" id="randomPickBtn" class="random-pick-btn">🎲 今日は何にする？</button>
   </div>
+  <div class="filter-row-compact">
+    <a href="#recommend" class="recommend-btn">👥 メンバーで選んでおすすめしてもらう</a>
+  </div>
 </div>
 
 <main>
@@ -999,6 +1096,7 @@
   <div id="detailView" style="display:none;"></div>
   <div id="playerView" style="display:none;"></div>
   <div id="membersView" style="display:none;"></div>
+  <div id="recommendView" style="display:none;"></div>
 </main>
 
 <footer>
@@ -1066,6 +1164,7 @@ const RATINGS_CACHE_KEY = "bg_ratings_cache_v1";
 const HISTORY_CACHE_KEY = "bg_history_cache_v1";
 const INTERESTS_CACHE_KEY = "bg_interests_cache_v1";
 const MY_NAME_KEY = "bg_myname";
+const REC_MEMBERS_KEY = "bg_rec_members";
 
 const RATING_LEVELS = [
   { value: 5, label: "最高", emoji: "🤩" },
@@ -1692,6 +1791,7 @@ function showDetail(g) {
   document.getElementById("listView").style.display = "none";
   document.getElementById("playerView").style.display = "none";
   document.getElementById("membersView").style.display = "none";
+  document.getElementById("recommendView").style.display = "none";
   const dv = document.getElementById("detailView");
   dv.style.display = "block";
 
@@ -1853,6 +1953,7 @@ function showListView() {
   document.getElementById("detailView").style.display = "none";
   document.getElementById("playerView").style.display = "none";
   document.getElementById("membersView").style.display = "none";
+  document.getElementById("recommendView").style.display = "none";
 }
 
 function buildMembersView() {
@@ -1869,11 +1970,238 @@ function buildMembersView() {
   `;
 }
 
+function getPlayerTagAffinity(name) {
+  const acc = {};
+  getPlayerRatings(name).forEach(pr => {
+    const g = games.find(x => slugOf(x) === pr.slug);
+    if (!g) return;
+    getGameTags(g).all.forEach(t => {
+      if (!acc[t]) acc[t] = { sum: 0, n: 0 };
+      acc[t].sum += pr.level;
+      acc[t].n += 1;
+    });
+  });
+  const out = {};
+  Object.keys(acc).forEach(t => { out[t] = acc[t].sum / acc[t].n; });
+  return out;
+}
+
+// 選んだメンバーの好み・興味あり・過去の評価を合成しておすすめを作る。
+// 誰かが「苦手」「やりたくない」と評価したゲームは除外リストに回す。
+function buildRecommendations(members) {
+  const affinity = {}, rated = {}, interested = {};
+  members.forEach(m => {
+    affinity[m] = getPlayerTagAffinity(m);
+    rated[m] = {};
+    getPlayerRatings(m).forEach(pr => { rated[m][pr.slug] = pr.level; });
+    interested[m] = new Set();
+  });
+  Object.keys(interestsCache).forEach(slug => {
+    (interestsCache[slug] || []).forEach(i => {
+      if (interested[i.name]) interested[i.name].add(slug);
+    });
+  });
+
+  const n = members.length;
+  const scored = [], neutral = [], excluded = [];
+
+  games.forEach(g => {
+    const slug = slugOf(g);
+    if (n > 0) {
+      if (g.playersMin != null && n < g.playersMin) return;
+      if (g.playersMax != null && n > g.playersMax) return;
+    }
+    const tags = getGameTags(g).all;
+    // 拡張セットは単体で遊べないので「今日なにする？」の候補から外す
+    if (tags.includes("拡張")) return;
+
+    const per = [], reasons = [], vetoBy = [];
+    const wantBy = [];
+    let evidence = 0;
+
+    members.forEach(m => {
+      if (interested[m].has(slug)) wantBy.push(m);
+      const lv = rated[m][slug];
+      let s = null, k = 0;
+      if (lv != null) {
+        s = lv;
+        k = 4; // 本人の実評価は強い根拠
+        if (lv <= 2) vetoBy.push(m);
+        else if (lv >= 4) reasons.push({ hot: false, text: `${m}が${ratingLabel(lv)}` });
+      } else {
+        const ts = tags.map(t => affinity[m][t]).filter(v => v != null);
+        if (ts.length) {
+          s = ts.reduce((a, b) => a + b, 0) / ts.length;
+          k = ts.length;
+        }
+      }
+      evidence += k;
+      // 根拠が薄いものは「ふつう(3)」に引き戻す。タグ1個だけの一致で満点にしない
+      per.push(s == null ? 3 : (k * s + 2 * 3) / (k + 2));
+    });
+
+    if (vetoBy.length) {
+      excluded.push({ g, who: vetoBy.join("・") });
+      return;
+    }
+
+    // どのタグが効いたかを説明できるようにする
+    const tagHits = [];
+    tags.forEach(t => {
+      const vals = members.map(m => affinity[m][t]).filter(v => v != null);
+      if (!vals.length) return;
+      const avg = vals.reduce((a, b) => a + b, 0) / vals.length;
+      if (avg >= 3.5) tagHits.push({ t, avg, n: vals.length });
+    });
+    tagHits.sort((a, b) => b.avg - a.avg || b.n - a.n);
+    tagHits.slice(0, 2).forEach(h => {
+      reasons.unshift({ hot: false, text: `#${h.t} が好み（★${Math.round(h.avg * 10) / 10}）` });
+    });
+
+    if (wantBy.length) {
+      reasons.unshift({ hot: true, text: `🌟 ${wantBy.join("・")} が興味あり` });
+    }
+
+    const base = per.length ? per.reduce((a, b) => a + b, 0) / per.length : 3;
+    const score = base + wantBy.length * 0.8;
+    const entry = { g, slug, score, reasons };
+
+    if (evidence || wantBy.length) scored.push(entry);
+    else neutral.push(entry);
+  });
+
+  scored.sort((a, b) => b.score - a.score);
+  excluded.sort((a, b) => a.g.jp.localeCompare(b.g.jp, "ja"));
+  return { scored, neutral, excluded };
+}
+
+function getRecMembers() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(REC_MEMBERS_KEY));
+    if (Array.isArray(saved)) return saved.filter(n => getAllKnownNames().includes(n));
+  } catch (e) { /* 壊れていたら選択なしから始める */ }
+  return [];
+}
+
+function buildRecommendView() {
+  const known = getAllKnownNames();
+  const selected = getRecMembers();
+
+  if (known.length === 0) {
+    return `
+      <a class="detail-back" href="#">← 一覧へ戻る</a>
+      <h1 class="detail-title">今日のおすすめ</h1>
+      <div class="detail-underline"></div>
+      <div class="review-card">
+        <div class="review-count">まだ誰も登録されていません。評価・履歴・興味ありを送るとメンバーとして選べるようになります。</div>
+      </div>
+    `;
+  }
+
+  const picker = `
+    <div class="review-card">
+      <div class="review-header"><div class="review-title">今いるメンバーを選ぶ</div></div>
+      <div class="rec-pick-grid">
+        ${known.map(n => `
+          <button type="button" class="rec-pick ${selected.includes(n) ? "on" : ""}" data-rec-toggle="${n}">${n}</button>
+        `).join("")}
+      </div>
+      <div class="rec-status">${selected.length
+        ? `${selected.length}人を選択中 ・ ${selected.length}人で遊べるゲームから探しています`
+        : "メンバーをタップして選んでください"}</div>
+    </div>
+  `;
+
+  if (selected.length === 0) return `
+    <a class="detail-back" href="#">← 一覧へ戻る</a>
+    <h1 class="detail-title">今日のおすすめ</h1>
+    <div class="detail-underline"></div>
+    ${picker}
+  `;
+
+  const { scored, neutral, excluded } = buildRecommendations(selected);
+  const top = scored.slice(0, 8);
+  // 好みのデータが足りないときは、毎回同じ顔ぶれにならないよう穴埋めをランダムに選ぶ
+  const filler = top.length < 5
+    ? neutral.slice().sort(() => Math.random() - 0.5).slice(0, 5 - top.length)
+    : [];
+
+  const row = (e, i) => `
+    <a class="rec-item" href="#game/${encodeURIComponent(e.slug)}">
+      <div class="rec-rank">${i + 1}</div>
+      <img src="${e.g.img}" alt="${e.g.jp}" onerror="this.style.visibility='hidden'">
+      <div class="rec-body">
+        <div class="rec-title">${e.g.jp}</div>
+        <div class="rec-spec">${e.g.playersRaw || "人数不明"} ・ ${e.g.timeRaw || "時間不明"}</div>
+        ${e.reasons.length
+          ? `<div class="rec-reason">${e.reasons.map(r => `<span class="${r.hot ? "hot" : ""}">${r.text}</span>`).join("")}</div>`
+          : `<div class="rec-reason"><span>まだ好みのデータがないゲームです</span></div>`}
+      </div>
+    </a>
+  `;
+
+  return `
+    <a class="detail-back" href="#">← 一覧へ戻る</a>
+    <h1 class="detail-title">今日のおすすめ</h1>
+    <div class="detail-underline"></div>
+    ${picker}
+    <div class="review-card">
+      <div class="review-header"><div class="review-title">おすすめ ${top.length + filler.length}件</div></div>
+      ${top.length
+        ? top.map(row).join("")
+        : `<div class="review-count">好みのデータがまだ足りません。評価や興味ありを登録すると精度が上がります。</div>`}
+      ${filler.length ? `
+        <div class="rec-status" style="margin:10px 0 8px;">— ここから下は好みのデータがないゲームです —</div>
+        ${filler.map((e, i) => row(e, top.length + i)).join("")}
+      ` : ""}
+    </div>
+    ${excluded.length ? `
+    <div class="review-card">
+      <div class="review-header"><div class="review-title">苦手な人がいるので外したゲーム</div></div>
+      <button type="button" class="section-toggle-btn" data-toggle-section="rec-excluded">見る（${excluded.length}件）</button>
+      <div class="rec-excluded" data-section="rec-excluded" style="display:none;">
+        ${excluded.map(x => `${x.g.jp} <span style="opacity:.7;">（${x.who}）</span>`).join("<br>")}
+      </div>
+    </div>` : ""}
+  `;
+}
+
+function showRecommendView() {
+  document.getElementById("controls").style.display = "none";
+  document.getElementById("listView").style.display = "none";
+  document.getElementById("detailView").style.display = "none";
+  document.getElementById("playerView").style.display = "none";
+  document.getElementById("membersView").style.display = "none";
+  const rv = document.getElementById("recommendView");
+  rv.style.display = "block";
+  rv.innerHTML = buildRecommendView();
+  window.scrollTo(0, 0);
+}
+
+document.getElementById("recommendView").addEventListener("click", e => {
+  const pick = e.target.closest("[data-rec-toggle]");
+  if (pick) {
+    const name = pick.dataset.recToggle;
+    const cur = getRecMembers();
+    const next = cur.includes(name) ? cur.filter(n => n !== name) : [...cur, name];
+    localStorage.setItem(REC_MEMBERS_KEY, JSON.stringify(next));
+    showRecommendView();
+    return;
+  }
+  const toggle = e.target.closest("[data-toggle-section]");
+  if (toggle) {
+    const key = toggle.dataset.toggleSection;
+    const target = toggle.parentElement.querySelector(`[data-section="${key}"]`);
+    if (target) target.style.display = target.style.display === "none" ? "" : "none";
+  }
+});
+
 function showMembersView() {
   document.getElementById("controls").style.display = "none";
   document.getElementById("listView").style.display = "none";
   document.getElementById("detailView").style.display = "none";
   document.getElementById("playerView").style.display = "none";
+  document.getElementById("recommendView").style.display = "none";
   const mv = document.getElementById("membersView");
   mv.style.display = "block";
   mv.innerHTML = buildMembersView();
@@ -2047,6 +2375,7 @@ function showPlayerPage(name) {
   document.getElementById("listView").style.display = "none";
   document.getElementById("detailView").style.display = "none";
   document.getElementById("membersView").style.display = "none";
+  document.getElementById("recommendView").style.display = "none";
   const pv = document.getElementById("playerView");
   pv.style.display = "block";
   pv.innerHTML = buildPlayerPage(name);
@@ -2078,6 +2407,10 @@ function router() {
   }
   if (location.hash === "#members") {
     showMembersView();
+    return;
+  }
+  if (location.hash === "#recommend") {
+    showRecommendView();
     return;
   }
   showListView();
