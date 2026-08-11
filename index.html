@@ -104,21 +104,196 @@
     font-weight: 600;
   }
 
+  /* スクロールに追従させない。一覧の見える面積を優先し、戻るのは右下の↑ボタンで。 */
   .controls {
-    position: sticky;
-    top: 0;
-    z-index: 10;
     background: var(--card-bg);
     border-bottom: 1px solid var(--border);
     padding: 12px 16px;
   }
+  .controls-topline {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+  .back-to-top {
+    position: fixed;
+    right: 16px;
+    bottom: 20px;
+    z-index: 50;
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    border: none;
+    background: var(--navy);
+    color: #fff;
+    font-size: 19px;
+    line-height: 1;
+    cursor: pointer;
+    box-shadow: 0 3px 12px rgba(0, 0, 0, 0.28);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s ease;
+  }
+  .back-to-top.show {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  .mypage-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--green);
+    color: #fff;
+    text-decoration: none;
+    padding: 9px 18px;
+    border-radius: 999px;
+    font-size: 13.5px;
+    font-weight: 700;
+  }
+  .mypage-btn:active { opacity: 0.8; }
+
+  .quiz-progress {
+    font-size: 12px;
+    color: var(--text-sub);
+    margin-bottom: 6px;
+  }
+  .quiz-bar {
+    height: 4px;
+    border-radius: 999px;
+    background: var(--border);
+    overflow: hidden;
+    margin-bottom: 18px;
+  }
+  .quiz-bar i {
+    display: block;
+    height: 100%;
+    background: var(--accent);
+    transition: width 0.25s ease;
+  }
+  .quiz-q {
+    font-size: 17px;
+    font-weight: 700;
+    line-height: 1.5;
+    margin-bottom: 16px;
+  }
+  .quiz-opt {
+    display: block;
+    width: 100%;
+    text-align: left;
+    border: 1px solid var(--border);
+    background: var(--card-bg);
+    color: var(--text);
+    font-size: 14.5px;
+    line-height: 1.5;
+    padding: 14px 16px;
+    border-radius: 12px;
+    margin-bottom: 10px;
+    cursor: pointer;
+  }
+  .quiz-opt:active { background: var(--accent-soft); }
+  .quiz-back {
+    background: none;
+    border: none;
+    color: var(--text-sub);
+    font-size: 13px;
+    text-decoration: underline;
+    cursor: pointer;
+    padding: 4px 0;
+  }
+  .type-hero {
+    text-align: center;
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 24px 16px;
+    margin-bottom: 14px;
+  }
+  .type-hero .emoji { font-size: 44px; line-height: 1; }
+  .type-hero .name {
+    font-size: 24px;
+    font-weight: 700;
+    margin-top: 8px;
+    color: var(--navy);
+  }
+  .type-hero .catch {
+    font-size: 13.5px;
+    color: var(--text-sub);
+    margin-top: 6px;
+  }
+  .axis-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12.5px;
+    margin-bottom: 7px;
+  }
+  .axis-label { width: 108px; flex-shrink: 0; }
+  .axis-track {
+    flex: 1;
+    height: 8px;
+    background: var(--bg);
+    border-radius: 999px;
+    overflow: hidden;
+  }
+  .axis-track i {
+    display: block;
+    height: 100%;
+    background: var(--accent);
+    border-radius: 999px;
+  }
+  .type-badge {
+    display: inline-block;
+    font-size: 12px;
+    font-weight: 700;
+    background: var(--accent-soft);
+    color: var(--navy-light);
+    padding: 3px 10px;
+    border-radius: 999px;
+    margin-left: 6px;
+  }
+  .quiz-cta {
+    display: block;
+    text-align: center;
+    text-decoration: none;
+    background: linear-gradient(135deg, #7c4dff, var(--accent));
+    color: #fff;
+    font-size: 13.5px;
+    font-weight: 700;
+    padding: 11px 12px;
+    border-radius: 999px;
+  }
+  .mood-row {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 8px;
+  }
+  .mood-opt {
+    flex: 1;
+    border: 1px solid var(--border);
+    background: var(--bg);
+    color: var(--text);
+    font-size: 12.5px;
+    font-weight: 600;
+    padding: 10px 8px;
+    border-radius: 10px;
+    cursor: pointer;
+  }
+  .mood-opt.on {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #fff;
+  }
+  .mood-q { font-size: 12px; color: var(--text-sub); margin-bottom: 4px; }
+  #filterArea { margin-top: 10px; }
   .search-box {
     width: 100%;
+    flex: 1;
+    min-width: 0;
     padding: 10px 14px;
     border: 1px solid var(--border);
     border-radius: 10px;
     font-size: 15px;
-    margin-bottom: 10px;
     background: var(--card-bg);
     color: var(--text);
   }
@@ -303,6 +478,73 @@
   .spec.unknown {
     background: #f1f2f5;
     color: var(--text-sub);
+  }
+
+  .card-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin-top: 6px;
+  }
+  .card-tag {
+    font-size: 10.5px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    color: var(--navy-light);
+    padding: 2px 7px;
+    border-radius: 999px;
+    white-space: nowrap;
+  }
+  .card-pitch {
+    margin: 7px 0 0;
+    padding-left: 15px;
+    font-size: 11.5px;
+    color: var(--text-sub);
+    line-height: 1.55;
+  }
+  .card-pitch li { margin-bottom: 1px; }
+  .card-pitch li::marker { color: var(--accent); }
+  .tag-cloud-more {
+    margin-top: 8px;
+    background: none;
+    border: none;
+    color: var(--accent);
+    font-size: 12px;
+    font-weight: 600;
+    text-decoration: underline;
+    cursor: pointer;
+    padding: 0;
+  }
+  .collapse-block {
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: var(--card-bg);
+    margin-bottom: 12px;
+    overflow: hidden;
+  }
+  .collapse-head {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    background: none;
+    border: none;
+    color: var(--text);
+    font-size: 14.5px;
+    font-weight: 700;
+    padding: 14px 16px;
+    cursor: pointer;
+    text-align: left;
+  }
+  .collapse-mark {
+    color: var(--text-sub);
+    font-size: 17px;
+    line-height: 1;
+    flex-shrink: 0;
+  }
+  .collapse-block > [data-section] {
+    padding: 0 16px 14px;
   }
 
   .rule-link {
@@ -1023,13 +1265,16 @@
   <button type="button" id="themeToggleBtn" class="theme-toggle-btn" title="ダークモード切り替え">🌙</button>
   <div class="eyebrow">OUR BOARD GAME SHELF</div>
   <h1>うちのボードゲーム棚</h1>
-  <div class="count"><span id="totalCount">-</span>件所蔵 ・ ゲーム名タップで詳細、▶ルールで動画検索</div>
+  <div class="count"><span id="totalCount">-</span>件所蔵 ・ タップでルール・評価・履歴が見られます</div>
   <div class="user-badge" id="userBadge"></div>
   <a href="#members" class="members-link">👥 みんなのページ一覧</a>
 </header>
 
 <div class="controls" id="controls">
-  <input id="search" class="search-box" type="search" placeholder="ゲーム名 or #ハッシュタグで検索">
+  <div class="controls-topline">
+    <input id="search" class="search-box" type="search" placeholder="ゲーム名 or #ハッシュタグで検索">
+  </div>
+  <div id="filterArea">
 
   <div class="filter-row-compact">
     <div class="filter-select-group">
@@ -1058,15 +1303,29 @@
     </div>
   </div>
   <div class="filter-row-compact">
-    <div class="filter-select-group" style="flex: 1;">
+    <div class="filter-select-group">
+      <label>ジャンル</label>
+      <select id="genreSelect" class="filter-select">
+        <option value="">指定なし</option>
+      </select>
+    </div>
+    <div class="filter-select-group">
+      <label>メカニクス</label>
+      <select id="mechanicSelect" class="filter-select">
+        <option value="">指定なし</option>
+      </select>
+    </div>
+  </div>
+  <div class="filter-row-compact">
+    <div class="filter-select-group" style="flex:1;">
       <label>並び順</label>
       <select id="sort" class="filter-select">
+        <option value="rating_desc">評価が高い順</option>
         <option value="default">登録順</option>
         <option value="players_asc">人数：少ない順</option>
         <option value="time_asc">時間：短い順</option>
         <option value="time_desc">時間：長い順</option>
         <option value="aiueo">あ→ん順</option>
-        <option value="rating_desc">評価が高い順</option>
         <option value="played_desc">プレイ回数が多い順</option>
       </select>
     </div>
@@ -1081,6 +1340,10 @@
   <div class="filter-row-compact">
     <a href="#recommend" class="recommend-btn">👥 メンバーで選んでおすすめしてもらう</a>
   </div>
+  <div class="filter-row-compact">
+    <a href="#quiz" class="quiz-cta">🧭 ボドゲタイプ診断をやってみる</a>
+  </div>
+  </div>
 </div>
 
 <main>
@@ -1088,6 +1351,7 @@
     <div class="tag-cloud-card">
       <div class="tag-cloud-title">🔥 人気タグ</div>
       <div class="tag-cloud" id="tagCloud"></div>
+      <button type="button" class="tag-cloud-more" id="tagCloudMore">もっと見る</button>
     </div>
     <div class="result-count" id="resultCount"></div>
     <div class="card-list" id="cardList"></div>
@@ -1097,7 +1361,10 @@
   <div id="playerView" style="display:none;"></div>
   <div id="membersView" style="display:none;"></div>
   <div id="recommendView" style="display:none;"></div>
+  <div id="quizView" style="display:none;"></div>
 </main>
+
+<button type="button" id="backToTop" class="back-to-top" title="一番上へ戻る" aria-label="一番上へ戻る">↑</button>
 
 <footer>
   所有データは <a href="https://bodoge.hoobby.net/" target="_blank" rel="noopener">ボドゲーマ</a> より
@@ -1155,10 +1422,19 @@ document.getElementById("themeToggleBtn").addEventListener("click", () => {
 let games = [];
 let rulesData = {};
 let genresData = {};
+let mechanicsData = {};
 let reviewsCache = {};
 let historyCache = {};
 let interestsCache = {};
-let state = { q: "", players: "", time: "", sort: "default", unplayedOnly: false };
+let profilesCache = {};   // 名前 → 診断結果
+let moodScores = null;    // 「今日の気分」。保存せずその場限り
+let state = { q: "", players: "", time: "", genre: "", mechanic: "", sort: "rating_desc", unplayedOnly: false };
+
+// 絞り込みを変えたら必ず先頭から見せる（途中から表示されると探しづらいため）
+function applyFilterChange() {
+  render();
+  window.scrollTo(0, 0);
+}
 
 const RATINGS_CACHE_KEY = "bg_ratings_cache_v1";
 const HISTORY_CACHE_KEY = "bg_history_cache_v1";
@@ -1178,6 +1454,134 @@ function ratingLabel(value) {
   return l ? `${l.emoji} ${l.label}` : `${value}`;
 }
 
+const PROFILES_CACHE_KEY = "bg_profiles_cache_v1";
+
+// ── ボドゲタイプ診断 ────────────────────────────────
+// 58種のメカニクスを、遊んだ体感で区別できる10タイプに束ねたもの。
+// 診断はこの10タイプへの点数を出し、そこからメカニクスの好みに変換する。
+const FAMILIES = {
+  trickster: {
+    emoji: "🎭", name: "詐欺師", catch: "嘘と読み合いで場を制する人",
+    mechanics: ["ブラフ", "正体隠匿", "バッティング", "シークレットユニット", "三すくみ"]
+  },
+  detective: {
+    emoji: "🔍", name: "探偵", catch: "情報を組み立てて答えに辿り着く人",
+    mechanics: ["推理", "記憶", "パターン認識", "謎解き", "コミュニケーション禁止"]
+  },
+  gambler: {
+    emoji: "🎲", name: "ギャンブラー", catch: "運に身を任せる瞬間が好きな人",
+    mechanics: ["ダイスロール", "出目移動", "チキンレース", "バースト", "賭け"]
+  },
+  builder: {
+    emoji: "🏗", name: "建築家", catch: "コツコツ組み上げて強くなる人",
+    mechanics: ["拡大再生産", "セットコレクション", "デッキ構築", "ワーカープレイスメント",
+                "タイル・カード配置", "パターンビルディング", "株・投資"]
+  },
+  tactician: {
+    emoji: "🃏", name: "策士", catch: "手札のやりくりで差をつける人",
+    mechanics: ["ハンドマネージメント", "ドラフト", "トリックテイキング", "競り", "アクション事前決定"]
+  },
+  athlete: {
+    emoji: "⚡", name: "アスリート", catch: "考えるより先に手が出る人",
+    mechanics: ["リアルタイム", "アクションゲーム", "バランスゲーム", "お絵かき"]
+  },
+  ally: {
+    emoji: "🤝", name: "仲間思い", catch: "みんなで勝ちたい人",
+    mechanics: ["協力プレイ", "チーム戦", "役割担当"]
+  },
+  conqueror: {
+    emoji: "⚔", name: "征服者", catch: "正面からぶつかって奪い取る人",
+    mechanics: ["陣取り", "グリッド移動", "直接攻撃", "ネットワーク形成",
+                "モジュラーボード", "接続マスへの移動", "囲み", "エリア移動"]
+  },
+  performer: {
+    emoji: "💬", name: "表現者", catch: "言葉と身体で場を沸かせる人",
+    mechanics: ["言葉遊び", "ストーリーメイキング", "お絵かき"]
+  },
+  host: {
+    emoji: "🎉", name: "ムードメーカー", catch: "場の空気を作って回す人",
+    mechanics: ["投票/多数決", "交渉", "交換・貿易"]
+  }
+};
+
+const QUIZ_QUESTIONS = [
+  { q: "ゲーム中、一番テンションが上がる瞬間は？", a: [
+    { t: "相手が自分のハッタリに引っかかった", s: { trickster: 3 } },
+    { t: "バラバラの手がかりが一本につながった", s: { detective: 3 } },
+    { t: "一発勝負のダイスで大成功した", s: { gambler: 3 } },
+    { t: "自分の組んだ仕組みが回り出した", s: { builder: 3 } }
+  ]},
+  { q: "勝ち方を選べるなら？", a: [
+    { t: "全員で力を合わせて勝ちたい", s: { ally: 3 } },
+    { t: "こっそり出し抜いて一人だけ勝ちたい", s: { trickster: 2, conqueror: 1 } },
+    { t: "実力差をきっちり見せつけたい", s: { tactician: 2, builder: 1 } }
+  ]},
+  { q: "初対面の人が多い場。あなたは？", a: [
+    { t: "話を振って場を回す", s: { host: 3 } },
+    { t: "お題があれば全力でやる", s: { performer: 3 } },
+    { t: "まずは黙って観察する", s: { detective: 2, trickster: 1 } }
+  ]},
+  { q: "手札を配られた。最初に考えるのは？", a: [
+    { t: "どの順番で出せば伸びるか", s: { tactician: 3 } },
+    { t: "相手にどう見せかけるか", s: { trickster: 3 } },
+    { t: "何を集めれば強くなるか", s: { builder: 2, tactician: 1 } }
+  ]},
+  { q: "制限時間10秒。急かされている！", a: [
+    { t: "考えるより手が先に動く", s: { athlete: 3 } },
+    { t: "焦りながらも最善手を探す", s: { tactician: 2, detective: 1 } }
+  ]},
+  { q: "「あと1回引けば点が伸びる。失敗したら全部パー」", a: [
+    { t: "引く", s: { gambler: 3 } },
+    { t: "やめておく", s: { builder: 2, tactician: 1 } }
+  ]},
+  { q: "相手のコマが自分の進路を塞いでいる", a: [
+    { t: "どかす。そのための手番", s: { conqueror: 3 } },
+    { t: "別ルートを組み直す", s: { builder: 2, detective: 1 } }
+  ]},
+  { q: "「“切ない”を声だけで表現して」と言われたら", a: [
+    { t: "やる。恥ずかしくない", s: { performer: 3 } },
+    { t: "人がやるのを見て楽しみたい", s: { host: 2, detective: 1 } }
+  ]},
+  { q: "30分前に誰が何を言ったか覚えている？", a: [
+    { t: "だいたい覚えている", s: { detective: 3 } },
+    { t: "今のことで精一杯", s: { athlete: 2, gambler: 1 } }
+  ]},
+  { q: "グループで方針を決めるとき", a: [
+    { t: "意見をまとめて落とし所を作る", s: { host: 3 } },
+    { t: "自分が得な方向にそっと誘導する", s: { trickster: 2, conqueror: 2 } },
+    { t: "全員が納得する形を優先する", s: { ally: 3 } }
+  ]},
+  { q: "一人だけ大きく出遅れてしまった。あなたは？", a: [
+    { t: "フォローに回る", s: { ally: 3 } },
+    { t: "今のうちに差を広げる", s: { conqueror: 3 } }
+  ]},
+  { q: "「自分らしい」と思うのは？", a: [
+    { t: "身振り手振りで伝えるのが得意", s: { performer: 3 } },
+    { t: "人の話を聞いてまとめるのが得意", s: { ally: 2, host: 1 } },
+    { t: "黙って最適解を探すのが得意", s: { tactician: 2, builder: 1 } }
+  ]},
+  { q: "遊ぶならどっち？", a: [
+    { t: "短いのを何回も回したい", s: { athlete: 2, host: 2, gambler: 1 } },
+    { t: "じっくり長い1本に浸りたい", s: { builder: 3, tactician: 1 } }
+  ]}
+];
+
+// 「今日の気分」。診断とは別で、その日だけの寄り道用。
+const MOOD_QUESTIONS = [
+  { q: "今日は頭を使いたい？", a: [
+    { t: "使いたい", s: { builder: 2, tactician: 2, detective: 1 } },
+    { t: "何も考えたくない", s: { gambler: 2, athlete: 2, host: 1 } }
+  ]},
+  { q: "今日の空気は？", a: [
+    { t: "みんなで仲良く", s: { ally: 3, host: 1 } },
+    { t: "バチバチにやりたい", s: { conqueror: 2, trickster: 2 } }
+  ]},
+  { q: "どっちの盛り上がり方？", a: [
+    { t: "ワイワイ笑いたい", s: { host: 2, performer: 2, athlete: 1 } },
+    { t: "しっとり集中したい", s: { detective: 2, builder: 2 } }
+  ]}
+];
+
 // no-cache は「毎回サーバーに聞く」設定。変更が無ければ304が返るだけなので通信量はほぼ増えず、
 // データを差し替えたのに古い内容が表示され続ける事故を防げる。
 const NO_CACHE = { cache: "no-cache" };
@@ -1186,41 +1590,60 @@ Promise.all([
   fetch("data/games.json", NO_CACHE).then(r => r.json()),
   fetch("data/rules.json", NO_CACHE).then(r => r.ok ? r.json() : {}).catch(() => ({})),
   fetch("data/genres.json", NO_CACHE).then(r => r.ok ? r.json() : {}).catch(() => ({})),
+  fetch("data/mechanics.json", NO_CACHE).then(r => r.ok ? r.json() : {}).catch(() => ({})),
   fetchAllReviews()
-]).then(([gamesData, rules, genres]) => {
+]).then(([gamesData, rules, genres, mechanics]) => {
   games = gamesData;
   rulesData = rules;
   genresData = genres;
+  mechanicsData = mechanics;
   document.getElementById("totalCount").textContent = games.length;
   renderUserBadge();
   renderTagCloud();
+  renderGenreOptions();
+  renderMechanicOptions();
   render();
   router();
 });
 
 document.getElementById("search").addEventListener("input", e => {
   state.q = e.target.value.trim();
-  render();
+  applyFilterChange();
 });
 
 document.getElementById("playersSelect").addEventListener("change", e => {
   state.players = e.target.value;
-  render();
+  applyFilterChange();
 });
 
 document.getElementById("timeSelect").addEventListener("change", e => {
   state.time = e.target.value;
-  render();
+  applyFilterChange();
 });
 
 document.getElementById("sort").addEventListener("change", e => {
   state.sort = e.target.value;
-  render();
+  applyFilterChange();
 });
 
 document.getElementById("unplayedOnly").addEventListener("change", e => {
   state.unplayedOnly = e.target.checked;
-  render();
+  applyFilterChange();
+});
+
+document.getElementById("mechanicSelect").addEventListener("change", e => {
+  state.mechanic = e.target.value;
+  applyFilterChange();
+});
+
+window.addEventListener("scroll", () => {
+  document.getElementById("backToTop").classList.toggle("show", window.scrollY > 400);
+}, { passive: true });
+
+document.getElementById("backToTop").addEventListener("click", () => {
+  window.scrollTo({ top: 0, behavior: "smooth" });
+  // smooth が効かない環境向けの保険
+  setTimeout(() => { if (window.scrollY > 0) window.scrollTo(0, 0); }, 500);
 });
 
 document.getElementById("randomPickBtn").addEventListener("click", () => {
@@ -1257,6 +1680,12 @@ function matches(g) {
     } else {
       if (g.timeMin > t) return false;
     }
+  }
+  if (state.genre) {
+    if (!getGameTags(g).genreTags.includes(state.genre)) return false;
+  }
+  if (state.mechanic) {
+    if (!getGameTags(g).allMechanics.includes(state.mechanic)) return false;
   }
   if (state.unplayedOnly) {
     if (hasMyRating(slugOf(g))) return false;
@@ -1310,25 +1739,30 @@ function render() {
   empty.style.display = "none";
 
   list.innerHTML = filtered.map(g => {
-    const ruleUrl = ruleVideoUrl(g);
     const slug = slugOf(g);
     const avg = averageScore(slug);
+    const { genreTags, mechanicTags, audienceTags } = getGameTags(g);
+    // ジャンル→メカニクス→雰囲気の順に、重複を除いて5つまで
+    const cardTags = Array.from(new Set([
+      ...genreTags.slice(0, 2), ...mechanicTags.slice(0, 2), ...audienceTags.slice(0, 2)
+    ])).slice(0, 5);
+    const r = rulesData[slug];
+    const pitches = (r && r.sellingPoints) || [];
     return `
     <div class="card">
       <a class="card-main" href="#game/${encodeURIComponent(slug)}">
         <img src="${g.img}" alt="${g.jp}" loading="lazy" onerror="this.style.visibility='hidden'">
         <div class="card-body">
-          <div class="card-title-jp">${g.jp}${rulesData[slug] ? '<span class="detail-badge-mini">詳しいルールあり</span>' : ""}</div>
+          <div class="card-title-jp">${g.jp}</div>
           <div class="card-title-en">${g.en}</div>
           <div class="spec-row">
             ${specHtml(g.playersRaw)}
             ${specHtml(g.timeRaw)}
             ${avg != null ? `<span class="spec">★ ${avg}/5</span>` : `<span class="spec unknown">未評価</span>`}
           </div>
+          ${cardTags.length ? `<div class="card-tags">${cardTags.map(t => `<span class="card-tag">#${t}</span>`).join("")}</div>` : ""}
+          ${pitches.length ? `<ul class="card-pitch">${pitches.map(p => `<li>${p}</li>`).join("")}</ul>` : ""}
         </div>
-      </a>
-      <a class="rule-link" href="${ruleUrl}" target="_blank" rel="noopener">
-        <span class="icon">▶</span>ルール
       </a>
     </div>
   `;
@@ -1344,9 +1778,24 @@ function ruleVideoUrl(g) {
   return `https://www.youtube.com/results?search_query=${q}`;
 }
 
+// ジャンルとメカニクスで同じことを言っているものは、表示上どちらか片方にする
+// （絞り込み用のデータは残したいので、消すのは見た目だけ）
+const GENRE_EQUIV = {
+  "推理": "推理系",
+  "協力プレイ": "協力系",
+  "正体隠匿": "正体隠匿系",
+  "チーム戦": "チーム戦系",
+  "パズル": "パズル系",
+  "ブラフ": "心理戦・ブラフ系"
+};
+
 function getGameTags(g) {
   const slug = slugOf(g);
   const genreTags = genresData[slug] || [];
+  const rawMechanics = mechanicsData[slug] || [];
+  const mechanicTags = rawMechanics.filter(
+    m => !(GENRE_EQUIV[m] && genreTags.includes(GENRE_EQUIV[m]))
+  );
   const r = rulesData[slug];
   const audienceTags = (r && r.audienceTags) || [];
   const computedTags = [];
@@ -1355,7 +1804,13 @@ function getGameTags(g) {
   if (g.timeMax != null && g.timeMax <= 15) computedTags.push("サクッと〜15分");
   if (g.timeMin != null && g.timeMin >= 60) computedTags.push("じっくり60分〜");
   const mergedAudience = Array.from(new Set([...audienceTags, ...computedTags]));
-  return { genreTags, audienceTags: mergedAudience, all: [...genreTags, ...mergedAudience] };
+  return {
+    genreTags,
+    mechanicTags,              // 表示用（ジャンルと重複するものを除いたもの）
+    allMechanics: rawMechanics, // 絞り込み・検索用（全部そのまま）
+    audienceTags: mergedAudience,
+    all: [...genreTags, ...rawMechanics, ...mergedAudience]
+  };
 }
 
 function goToTagSearch(tag) {
@@ -1375,14 +1830,46 @@ function renderTagCloud() {
       counts[t] = (counts[t] || 0) + 1;
     });
   });
-  const top = Object.entries(counts)
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 14);
+  const ranked = Object.entries(counts).sort((a, b) => b[1] - a[1]);
   const el = document.getElementById("tagCloud");
   if (!el) return;
-  el.innerHTML = top.map(([tag, count]) => `
-    <button type="button" data-tag-search="${tag}">#${tag}<span>${count}</span></button>
-  `).join("");
+  const chip = ([tag, count]) => `<button type="button" data-tag-search="${tag}">#${tag}<span>${count}</span></button>`;
+  const rest = ranked.slice(5, 24);
+  el.innerHTML = `
+    ${ranked.slice(0, 5).map(chip).join("")}
+    ${rest.length ? `
+      <div class="tag-cloud" data-section="more-tags" style="display:none;">${rest.map(chip).join("")}</div>
+    ` : ""}
+  `;
+  const more = document.getElementById("tagCloudMore");
+  if (more) more.style.display = rest.length ? "" : "none";
+}
+
+// ジャンルの絞り込み候補は、実際にデータにあるものだけを多い順で出す
+function renderGenreOptions() {
+  const counts = {};
+  games.forEach(g => {
+    getGameTags(g).genreTags.forEach(t => { counts[t] = (counts[t] || 0) + 1; });
+  });
+  const sel = document.getElementById("genreSelect");
+  if (!sel) return;
+  sel.innerHTML = `<option value="">指定なし</option>` +
+    Object.entries(counts).sort((a, b) => b[1] - a[1])
+      .map(([t, n]) => `<option value="${t}"${state.genre === t ? " selected" : ""}>${t}（${n}）</option>`)
+      .join("");
+}
+
+function renderMechanicOptions() {
+  const counts = {};
+  games.forEach(g => {
+    getGameTags(g).allMechanics.forEach(t => { counts[t] = (counts[t] || 0) + 1; });
+  });
+  const sel = document.getElementById("mechanicSelect");
+  if (!sel) return;
+  sel.innerHTML = `<option value="">指定なし</option>` +
+    Object.entries(counts).sort((a, b) => b[1] - a[1])
+      .map(([t, n]) => `<option value="${t}"${state.mechanic === t ? " selected" : ""}>${t}（${n}）</option>`)
+      .join("");
 }
 
 document.getElementById("tagCloud").addEventListener("click", e => {
@@ -1391,22 +1878,37 @@ document.getElementById("tagCloud").addEventListener("click", e => {
   goToTagSearch(btn.dataset.tagSearch);
 });
 
+document.getElementById("tagCloudMore").addEventListener("click", () => {
+  const rest = document.querySelector('[data-section="more-tags"]');
+  if (!rest) return;
+  const hidden = rest.style.display === "none";
+  rest.style.display = hidden ? "flex" : "none";
+  document.getElementById("tagCloudMore").textContent = hidden ? "閉じる" : "もっと見る";
+});
+
+document.getElementById("genreSelect").addEventListener("change", e => {
+  state.genre = e.target.value;
+  applyFilterChange();
+});
+
 function buildTagsAndPitch(g) {
   const slug = slugOf(g);
-  const { genreTags, audienceTags } = getGameTags(g);
+  const { genreTags, mechanicTags, audienceTags } = getGameTags(g);
   const r = rulesData[slug];
   const sellingPoints = r && r.sellingPoints;
+  const anyTags = genreTags.length || mechanicTags.length || audienceTags.length;
 
-  if (genreTags.length === 0 && audienceTags.length === 0 && (!sellingPoints || sellingPoints.length === 0)) {
+  if (!anyTags && (!sellingPoints || sellingPoints.length === 0)) {
     return "";
   }
 
   const tagChip = t => `<button class="tag-chip" data-tag-search="${t}">#${t}</button>`;
 
   return `
-    ${(genreTags.length || audienceTags.length) ? `
+    ${anyTags ? `
     <div class="tag-section">
       ${genreTags.length ? `<div class="tag-row">${genreTags.map(tagChip).join("")}</div>` : ""}
+      ${mechanicTags.length ? `<div class="tag-row">${mechanicTags.map(tagChip).join("")}</div>` : ""}
       ${audienceTags.length ? `<div class="tag-row">${audienceTags.map(tagChip).join("")}</div>` : ""}
     </div>` : ""}
     ${sellingPoints && sellingPoints.length ? `
@@ -1445,11 +1947,39 @@ function fetchCollectionCache(collectionName, cacheKey) {
   });
 }
 
+// 診断結果はゲームではなく人に紐づくので、名前をキーにして読む
+function fetchProfiles() {
+  if (!firebaseReady) {
+    try {
+      return Promise.resolve(JSON.parse(localStorage.getItem(PROFILES_CACHE_KEY)) || {});
+    } catch (e) {
+      return Promise.resolve({});
+    }
+  }
+  return db.collection("profiles").get().then(snapshot => {
+    const cache = {};
+    snapshot.forEach(doc => {
+      const d = doc.data();
+      if (d.name) cache[d.name] = Object.assign({ id: doc.id }, d);
+    });
+    localStorage.setItem(PROFILES_CACHE_KEY, JSON.stringify(cache));
+    return cache;
+  }).catch(err => {
+    console.error("profiles取得エラー", err);
+    try {
+      return JSON.parse(localStorage.getItem(PROFILES_CACHE_KEY)) || {};
+    } catch (e) {
+      return {};
+    }
+  });
+}
+
 function fetchAllReviews() {
   return Promise.all([
     fetchCollectionCache("ratings", RATINGS_CACHE_KEY).then(c => { reviewsCache = c; }),
     fetchCollectionCache("history", HISTORY_CACHE_KEY).then(c => { historyCache = c; }),
-    fetchCollectionCache("interests", INTERESTS_CACHE_KEY).then(c => { interestsCache = c; })
+    fetchCollectionCache("interests", INTERESTS_CACHE_KEY).then(c => { interestsCache = c; }),
+    fetchProfiles().then(c => { profilesCache = c; })
   ]);
 }
 
@@ -1463,6 +1993,69 @@ function getHistory(slug) {
 
 function getInterests(slug) {
   return interestsCache[slug] || [];
+}
+
+// 満点で割る方式だと、出番の設問が少ないタイプほど「たまたま満点」になりやすく、
+// 結果が偏ってしまう（実測でアスリート19.8% / 詐欺師4.4%）。
+// そこで「適当に答えたときの分布」を基準にして、そこからどれだけ上振れしたかで測る。
+function quizBaseline(questions) {
+  const mean = {}, variance = {};
+  Object.keys(FAMILIES).forEach(f => { mean[f] = 0; variance[f] = 0; });
+  questions.forEach(q => {
+    Object.keys(FAMILIES).forEach(f => {
+      const vals = q.a.map(o => o.s[f] || 0);
+      const m = vals.reduce((a, b) => a + b, 0) / vals.length;
+      const m2 = vals.reduce((a, b) => a + b * b, 0) / vals.length;
+      mean[f] += m;
+      variance[f] += m2 - m * m;
+    });
+  });
+  const sd = {};
+  Object.keys(FAMILIES).forEach(f => { sd[f] = Math.sqrt(variance[f]) || 1; });
+  return { mean, sd };
+}
+
+const QUIZ_BASELINE = quizBaseline(QUIZ_QUESTIONS);
+
+function scoreQuiz(answers, questions) {
+  const base = questions === QUIZ_QUESTIONS ? QUIZ_BASELINE : quizBaseline(questions);
+  const raw = {};
+  Object.keys(FAMILIES).forEach(f => { raw[f] = 0; });
+  questions.forEach((q, i) => {
+    const chosen = q.a[answers[i]];
+    if (chosen) Object.entries(chosen.s).forEach(([f, v]) => { raw[f] += v; });
+  });
+  const out = {};
+  Object.keys(FAMILIES).forEach(f => {
+    const z = (raw[f] - base.mean[f]) / base.sd[f];
+    const v = Math.max(0, Math.min(1, 0.5 + z / 4));   // 表示用に 0〜1 へ収める
+    out[f] = Math.round(v * 100) / 100;
+  });
+  return out;
+}
+
+function topFamilies(scores, n) {
+  return Object.entries(scores).sort((a, b) => b[1] - a[1]).slice(0, n).map(([f]) => f);
+}
+
+function getProfile(name) {
+  return profilesCache[name] || null;
+}
+
+function saveProfile(name, scores) {
+  const type = topFamilies(scores, 1)[0];
+  if (!firebaseReady) {
+    alert("Firebaseが未設定のため、診断結果を保存できません。");
+    return Promise.resolve();
+  }
+  // 撮り直しできるよう、同じ名前の古い結果は消してから入れ直す
+  return db.collection("profiles").where("name", "==", name).get()
+    .then(snap => Promise.all(snap.docs.map(d => d.ref.delete())))
+    .then(() => db.collection("profiles").add({
+      name, type, scores,
+      createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    }))
+    .then(fetchAllReviews);
 }
 
 function toggleInterest(slug, name) {
@@ -1535,7 +2128,8 @@ function renderUserBadge() {
   const el = document.getElementById("userBadge");
   const name = getMyName();
   el.innerHTML = name
-    ? `あなたの名前: <a href="#player/${encodeURIComponent(name)}" style="color:#fff;">${name}</a> <button id="changeNameBtn" type="button">変更</button>`
+    ? `<a class="mypage-btn" href="#player/${encodeURIComponent(name)}">👤 ${name} のマイページ</a>
+       <button id="changeNameBtn" type="button">名前を変更</button>`
     : `<button id="registerNameBtn" type="button">＋マイページを作る（名前を登録）</button>`;
   const changeBtn = document.getElementById("changeNameBtn");
   if (changeBtn) {
@@ -1570,8 +2164,10 @@ function getAllKnownNames() {
   Object.values(reviewsCache).forEach(list => list.forEach(r => { if (r.name) names.add(r.name); }));
   Object.values(historyCache).forEach(list => list.forEach(h => { if (h.name) names.add(h.name); }));
   Object.values(interestsCache).forEach(list => list.forEach(i => { if (i.name) names.add(i.name); }));
-  const arr = Array.from(names).sort((a, b) => a.localeCompare(b, "ja"));
+  Object.keys(profilesCache).forEach(n => names.add(n));   // 診断だけした人も仲間に入れる
   const myName = getMyName();
+  if (myName) names.add(myName);                            // 名前を登録した本人は常に選べる
+  const arr = Array.from(names).sort((a, b) => a.localeCompare(b, "ja"));
   if (myName && arr.includes(myName)) {
     return [myName, ...arr.filter(n => n !== myName)];
   }
@@ -1608,10 +2204,27 @@ function buildOtherMembersPicker() {
   `;
 }
 
+function buildRatingItem(r, slug) {
+  return `
+    <div class="review-item">
+      <div class="review-item-top">
+        <span class="review-item-name"><a href="#player/${encodeURIComponent(r.name)}">${r.name}</a></span>
+        <span>
+          <span class="review-item-level">${ratingLabel(r.level)}</span>
+          <button class="review-item-del" data-del-rating-id="${r.id}" data-del-slug="${slug}" title="削除">×</button>
+        </span>
+      </div>
+    </div>
+  `;
+}
+
 function buildRatingSection(g) {
   const slug = slugOf(g);
   const reviews = getReviews(slug);
   const avg = averageScore(slug);
+  // 人数が増えると縦に伸びるので、4件以上はたたむ
+  const FOLD_FROM = 4;
+  const folded = reviews.length >= FOLD_FROM;
   return `
     <div class="review-card">
       <div class="review-header">
@@ -1619,32 +2232,28 @@ function buildRatingSection(g) {
         ${avg != null ? `<div class="review-avg">${avg}<span>/5</span></div>` : ""}
       </div>
       <div class="review-count">${reviews.length}件の評価${reviews.length ? "" : "（まだ評価がありません）"}${!firebaseReady ? " ・ ⚠️ Firebase未設定" : ""}</div>
-      ${reviews.length ? `
-      <div class="review-list">
-        ${reviews.map(r => `
-          <div class="review-item">
-            <div class="review-item-top">
-              <span class="review-item-name"><a href="#player/${encodeURIComponent(r.name)}">${r.name}</a></span>
-              <span>
-                <span class="review-item-level">${ratingLabel(r.level)}</span>
-                <button class="review-item-del" data-del-rating-id="${r.id}" data-del-slug="${slug}" title="削除">×</button>
-              </span>
-            </div>
-          </div>
-        `).join("")}
+      ${reviews.length && !folded ? `
+      <div class="review-list">${reviews.map(r => buildRatingItem(r, slug)).join("")}</div>` : ""}
+      ${folded ? `
+      <button type="button" class="section-toggle-btn" data-toggle-section="rating-list">みんなの評価を見る（${reviews.length}件）</button>
+      <div class="review-list" data-section="rating-list" style="display:none;">
+        ${reviews.map(r => buildRatingItem(r, slug)).join("")}
       </div>` : ""}
-      <form class="rating-form" data-rating-slug="${slug}">
-        ${buildSubmitterLine()}
-        <div class="rating-choice-row">
-          ${RATING_LEVELS.map(l => `
-            <label class="rating-choice">
-              <input type="radio" name="level" value="${l.value}" required>
-              <span>${l.emoji} ${l.label}</span>
-            </label>
-          `).join("")}
-        </div>
-        <button type="submit">評価を送る</button>
-      </form>
+      <button type="button" class="section-toggle-btn section-toggle-btn-primary" data-toggle-section="rating-form">＋自分の評価を入れる</button>
+      <div data-section="rating-form" style="display:none;">
+        <form class="rating-form" data-rating-slug="${slug}">
+          ${buildSubmitterLine()}
+          <div class="rating-choice-row">
+            ${RATING_LEVELS.map(l => `
+              <label class="rating-choice">
+                <input type="radio" name="level" value="${l.value}" required>
+                <span>${l.emoji} ${l.label}</span>
+              </label>
+            `).join("")}
+          </div>
+          <button type="submit">評価を送る</button>
+        </form>
+      </div>
     </div>
   `;
 }
@@ -1668,10 +2277,6 @@ function buildHistorySection(g) {
   const [recent, ...older] = history;
 
   return `
-    <div class="review-card">
-      <div class="review-header">
-        <div class="review-title">プレイ履歴</div>
-      </div>
       <div class="review-count">${history.length}件の記録${history.length ? "" : "（まだ記録がありません）"}${!firebaseReady ? " ・ ⚠️ Firebase未設定" : ""}</div>
       ${recent ? `
       <div class="review-list">${buildHistoryItem(recent, slug)}</div>
@@ -1708,6 +2313,19 @@ function buildHistorySection(g) {
   `;
 }
 
+// タップで開閉するセクション。詳細ページが縦に長くなりすぎるのを防ぐ。
+function collapsibleSection(key, title, inner, open) {
+  if (!inner) return "";
+  return `
+    <div class="collapse-block">
+      <button type="button" class="collapse-head" data-toggle-section="${key}" aria-expanded="${open ? "true" : "false"}">
+        <span>${title}</span><span class="collapse-mark">${open ? "−" : "＋"}</span>
+      </button>
+      <div data-section="${key}"${open ? "" : ' style="display:none;"'}>${inner}</div>
+    </div>
+  `;
+}
+
 function buildQuickRef(g) {
   const r = rulesData[slugOf(g)];
   if (!r) return "";
@@ -1730,8 +2348,6 @@ function buildQuickRef(g) {
   }
 
   return `
-    <div class="quickref-card">
-      <div class="quickref-title">🎯 プレイ中の早見表</div>
       ${r.winCondition ? `
       <div class="quickref-sub">勝利条件</div>
       <div class="quickref-win">${r.winCondition}</div>` : ""}
@@ -1739,7 +2355,6 @@ function buildQuickRef(g) {
       ${hasRules ? `
       <div class="quickref-sub">自分の手番でできること</div>
       <ul class="quickref-list">${r.rules.map(s => `<li>${s}</li>`).join("")}</ul>` : ""}
-    </div>
   `;
 }
 
@@ -1803,6 +2418,7 @@ function showDetail(g) {
   document.getElementById("playerView").style.display = "none";
   document.getElementById("membersView").style.display = "none";
   document.getElementById("recommendView").style.display = "none";
+  document.getElementById("quizView").style.display = "none";
   const dv = document.getElementById("detailView");
   dv.style.display = "block";
 
@@ -1829,15 +2445,17 @@ function showDetail(g) {
         <div class="value">${avg != null ? `★ ${avg}/5` : "未評価"}</div>
       </div>
     </div>
+    ${buildRatingSection(g)}
     ${buildInterestSection(g)}
     ${buildTagsAndPitch(g)}
     ${buildWorldviewSection(g)}
     ${buildSetupSection(g)}
-    ${buildQuickRef(g)}
-    <a class="detail-cta detail-cta-primary" href="${ruleVideoUrl(g)}" target="_blank" rel="noopener">▶ ルールを動画で確認</a>
-    <a class="detail-cta detail-cta-secondary" href="${g.url}" target="_blank" rel="noopener">ボドゲーマで詳細を見る</a>
-    ${buildRatingSection(g)}
-    ${buildHistorySection(g)}
+    ${collapsibleSection("quickref", "🎯 プレイ中の早見表", buildQuickRef(g), false)}
+    ${collapsibleSection("links", "🔗 動画・ボドゲーマで調べる", `
+      <a class="detail-cta detail-cta-primary" href="${ruleVideoUrl(g)}" target="_blank" rel="noopener">▶ ルールを動画で確認</a>
+      <a class="detail-cta detail-cta-secondary" href="${g.url}" target="_blank" rel="noopener">ボドゲーマで詳細を見る</a>
+    `, false)}
+    ${collapsibleSection("history", `📖 プレイ履歴（${getHistory(slugOf(g)).length}件）`, buildHistorySection(g), false)}
   `;
   window.scrollTo(0, 0);
 }
@@ -1918,6 +2536,9 @@ document.getElementById("detailView").addEventListener("click", e => {
     if (target) {
       const showing = target.style.display !== "none";
       target.style.display = showing ? "none" : "";
+      const mark = sectionToggle.querySelector(".collapse-mark");
+      if (mark) mark.textContent = showing ? "＋" : "−";
+      sectionToggle.setAttribute("aria-expanded", showing ? "false" : "true");
     }
     return;
   }
@@ -1965,6 +2586,7 @@ function showListView() {
   document.getElementById("playerView").style.display = "none";
   document.getElementById("membersView").style.display = "none";
   document.getElementById("recommendView").style.display = "none";
+  document.getElementById("quizView").style.display = "none";
 }
 
 function buildMembersView() {
@@ -1975,7 +2597,11 @@ function buildMembersView() {
     <div class="detail-underline"></div>
     ${names.length ? `
     <div class="members-grid">
-      ${names.map(n => `<a class="member-chip" href="#player/${encodeURIComponent(n)}">${n}</a>`).join("")}
+      ${names.map(n => {
+        const p = getProfile(n);
+        const f = p && FAMILIES[p.type];
+        return `<a class="member-chip" href="#player/${encodeURIComponent(n)}">${n}${f ? ` <span style="opacity:.75;font-weight:500;">${f.emoji}${f.name}</span>` : ""}</a>`;
+      }).join("")}
     </div>
     ` : `<div class="review-count">まだ誰も登録していません。評価・履歴・興味ありのいずれかを送るとここに表示されます。</div>`}
   `;
@@ -1983,7 +2609,8 @@ function buildMembersView() {
 
 function getPlayerTagAffinity(name) {
   const acc = {};
-  getPlayerRatings(name).forEach(pr => {
+  const ratings = getPlayerRatings(name);
+  ratings.forEach(pr => {
     const g = games.find(x => slugOf(x) === pr.slug);
     if (!g) return;
     getGameTags(g).all.forEach(t => {
@@ -1994,7 +2621,38 @@ function getPlayerTagAffinity(name) {
   });
   const out = {};
   Object.keys(acc).forEach(t => { out[t] = acc[t].sum / acc[t].n; });
+
+  // 診断結果は「実際の評価がまだ無いタグ」だけを埋める補助にする。
+  // 評価が増えるほど診断の影響を薄める（自己申告より実績のほうが正確なので）。
+  const prof = getProfile(name);
+  if (prof && prof.scores) {
+    const w = 1 / (1 + ratings.length / 3);
+    Object.entries(prof.scores).forEach(([fam, score]) => {
+      const fm = FAMILIES[fam];
+      if (!fm) return;
+      const affinity = 2 + score * 2.5;         // 0→2.0, 1→4.5
+      const shrunk = 3 + (affinity - 3) * w;    // 評価が増えたら3(ふつう)へ寄せる
+      fm.mechanics.forEach(m => {
+        if (out[m] == null) out[m] = shrunk;
+      });
+    });
+  }
   return out;
+}
+
+// 今日の気分は、その日だけゲームを後押しする加点として使う
+function moodBonusFor(g) {
+  if (!moodScores) return 0;
+  const mech = getGameTags(g).allMechanics;
+  if (!mech.length) return 0;
+  let hit = 0;
+  Object.entries(moodScores).forEach(([fam, v]) => {
+    if (!v) return;
+    const fm = FAMILIES[fam];
+    if (fm && mech.some(m => fm.mechanics.includes(m))) hit += v;
+  });
+  const maxV = Math.max(1, ...Object.values(moodScores));
+  return Math.min(1, hit / (maxV * 2)) * 0.9;
 }
 
 // 選んだメンバーの好み・興味あり・過去の評価を合成しておすすめを作る。
@@ -2074,16 +2732,30 @@ function buildRecommendations(members) {
     }
 
     const base = per.length ? per.reduce((a, b) => a + b, 0) / per.length : 3;
-    const score = base + wantBy.length * 0.8;
+    const mood = moodBonusFor(g);
+    if (mood > 0.4) reasons.push({ hot: true, text: "🌡 今日の気分に合う" });
+    const score = base + wantBy.length * 0.8 + mood;
     const entry = { g, slug, score, reasons };
 
-    if (evidence || wantBy.length) scored.push(entry);
+    if (evidence || wantBy.length || mood > 0) scored.push(entry);
     else neutral.push(entry);
   });
 
   scored.sort((a, b) => b.score - a.score);
   excluded.sort((a, b) => a.g.jp.localeCompare(b.g.jp, "ja"));
   return { scored, neutral, excluded };
+}
+
+let moodAnswers = [];
+
+function recomputeMood() {
+  if (!moodAnswers.some(v => v != null)) { moodScores = null; return; }
+  const s = {};
+  MOOD_QUESTIONS.forEach((q, qi) => {
+    const pick = q.a[moodAnswers[qi]];
+    if (pick) Object.entries(pick.s).forEach(([f, v]) => { s[f] = (s[f] || 0) + v; });
+  });
+  moodScores = s;
 }
 
 function getRecMembers() {
@@ -2123,11 +2795,28 @@ function buildRecommendView() {
     </div>
   `;
 
+  const moodPicked = moodAnswers.slice();
+  const moodCard = `
+    <div class="review-card">
+      <div class="review-header"><div class="review-title">🌡 今日の気分（任意）</div></div>
+      ${MOOD_QUESTIONS.map((q, qi) => `
+        <div class="mood-q">${q.q}</div>
+        <div class="mood-row">
+          ${q.a.map((o, oi) => `
+            <button type="button" class="mood-opt ${moodPicked[qi] === oi ? "on" : ""}" data-mood="${qi}:${oi}">${o.t}</button>
+          `).join("")}
+        </div>
+      `).join("")}
+      ${moodPicked.some(v => v != null) ? `<button type="button" class="link-btn" data-mood-clear>気分をリセット</button>` : ""}
+    </div>
+  `;
+
   if (selected.length === 0) return `
     <a class="detail-back" href="#">← 一覧へ戻る</a>
     <h1 class="detail-title">今日のおすすめ</h1>
     <div class="detail-underline"></div>
     ${picker}
+    ${moodCard}
   `;
 
   const { scored, neutral, excluded } = buildRecommendations(selected);
@@ -2156,6 +2845,7 @@ function buildRecommendView() {
     <h1 class="detail-title">今日のおすすめ</h1>
     <div class="detail-underline"></div>
     ${picker}
+    ${moodCard}
     <div class="review-card">
       <div class="review-header"><div class="review-title">おすすめ ${top.length + filler.length}件</div></div>
       ${top.length
@@ -2183,6 +2873,7 @@ function showRecommendView() {
   document.getElementById("detailView").style.display = "none";
   document.getElementById("playerView").style.display = "none";
   document.getElementById("membersView").style.display = "none";
+  document.getElementById("quizView").style.display = "none";
   const rv = document.getElementById("recommendView");
   rv.style.display = "block";
   rv.innerHTML = buildRecommendView();
@@ -2190,6 +2881,17 @@ function showRecommendView() {
 }
 
 document.getElementById("recommendView").addEventListener("click", e => {
+  const mood = e.target.closest("[data-mood]");
+  if (mood) {
+    const [qi, oi] = mood.dataset.mood.split(":").map(Number);
+    moodAnswers[qi] = moodAnswers[qi] === oi ? null : oi;  // 同じものを再タップで解除
+    recomputeMood();
+    showRecommendView();
+    return;
+  }
+  if (e.target.closest("[data-mood-clear]")) {
+    moodAnswers = []; recomputeMood(); showRecommendView(); return;
+  }
   const pick = e.target.closest("[data-rec-toggle]");
   if (pick) {
     const name = pick.dataset.recToggle;
@@ -2207,12 +2909,274 @@ document.getElementById("recommendView").addEventListener("click", e => {
   }
 });
 
+let quizAnswers = [];
+let quizStarted = false;
+
+function buildTypeHero(fam) {
+  const f = FAMILIES[fam];
+  if (!f) return "";
+  return `
+    <div class="type-hero">
+      <div class="emoji">${f.emoji}</div>
+      <div class="name">${f.name}タイプ</div>
+      <div class="catch">${f.catch}</div>
+    </div>
+  `;
+}
+
+// メカニクス → 属するタイプ（お絵かきのように複数に跨るものがある）
+const MECHANIC_FAMILIES = (() => {
+  const m = {};
+  Object.entries(FAMILIES).forEach(([f, fm]) => {
+    fm.mechanics.forEach(x => { (m[x] = m[x] || []).push(f); });
+  });
+  return m;
+})();
+
+// そのゲームが「どれだけ自分の好みで出来ているか」を 0〜1 で返す
+function gameFit(g, scores) {
+  const mech = getGameTags(g).allMechanics;
+  if (!mech.length) return null;
+  let sum = 0;
+  mech.forEach(x => {
+    const fams = MECHANIC_FAMILIES[x] || [];
+    sum += fams.reduce((a, f) => Math.max(a, scores[f] || 0), 0);
+  });
+  return sum / mech.length;
+}
+
+// 実際の所蔵ゲームを通して、ジャンル／メカニクスの相性を並べる。
+// タイプ内で横並びになるのを避けるため、共起しているものも拾えるようにしている。
+function rankAffinity(scores) {
+  const acc = {};
+  games.forEach(g => {
+    const t = getGameTags(g);
+    if (t.genreTags.includes("拡張")) return;
+    const fit = gameFit(g, scores);
+    if (fit == null) return;
+    t.allMechanics.forEach(m => {
+      const k = "メカニクス|" + m;
+      (acc[k] = acc[k] || []).push(fit);
+    });
+    t.genreTags.forEach(gt => {
+      const k = "ジャンル|" + gt;
+      (acc[k] = acc[k] || []).push(fit);
+    });
+  });
+  // 所蔵数が少ないタグは平均が偶然に振られやすいので、全体平均へ引き戻してから並べる
+  const all = Object.values(acc).flat();
+  const globalMean = all.length ? all.reduce((a, b) => a + b, 0) / all.length : 0.5;
+  const PRIOR = 8;
+  return Object.entries(acc)
+    .filter(([, arr]) => arr.length >= 5)
+    .map(([k, arr]) => {
+      const [kind, label] = k.split("|");
+      const mean = arr.reduce((a, b) => a + b, 0) / arr.length;
+      const v = (arr.length * mean + PRIOR * globalMean) / (arr.length + PRIOR);
+      return { kind, label, v, n: arr.length };
+    })
+    .sort((a, b) => b.v - a.v);
+}
+
+function buildAffinityRanking(scores) {
+  const ranked = rankAffinity(scores);
+  if (ranked.length < 8) return "";
+  const good = ranked.slice(0, 5);
+  const bad = ranked.slice(-3).reverse();
+  const row = (r, i) => `
+    <a class="rec-item" href="#" data-tag-search="${r.label}" style="cursor:pointer;">
+      ${i != null ? `<div class="rec-rank">${i + 1}</div>` : `<div class="rec-rank" style="background:var(--text-sub);">–</div>`}
+      <div class="rec-body">
+        <div class="rec-title">#${r.label}</div>
+        <div class="rec-spec">${r.kind} ・ 所蔵${r.n}件</div>
+      </div>
+    </a>
+  `;
+  return `
+    <div class="review-card">
+      <div class="review-header"><div class="review-title">👍 向いていそう</div></div>
+      ${good.map((r, i) => row(r, i)).join("")}
+    </div>
+    <div class="review-card">
+      <div class="review-header"><div class="review-title">🤔 あまり向かないかも</div></div>
+      ${bad.map(r => row(r, null)).join("")}
+      <div class="review-count" style="margin-top:8px;">苦手というより「今の回答からは優先度が低そう」という程度です。遊んでみたら好きかもしれません。</div>
+    </div>
+  `;
+}
+
+function buildAxisChart(scores) {
+  return Object.entries(scores)
+    .sort((a, b) => b[1] - a[1])
+    .map(([fam, v]) => {
+      const f = FAMILIES[fam];
+      if (!f) return "";
+      return `
+        <div class="axis-row">
+          <span class="axis-label">${f.emoji} ${f.name}</span>
+          <span class="axis-track"><i style="width:${Math.round(v * 100)}%"></i></span>
+        </div>
+      `;
+    }).join("");
+}
+
+// 診断結果に合うゲームを、上位タイプのメカニクスから拾う
+function sampleGamesForScores(scores, n) {
+  const top = topFamilies(scores, 3);
+  const weight = {};
+  top.forEach((fam, i) => {
+    FAMILIES[fam].mechanics.forEach(m => { weight[m] = Math.max(weight[m] || 0, 3 - i); });
+  });
+  return games.map(g => {
+    const t = getGameTags(g);
+    if (t.genreTags.includes("拡張")) return { g, s: 0 };  // 単体で遊べないので出さない
+    const mech = t.allMechanics;
+    if (!mech.length) return { g, s: 0 };
+    // 合計のままだとメカニクスが多いだけのゲームが上位を独占するので、
+    // 「そのゲームがどれだけそのタイプ寄りか」で見る
+    const sum = mech.reduce((a, m) => a + (weight[m] || 0), 0);
+    return { g, s: sum / Math.sqrt(mech.length) };
+  }).filter(x => x.s > 0)
+    .sort((a, b) => b.s - a.s || (averageScore(slugOf(b.g)) ?? 0) - (averageScore(slugOf(a.g)) ?? 0))
+    .slice(0, n);
+}
+
+function buildQuizView() {
+  const myName = getMyName();
+  const existing = myName ? getProfile(myName) : null;
+  const i = quizAnswers.length;
+
+  // まだ始めていない状態
+  if (i === 0 && !quizStarted) {
+    return `
+      <a class="detail-back" href="#">← 一覧へ戻る</a>
+      <h1 class="detail-title">ボドゲタイプ診断</h1>
+      <div class="detail-underline"></div>
+      ${existing ? `
+        ${buildTypeHero(existing.type)}
+        <div class="review-card">
+          <div class="review-header"><div class="review-title">あなたの傾向</div></div>
+          ${buildAxisChart(existing.scores)}
+        </div>
+      ` : ""}
+      <div class="review-card">
+        <div class="review-count">${QUIZ_QUESTIONS.length}問の質問に答えると、あなたのタイプと相性のいいゲームが分かります。${existing ? "もう一度やると結果は上書きされます。" : ""}</div>
+        <button type="button" class="section-toggle-btn section-toggle-btn-primary" data-quiz-start>
+          ${existing ? "もう一度診断する" : "診断をはじめる"}
+        </button>
+      </div>
+    `;
+  }
+
+  // 回答途中
+  if (i < QUIZ_QUESTIONS.length) {
+    const q = QUIZ_QUESTIONS[i];
+    return `
+      <a class="detail-back" href="#">← 一覧へ戻る</a>
+      <div class="quiz-progress">質問 ${i + 1} / ${QUIZ_QUESTIONS.length}</div>
+      <div class="quiz-bar"><i style="width:${(i / QUIZ_QUESTIONS.length) * 100}%"></i></div>
+      <div class="quiz-q">${q.q}</div>
+      ${q.a.map((o, idx) => `<button type="button" class="quiz-opt" data-quiz-pick="${idx}">${o.t}</button>`).join("")}
+      ${i > 0 ? `<button type="button" class="quiz-back" data-quiz-back>← ひとつ戻る</button>` : ""}
+    `;
+  }
+
+  // 結果
+  const scores = scoreQuiz(quizAnswers, QUIZ_QUESTIONS);
+  const type = topFamilies(scores, 1)[0];
+  const picks = sampleGamesForScores(scores, 6);
+  return `
+    <a class="detail-back" href="#">← 一覧へ戻る</a>
+    <h1 class="detail-title">診断結果</h1>
+    <div class="detail-underline"></div>
+    ${buildTypeHero(type)}
+    <div class="review-card">
+      <div class="review-header"><div class="review-title">あなたの傾向</div></div>
+      ${buildAxisChart(scores)}
+    </div>
+    ${buildAffinityRanking(scores)}
+    <div class="review-card">
+      <div class="review-header"><div class="review-title">相性が良さそうなゲーム</div></div>
+      <div class="player-game-list">
+        ${picks.map(p => `
+          <a class="player-game-row" href="#game/${encodeURIComponent(slugOf(p.g))}">
+            <img src="${p.g.img}" alt="${p.g.jp}" onerror="this.style.visibility='hidden'">
+            <div class="player-game-row-body">
+              <div class="player-game-row-title">${p.g.jp}</div>
+              <div class="player-game-row-level">${getGameTags(p.g).allMechanics.slice(0, 3).map(m => "#" + m).join(" ")}</div>
+            </div>
+          </a>
+        `).join("")}
+      </div>
+    </div>
+    <div class="review-card">
+      <div class="review-count">${getMyName()
+        ? `<strong>${getMyName()}</strong> の結果として保存すると、マイページに表示され、おすすめの精度も上がります。`
+        : "名前を登録すると結果を保存できます。"}</div>
+      <button type="button" class="section-toggle-btn section-toggle-btn-primary" data-quiz-save>結果を保存する</button>
+      <button type="button" class="section-toggle-btn" data-quiz-retry>もう一度やる</button>
+    </div>
+  `;
+}
+
+function showQuizView() {
+  document.getElementById("controls").style.display = "none";
+  document.getElementById("listView").style.display = "none";
+  document.getElementById("detailView").style.display = "none";
+  document.getElementById("playerView").style.display = "none";
+  document.getElementById("membersView").style.display = "none";
+  document.getElementById("recommendView").style.display = "none";
+  const qv = document.getElementById("quizView");
+  qv.style.display = "block";
+  qv.innerHTML = buildQuizView();
+  window.scrollTo(0, 0);
+}
+
+// 相性ランキングのタグをタップしたら、その絞り込みで一覧へ
+["quizView", "playerView"].forEach(id => {
+  document.getElementById(id).addEventListener("click", e => {
+    const tag = e.target.closest("[data-tag-search]");
+    if (!tag) return;
+    e.preventDefault();
+    goToTagSearch(tag.dataset.tagSearch);
+  });
+});
+
+document.getElementById("quizView").addEventListener("click", async e => {
+  if (e.target.closest("[data-quiz-start]")) {
+    quizStarted = true; quizAnswers = []; showQuizView(); return;
+  }
+  const pick = e.target.closest("[data-quiz-pick]");
+  if (pick) {
+    quizAnswers.push(parseInt(pick.dataset.quizPick, 10));
+    showQuizView();
+    return;
+  }
+  if (e.target.closest("[data-quiz-back]")) {
+    quizAnswers.pop(); showQuizView(); return;
+  }
+  if (e.target.closest("[data-quiz-retry]")) {
+    quizAnswers = []; quizStarted = true; showQuizView(); return;
+  }
+  const save = e.target.closest("[data-quiz-save]");
+  if (save) {
+    const name = ensureMyName();
+    if (!name) return;
+    save.disabled = true;
+    save.textContent = "保存中…";
+    await saveProfile(name, scoreQuiz(quizAnswers, QUIZ_QUESTIONS));
+    quizStarted = false; quizAnswers = [];
+    location.hash = `#player/${encodeURIComponent(name)}`;
+  }
+});
+
 function showMembersView() {
   document.getElementById("controls").style.display = "none";
   document.getElementById("listView").style.display = "none";
   document.getElementById("detailView").style.display = "none";
   document.getElementById("playerView").style.display = "none";
   document.getElementById("recommendView").style.display = "none";
+  document.getElementById("quizView").style.display = "none";
   const mv = document.getElementById("membersView");
   mv.style.display = "block";
   mv.innerHTML = buildMembersView();
@@ -2321,6 +3285,9 @@ function buildPlayerPage(name) {
     `;
   }).join("");
 
+  const prof = getProfile(name);
+  const isMe = getMyName() === name;
+
   return `
     <a class="detail-back" href="#">← 一覧へ戻る</a>
     <h1 class="detail-title">${name} さんのページ</h1>
@@ -2331,6 +3298,22 @@ function buildPlayerPage(name) {
         <div class="value">${totalCount}件</div>
       </div>
     </div>
+    ${prof ? `
+      ${buildTypeHero(prof.type)}
+      <div class="review-card">
+        <div class="review-header"><div class="review-title">タイプの内訳</div></div>
+        ${buildAxisChart(prof.scores)}
+        ${isMe ? `<a class="quiz-cta" style="margin-top:12px;" href="#quiz">診断をやり直す</a>` : ""}
+      </div>
+      ${buildAffinityRanking(prof.scores)}
+    ` : `
+      <div class="review-card">
+        <div class="review-count">${isMe
+          ? "まだタイプ診断をしていません。13問答えるとタイプが分かり、おすすめの精度も上がります。"
+          : `${name} さんはまだタイプ診断をしていません。`}</div>
+        ${isMe ? `<a class="quiz-cta" style="margin-top:10px;" href="#quiz">🧭 診断をやってみる</a>` : ""}
+      </div>
+    `}
     <div class="quickref-card">
       <div class="quickref-title">🎯 好きなジャンル傾向</div>
       ${genreBreakdown.length ? `
@@ -2387,6 +3370,7 @@ function showPlayerPage(name) {
   document.getElementById("detailView").style.display = "none";
   document.getElementById("membersView").style.display = "none";
   document.getElementById("recommendView").style.display = "none";
+  document.getElementById("quizView").style.display = "none";
   const pv = document.getElementById("playerView");
   pv.style.display = "block";
   pv.innerHTML = buildPlayerPage(name);
@@ -2422,6 +3406,10 @@ function router() {
   }
   if (location.hash === "#recommend") {
     showRecommendView();
+    return;
+  }
+  if (location.hash === "#quiz") {
+    showQuizView();
     return;
   }
   showListView();
