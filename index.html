@@ -363,28 +363,364 @@
     margin: 0 auto;
   }
 
+  .result-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin: 4px 4px 10px;
+  }
   .result-count {
     font-size: 13px;
     color: var(--text-sub);
-    margin: 4px 4px 10px;
+    flex-shrink: 0;
   }
-  .tag-cloud-card {
+  .sort-inline {
+    max-width: 60%;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 6px 8px;
+    font-size: 12.5px;
+    background: var(--card-bg);
+    color: var(--text);
+  }
+  .reset-btn {
+    flex: 1;
+    border: 1px solid var(--border);
+    background: var(--bg);
+    color: var(--text-sub);
+    font-size: 12.5px;
+    font-weight: 600;
+    padding: 9px 12px;
+    border-radius: 999px;
+    cursor: pointer;
+  }
+  .reset-btn:active { background: var(--accent-soft); }
+  .cta-block { margin-bottom: 10px; }
+  .cta-note {
+    margin: 6px 2px 0;
+    font-size: 11.5px;
+    line-height: 1.55;
+    color: var(--text-sub);
+  }
+
+  .detail-title-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+  }
+  .detail-title-row .detail-title { flex: 1; min-width: 0; }
+  .title-interest {
+    flex-shrink: 0;
+    border: none;
+    background: none;
+    font-size: 27px;
+    line-height: 1;
+    padding: 2px;
+    cursor: pointer;
+  }
+  /* 幅があれば横並び、狭ければ縦積み。タグが複数でも崩れないようにする */
+  .class-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 10px;
+    margin-bottom: 14px;
+  }
+  .class-box {
     background: var(--card-bg);
     border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 10px 12px;
+  }
+  .class-box-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px;
+    margin-bottom: 7px;
+  }
+  .class-box-label {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--text-sub);
+  }
+  .class-empty { font-size: 12px; color: var(--text-sub); }
+
+  .level-card {
+    background: linear-gradient(135deg, var(--navy), var(--navy-light));
+    border-radius: 14px;
+    padding: 16px;
+    margin-bottom: 14px;
+    color: #fff;
+  }
+  .level-top {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 10px;
+  }
+  .level-rank { font-size: 19px; font-weight: 700; }
+  .level-exp { font-size: 12px; color: #c4d1ea; margin-top: 3px; }
+  .level-num { font-size: 13px; color: #c4d1ea; flex-shrink: 0; }
+  .level-num b { font-size: 26px; color: #fff; margin-left: 3px; }
+  .level-bar {
+    height: 8px;
+    border-radius: 999px;
+    background: rgba(255,255,255,0.18);
+    overflow: hidden;
+    margin: 12px 0 7px;
+  }
+  .level-bar i {
+    display: block;
+    height: 100%;
+    background: #7ee0a8;
+    border-radius: 999px;
+  }
+  .level-next { font-size: 11.5px; color: #c4d1ea; }
+  .level-card .section-toggle-btn {
+    background: rgba(255,255,255,0.12);
+    border-color: rgba(255,255,255,0.3);
+    color: #fff;
+    margin-bottom: 0;
+  }
+  .exp-table { margin-top: 10px; }
+  .exp-table td i {
+    display: block;
+    font-style: normal;
+    font-size: 10.5px;
+    color: #9fb0cc;
+    margin-top: 2px;
+  }
+  .stat-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    margin-bottom: 14px;
+  }
+  .stat-box {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 11px 6px;
+    text-align: center;
+  }
+  .stat-label { font-size: 10.5px; color: var(--text-sub); }
+  .stat-value { font-size: 21px; font-weight: 700; color: var(--navy); margin-top: 2px; }
+  .stat-value i { font-style: normal; font-size: 10.5px; color: var(--text-sub); margin-left: 2px; }
+
+  .title-count {
+    font-size: 13px;
+    font-weight: 700;
+    color: #c98a1e;
+    flex-shrink: 0;
+  }
+  .title-count span { font-size: 11px; color: var(--text-sub); font-weight: 500; }
+
+  .mode-row { display: flex; flex-wrap: wrap; gap: 6px; }
+  .mode-opt { flex: 1; min-width: 84px; cursor: pointer; }
+  .mode-opt input { position: absolute; opacity: 0; width: 0; height: 0; }
+  .mode-opt span {
+    display: block;
+    text-align: center;
+    border: 1px solid var(--border);
+    border-radius: 9px;
+    padding: 8px 6px;
+    font-size: 12.5px;
+    font-weight: 700;
+    color: var(--text);
+    background: var(--card-bg);
+  }
+  .mode-opt span i {
+    display: block;
+    font-style: normal;
+    font-size: 10px;
+    font-weight: 500;
+    color: var(--text-sub);
+    margin-top: 2px;
+  }
+  .mode-opt input:checked + span {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #fff;
+  }
+  .mode-opt input:checked + span i { color: rgba(255,255,255,0.85); }
+  .pick-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .pick-item { cursor: pointer; }
+  .pick-item input { position: absolute; opacity: 0; width: 0; height: 0; }
+  .pick-item span {
+    display: inline-block;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    padding: 7px 14px;
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--text);
+    background: var(--card-bg);
+  }
+  .pick-item input:checked + span {
+    background: var(--green);
+    border-color: var(--green);
+    color: #fff;
+  }
+  .title-strip {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    margin: 6px 0 2px;
+  }
+  .title-wrap {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .title-chip {
+    border: 1px solid var(--border);
+    background: var(--bg);
+    color: var(--text-sub);
+    font-size: 11.5px;
+    font-weight: 700;
+    padding: 5px 11px;
+    border-radius: 999px;
+    cursor: pointer;
+  }
+  .title-chip.on {
+    background: linear-gradient(135deg, #d8a13a, #c98a1e);
+    border-color: #c98a1e;
+    color: #fff;
+  }
+  .title-desc {
+    font-size: 11.5px;
+    color: var(--text-sub);
+    line-height: 1.6;
+    margin-top: 9px;
+  }
+  .title-desc b { color: var(--text); }
+  .pref-list { display: flex; flex-direction: column; gap: 6px; }
+  .pref-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    width: 100%;
+    text-align: left;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 9px;
+    padding: 9px 11px;
+    cursor: pointer;
+    font-size: 13px;
+    color: var(--text);
+  }
+  .pref-row:active { background: var(--accent-soft); }
+  .pref-kind {
+    flex-shrink: 0;
+    font-size: 10.5px;
+    font-weight: 700;
+    color: var(--text-sub);
+  }
+  .pref-name { flex: 1; min-width: 0; font-weight: 600; }
+  .pref-score {
+    flex-shrink: 0;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--accent);
+  }
+  .pref-score i {
+    font-style: normal;
+    font-weight: 500;
+    font-size: 10.5px;
+    color: var(--text-sub);
+  }
+  .tag-chip-own {
+    background: var(--accent-soft) !important;
+    border-color: var(--accent) !important;
+    color: var(--accent) !important;
+  }
+  .tag-chip-edit {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .tag-chip-edit button {
+    border: none;
+    background: none;
+    color: inherit;
+    font-size: 15px;
+    line-height: 1;
+    padding: 0 0 0 2px;
+    cursor: pointer;
+    opacity: 0.65;
+  }
+  .tag-chip-hidden { opacity: 0.55; }
+  .tag-edit-bar { margin: 2px 2px 10px; }
+  .tag-edit-card {
+    background: var(--card-bg);
+    border: 1px dashed var(--accent);
     border-radius: 12px;
     padding: 12px 14px;
     margin-bottom: 14px;
   }
-  .tag-cloud-title {
-    font-size: 12px;
-    font-weight: 700;
-    color: var(--text-sub);
-    margin-bottom: 8px;
+  .tag-add-form { display: flex; gap: 8px; }
+  .tag-add-form input {
+    flex: 1;
+    min-width: 0;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 9px 10px;
+    font-size: 13.5px;
+    background: var(--card-bg);
+    color: var(--text);
   }
+  .tag-add-form button {
+    flex-shrink: 0;
+    border: none;
+    background: var(--accent);
+    color: #fff;
+    font-size: 13px;
+    font-weight: 700;
+    padding: 9px 16px;
+    border-radius: 8px;
+    cursor: pointer;
+  }
+  .tag-edit-note {
+    font-size: 11.5px;
+    color: var(--text-sub);
+    line-height: 1.55;
+    margin-top: 8px;
+  }
+  .tagcloud-fold {
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    margin-top: 10px;
+    overflow: hidden;
+  }
+  .tagcloud-head {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: var(--bg);
+    border: none;
+    color: var(--text);
+    font-size: 12.5px;
+    font-weight: 700;
+    padding: 10px 12px;
+    cursor: pointer;
+    text-align: left;
+  }
+  #tagCloudPanel { padding: 10px 12px 12px; }
   .tag-cloud {
     display: flex;
     flex-wrap: wrap;
     gap: 6px;
+  }
+  /* 閉じているときはちょうど2行分だけ見せる */
+  .tag-cloud.clamped {
+    max-height: 62px;
+    overflow: hidden;
   }
   .tag-cloud button {
     border: 1px solid var(--border);
@@ -495,15 +831,64 @@
     border-radius: 999px;
     white-space: nowrap;
   }
-  .card-pitch {
-    margin: 7px 0 0;
-    padding-left: 15px;
-    font-size: 11.5px;
+  .score-pill {
+    font-size: 10.5px;
     color: var(--text-sub);
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 3px 8px;
+    white-space: nowrap;
+  }
+  .score-pill b {
+    font-size: 12.5px;
+    color: var(--text);
+    margin-left: 2px;
+  }
+  /* ジャンル・メカニクスは検索窓の#と紛らわしいので、ラベル付きの文章で見せる */
+  .card-class {
+    font-size: 11.5px;
+    line-height: 1.5;
+    color: var(--text);
+    margin-top: 5px;
+  }
+  .card-class span {
+    color: var(--text-sub);
+    font-weight: 700;
+    margin-right: 3px;
+  }
+  .card-pitch-box {
+    background: var(--pitch-bg);
+    border: 1px solid var(--pitch-border);
+    border-radius: 9px;
+    padding: 8px 10px 8px 6px;
+    margin-top: 8px;
+  }
+  .card-pitch-title {
+    font-size: 10.5px;
+    font-weight: 700;
+    color: var(--pitch-text);
+    margin: 0 0 3px 8px;
+  }
+  .card-interest {
+    flex-shrink: 0;
+    align-self: flex-start;
+    border: none;
+    background: none;
+    font-size: 21px;
+    line-height: 1;
+    padding: 2px 0 0 4px;
+    cursor: pointer;
+  }
+  .card-pitch {
+    margin: 0;
+    padding-left: 18px;
+    font-size: 11.5px;
+    color: var(--text);
     line-height: 1.55;
   }
   .card-pitch li { margin-bottom: 1px; }
-  .card-pitch li::marker { color: var(--accent); }
+  .card-pitch li::marker { color: var(--pitch-text); }
   .tag-cloud-more {
     margin-top: 8px;
     background: none;
@@ -869,7 +1254,9 @@
     color: var(--text);
     margin-bottom: 12px;
   }
-  .link-btn {
+  /* フォーム内のボタン共通スタイルに飲まれないよう、テキストリンクの見た目を保つ */
+  .link-btn,
+  .review-form button.link-btn {
     background: none;
     border: none;
     color: var(--accent);
@@ -878,6 +1265,7 @@
     text-decoration: underline;
     cursor: pointer;
     padding: 0 0 0 6px;
+    width: auto;
   }
   .member-toggle-btn {
     display: block;
@@ -1124,10 +1512,11 @@
     padding: 10px 14px;
     cursor: pointer;
   }
+  /* 10段階を縦に並べると長すぎるので2列に。全部が同時に見えるので選び逃しがない */
   .rating-choice-row {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
     margin-bottom: 4px;
   }
   .rating-choice { cursor: pointer; }
@@ -1138,20 +1527,40 @@
     height: 0;
   }
   .rating-choice span {
-    display: inline-block;
-    padding: 9px 13px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 9px 10px;
     border: 1px solid var(--border);
-    border-radius: 999px;
-    font-size: 12.5px;
+    border-radius: 10px;
+    font-size: 11.5px;
     font-weight: 600;
+    line-height: 1.3;
     color: var(--text);
     background: var(--card-bg);
+    height: 100%;
+    box-sizing: border-box;
+  }
+  .rating-choice span b {
+    flex-shrink: 0;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11.5px;
+    color: #fff;
   }
   .rating-choice input:checked + span {
     background: var(--accent);
     border-color: var(--accent);
     color: #fff;
   }
+  .rating-choice input:checked + span b {
+    background: rgba(255,255,255,0.28) !important;
+  }
+  .rating-choice input:focus-visible + span { outline: 2px solid var(--accent); }
   .name-pick-row { margin-bottom: 8px; }
   .new-name-input {
     width: 100%;
@@ -1272,7 +1681,18 @@
 
 <div class="controls" id="controls">
   <div class="controls-topline">
-    <input id="search" class="search-box" type="search" placeholder="ゲーム名 or #ハッシュタグで検索">
+    <input id="search" class="search-box" type="search" list="searchSuggest"
+           placeholder="ゲーム名 or #ハッシュタグ（例: 初心者でも遊べる）">
+    <datalist id="searchSuggest"></datalist>
+  </div>
+  <div class="tagcloud-fold">
+    <button type="button" class="tagcloud-head" id="tagCloudHead">
+      <span>🔥 人気タグから探す</span><span class="collapse-mark">＋</span>
+    </button>
+    <div id="tagCloudPanel" style="display:none;">
+      <div class="tag-cloud" id="tagCloud"></div>
+      <button type="button" class="tag-cloud-more" id="tagCloudMore">もっと見る</button>
+    </div>
   </div>
   <div id="filterArea">
 
@@ -1295,10 +1715,10 @@
       <label>時間</label>
       <select id="timeSelect" class="filter-select">
         <option value="">指定なし</option>
-        <option value="15">〜15分</option>
-        <option value="30">〜30分</option>
-        <option value="60">〜60分</option>
-        <option value="9999">60分〜</option>
+        <option value="15">超軽量級（〜15分）</option>
+        <option value="30">軽量級（〜30分）</option>
+        <option value="60">中量級（〜60分）</option>
+        <option value="9999">重量級（60分〜）</option>
       </select>
     </div>
   </div>
@@ -1310,23 +1730,9 @@
       </select>
     </div>
     <div class="filter-select-group">
-      <label>メカニクス</label>
+      <label>メカニクス（仕組み）</label>
       <select id="mechanicSelect" class="filter-select">
         <option value="">指定なし</option>
-      </select>
-    </div>
-  </div>
-  <div class="filter-row-compact">
-    <div class="filter-select-group" style="flex:1;">
-      <label>並び順</label>
-      <select id="sort" class="filter-select">
-        <option value="rating_desc">評価が高い順</option>
-        <option value="default">登録順</option>
-        <option value="players_asc">人数：少ない順</option>
-        <option value="time_asc">時間：短い順</option>
-        <option value="time_desc">時間：長い順</option>
-        <option value="aiueo">あ→ん順</option>
-        <option value="played_desc">プレイ回数が多い順</option>
       </select>
     </div>
   </div>
@@ -1335,25 +1741,34 @@
       <input type="checkbox" id="unplayedOnly">
       <span>🗄️ 積みゲー（自分が未評価）のみ表示</span>
     </label>
-    <button type="button" id="randomPickBtn" class="random-pick-btn">🎲 今日は何にする？</button>
+    <button type="button" id="resetFilterBtn" class="reset-btn">↺ 条件をリセット</button>
   </div>
-  <div class="filter-row-compact">
+  <div class="cta-block">
     <a href="#recommend" class="recommend-btn">👥 メンバーで選んでおすすめしてもらう</a>
+    <p class="cta-note">今いる人をタップするだけ。全員の好みを混ぜて、その人数で遊べるゲームを提案します。誰かが苦手なゲームは自動で外れます。</p>
   </div>
-  <div class="filter-row-compact">
+  <div class="cta-block">
     <a href="#quiz" class="quiz-cta">🧭 ボドゲタイプ診断をやってみる</a>
+    <p class="cta-note">13問であなたは10タイプのどれか。向いているメカニクスと、相性のいい棚の中の1本が分かります。</p>
   </div>
   </div>
 </div>
 
 <main>
   <div id="listView">
-    <div class="tag-cloud-card">
-      <div class="tag-cloud-title">🔥 人気タグ</div>
-      <div class="tag-cloud" id="tagCloud"></div>
-      <button type="button" class="tag-cloud-more" id="tagCloudMore">もっと見る</button>
+    <div class="result-bar">
+      <span class="result-count" id="resultCount"></span>
+      <select id="sort" class="sort-inline">
+        <option value="rating_desc">みんなの評価が高い順</option>
+        <option value="myrating_desc">自分の評価が高い順</option>
+        <option value="default">登録順</option>
+        <option value="players_asc">人数：少ない順</option>
+        <option value="time_asc">時間：短い順</option>
+        <option value="time_desc">時間：長い順</option>
+        <option value="aiueo">あ→ん順</option>
+        <option value="played_desc">プレイ回数が多い順</option>
+      </select>
     </div>
-    <div class="result-count" id="resultCount"></div>
     <div class="card-list" id="cardList"></div>
     <div class="empty-state" id="emptyState" style="display:none;">条件に合うゲームが見つかりませんでした。</div>
   </div>
@@ -1427,6 +1842,12 @@ let reviewsCache = {};
 let historyCache = {};
 let interestsCache = {};
 let profilesCache = {};   // 名前 → 診断結果
+let customTagsCache = {}; // slug → 自分たちで足した/隠したタグ
+let tagEditMode = false;
+let genreEditMode = false;
+let mechanicEditMode = false;
+let GENRE_VOCAB = new Set();      // データ読み込み後に埋める
+let MECHANIC_VOCAB = new Set();
 let moodScores = null;    // 「今日の気分」。保存せずその場限り
 let state = { q: "", players: "", time: "", genre: "", mechanic: "", sort: "rating_desc", unplayedOnly: false };
 
@@ -1442,19 +1863,90 @@ const INTERESTS_CACHE_KEY = "bg_interests_cache_v1";
 const MY_NAME_KEY = "bg_myname";
 const REC_MEMBERS_KEY = "bg_rec_members";
 
+// 10段階。5段階だと「ふつう」に逃げられてしまい、下2つも心理的に押しづらいため。
 const RATING_LEVELS = [
-  { value: 5, label: "最高", emoji: "🤩" },
-  { value: 4, label: "またやりたい", emoji: "😊" },
-  { value: 3, label: "普通", emoji: "😐" },
-  { value: 2, label: "苦手", emoji: "😕" },
-  { value: 1, label: "やりたくない", emoji: "😩" }
+  { value: 10, label: "いつでも遊びたい", emoji: "🤩" },
+  { value: 9, label: "かなり遊びたい", emoji: "🤩" },
+  { value: 8, label: "またぜひ遊びたい", emoji: "😊" },
+  { value: 7, label: "また遊びたい", emoji: "😊" },
+  { value: 6, label: "誘われたら遊びたい", emoji: "🙂" },
+  { value: 5, label: "誘われたら遊ぶ", emoji: "🙂" },
+  { value: 4, label: "他に候補がなければ遊ぶ", emoji: "😐" },
+  { value: 3, label: "あまり遊びたくない", emoji: "😕" },
+  { value: 2, label: "もう遊ばなくていい", emoji: "😕" },
+  { value: 1, label: "二度と遊びたくない", emoji: "😩" }
 ];
+const RATING_MAX = 10;
+const RATING_NEUTRAL = 5.5;              // 1〜10のまんなか
+const RATING_VETO_MAX = 3;               // これ以下は「遊びたくない」＝おすすめから除外
+const RATING_LOVE_MIN = 8;               // これ以上は強い推しとして理由に出す
+
+// ランクごとに Lv1〜Lv3。ランク間の必要EXPを3等分している。
+const RANK_BASES = [
+  { name: "はじめてのボードゲーマー", exp: 0 },
+  { name: "駆け出し", exp: 100 },
+  { name: "初心者", exp: 250 },
+  { name: "見習い", exp: 450 },
+  { name: "ボードゲーム好き", exp: 700 },
+  { name: "愛好家", exp: 1000 },
+  { name: "経験者", exp: 1400 },
+  { name: "ベテラン", exp: 1900 },
+  { name: "熟練者", exp: 2500 },
+  { name: "ボードゲーマー", exp: 3200 },
+  { name: "マスター", exp: 8000 },
+  { name: "グランドマスター", exp: 15000 }
+];
+
+const LEVELS = (() => {
+  const out = [];
+  RANK_BASES.forEach((r, i) => {
+    const next = RANK_BASES[i + 1];
+    // 最後のランクは、ひとつ前の伸び幅を引き継いで刻む
+    const span = next ? next.exp - r.exp : r.exp - RANK_BASES[i - 1].exp;
+    for (let s = 0; s < 3; s++) {
+      out.push({
+        rank: r.name,
+        sub: s + 1,
+        need: Math.round((r.exp + (span * s) / 3) / 10) * 10
+      });
+    }
+  });
+  return out;
+})();
+
+function levelFromExp(exp) {
+  let idx = 0;
+  for (let i = 0; i < LEVELS.length; i++) if (exp >= LEVELS[i].need) idx = i;
+  const cur = LEVELS[idx];
+  const next = LEVELS[idx + 1] || null;
+  return {
+    rank: cur.rank,
+    sub: cur.sub,
+    label: `${cur.rank} ${"★".repeat(cur.sub)}${"☆".repeat(3 - cur.sub)}`,
+    level: idx + 1,
+    curNeed: cur.need,
+    nextNeed: next ? next.need : null,
+    nextLabel: next ? `${next.rank} ${"★".repeat(next.sub)}${"☆".repeat(3 - next.sub)}` : null,
+    progress: next ? (exp - cur.need) / (next.need - cur.need) : 1
+  };
+}
+
 function ratingLabel(value) {
   const l = RATING_LEVELS.find(r => r.value === value);
-  return l ? `${l.emoji} ${l.label}` : `${value}`;
+  return l ? `${l.emoji} ${value} ${l.label}` : `${value}`;
+}
+
+// 点数がひと目で分かるよう、高い＝緑 / 低い＝赤 のグラデーションにする
+function ratingColor(value) {
+  if (value >= 9) return "#2e9e6b";
+  if (value >= 7) return "#5cae7a";
+  if (value >= 5) return "#9aa7bd";
+  if (value >= 4) return "#c2a15a";
+  return "#c96a6a";
 }
 
 const PROFILES_CACHE_KEY = "bg_profiles_cache_v1";
+const CUSTOMTAGS_CACHE_KEY = "bg_customtags_cache_v1";
 
 // ── ボドゲタイプ診断 ────────────────────────────────
 // 58種のメカニクスを、遊んだ体感で区別できる10タイプに束ねたもの。
@@ -1602,6 +2094,9 @@ Promise.all([
   renderTagCloud();
   renderGenreOptions();
   renderMechanicOptions();
+  renderSearchSuggest();
+  GENRE_VOCAB = new Set(Object.values(genresData).flat().sort((a, b) => a.localeCompare(b, "ja")));
+  MECHANIC_VOCAB = new Set(Object.values(mechanicsData).flat().sort((a, b) => a.localeCompare(b, "ja")));
   render();
   router();
 });
@@ -1646,21 +2141,23 @@ document.getElementById("backToTop").addEventListener("click", () => {
   setTimeout(() => { if (window.scrollY > 0) window.scrollTo(0, 0); }, 500);
 });
 
-document.getElementById("randomPickBtn").addEventListener("click", () => {
-  const candidates = games.filter(matches);
-  if (candidates.length === 0) {
-    alert("条件に合うゲームがありません。絞り込みを変えてみてください。");
-    return;
-  }
-  const pick = candidates[Math.floor(Math.random() * candidates.length)];
-  location.hash = `#game/${encodeURIComponent(slugOf(pick))}`;
+document.getElementById("resetFilterBtn").addEventListener("click", () => {
+  state.q = ""; state.players = ""; state.time = "";
+  state.genre = ""; state.mechanic = ""; state.unplayedOnly = false;
+  document.getElementById("search").value = "";
+  document.getElementById("playersSelect").value = "";
+  document.getElementById("timeSelect").value = "";
+  document.getElementById("genreSelect").value = "";
+  document.getElementById("mechanicSelect").value = "";
+  document.getElementById("unplayedOnly").checked = false;
+  applyFilterChange();
 });
 
 function matches(g) {
   if (state.q) {
-    const q = state.q.toLowerCase().replace(/^#/, "");
-    const hay = (g.jp + " " + g.en).toLowerCase();
-    const tagHay = getGameTags(g).all.join(" ").toLowerCase();
+    const q = normalizeSearch(state.q.replace(/^#/, ""));
+    const hay = normalizeSearch(g.jp + " " + g.en);
+    const tagHay = normalizeSearch(getGameTags(g).all.join(" "));
     if (!hay.includes(q) && !tagHay.includes(q)) return false;
   }
   if (state.players) {
@@ -1674,11 +2171,16 @@ function matches(g) {
   }
   if (state.time) {
     const t = parseInt(state.time, 10);
-    if (g.timeMin == null) return false;
+    if (g.timeMax == null) return false;
+    // 超軽量級〜重量級。かかる上限の時間で階級を決める
     if (t === 9999) {
-      if (g.timeMax < 60) return false;
-    } else {
-      if (g.timeMin > t) return false;
+      if (g.timeMax <= 60) return false;
+    } else if (t === 60) {
+      if (g.timeMax <= 30 || g.timeMax > 60) return false;
+    } else if (t === 30) {
+      if (g.timeMax <= 15 || g.timeMax > 30) return false;
+    } else if (t === 15) {
+      if (g.timeMax > 15) return false;
     }
   }
   if (state.genre) {
@@ -1711,6 +2213,9 @@ function sortGames(list) {
     case "rating_desc":
       arr.sort((a, b) => (averageScore(slugOf(b)) ?? -1) - (averageScore(slugOf(a)) ?? -1));
       break;
+    case "myrating_desc":
+      arr.sort((a, b) => (myRating(slugOf(b)) ?? -1) - (myRating(slugOf(a)) ?? -1));
+      break;
     case "played_desc":
       arr.sort((a, b) => getHistory(slugOf(b)).length - getHistory(slugOf(a)).length);
       break;
@@ -1738,16 +2243,16 @@ function render() {
   }
   empty.style.display = "none";
 
+  const myName = getMyName();
   list.innerHTML = filtered.map(g => {
     const slug = slugOf(g);
     const avg = averageScore(slug);
+    const mine = myRating(slug);
     const { genreTags, mechanicTags, audienceTags } = getGameTags(g);
-    // ジャンル→メカニクス→雰囲気の順に、重複を除いて5つまで
-    const cardTags = Array.from(new Set([
-      ...genreTags.slice(0, 2), ...mechanicTags.slice(0, 2), ...audienceTags.slice(0, 2)
-    ])).slice(0, 5);
+    const otherTags = audienceTags.slice(0, 4);
     const r = rulesData[slug];
     const pitches = (r && r.sellingPoints) || [];
+    const iLike = myName && getInterests(slug).some(i => i.name === myName);
     return `
     <div class="card">
       <a class="card-main" href="#game/${encodeURIComponent(slug)}">
@@ -1758,12 +2263,21 @@ function render() {
           <div class="spec-row">
             ${specHtml(g.playersRaw)}
             ${specHtml(g.timeRaw)}
-            ${avg != null ? `<span class="spec">★ ${avg}/5</span>` : `<span class="spec unknown">未評価</span>`}
+            <span class="score-pill">自分 ${mine != null ? `<b style="color:${ratingColor(mine)}">${mine}</b>` : "—"}</span>
+            <span class="score-pill">みんな ${avg != null ? `<b>${avg}</b>` : "—"}</span>
           </div>
-          ${cardTags.length ? `<div class="card-tags">${cardTags.map(t => `<span class="card-tag">#${t}</span>`).join("")}</div>` : ""}
-          ${pitches.length ? `<ul class="card-pitch">${pitches.map(p => `<li>${p}</li>`).join("")}</ul>` : ""}
+          ${genreTags.length ? `<div class="card-class"><span>ジャンル：</span>${genreTags.join("・")}</div>` : ""}
+          ${mechanicTags.length ? `<div class="card-class"><span>メカニクス（仕組み）：</span>${mechanicTags.join("・")}</div>` : ""}
+          ${otherTags.length ? `<div class="card-tags">${otherTags.map(t => `<span class="card-tag">#${t}</span>`).join("")}</div>` : ""}
+          ${pitches.length ? `
+          <div class="card-pitch-box">
+            <div class="card-pitch-title">✨ おすすめポイント</div>
+            <ul class="card-pitch">${pitches.map(p => `<li>${p}</li>`).join("")}</ul>
+          </div>` : ""}
         </div>
       </a>
+      <button type="button" class="card-interest ${iLike ? "on" : ""}" data-card-interest="${slug}"
+              title="興味あり">${iLike ? "🌟" : "☆"}</button>
     </div>
   `;
   }).join("");
@@ -1771,6 +2285,12 @@ function render() {
 
 function slugOf(g) {
   return g.url.split("/").filter(Boolean).pop();
+}
+
+// ひらがなで打ってもカタカナのゲーム名・タグに当たるようにする
+function normalizeSearch(s) {
+  return s.toLowerCase().replace(/[ぁ-ゖ]/g, c =>
+    String.fromCharCode(c.charCodeAt(0) + 0x60));
 }
 
 function ruleVideoUrl(g) {
@@ -1791,26 +2311,49 @@ const GENRE_EQUIV = {
 
 function getGameTags(g) {
   const slug = slugOf(g);
-  const genreTags = genresData[slug] || [];
-  const rawMechanics = mechanicsData[slug] || [];
+  const { added, addedGenres, addedMechanics, hidden } = getCustomTags(slug);
+  const keep = t => !hidden.has(t);
+
+  const genreTags = Array.from(new Set([...(genresData[slug] || []), ...addedGenres])).filter(keep);
+  const rawMechanics = Array.from(new Set([...(mechanicsData[slug] || []), ...addedMechanics])).filter(keep);
   const mechanicTags = rawMechanics.filter(
     m => !(GENRE_EQUIV[m] && genreTags.includes(GENRE_EQUIV[m]))
   );
   const r = rulesData[slug];
-  const audienceTags = (r && r.audienceTags) || [];
+  const audienceTags = ((r && r.audienceTags) || []).filter(keep);
   const computedTags = [];
   if (g.playersMin === 1) computedTags.push("ソロ可");
   if (g.playersMax != null && g.playersMax >= 8) computedTags.push("大人数向け");
   if (g.timeMax != null && g.timeMax <= 15) computedTags.push("サクッと〜15分");
   if (g.timeMin != null && g.timeMin >= 60) computedTags.push("じっくり60分〜");
-  const mergedAudience = Array.from(new Set([...audienceTags, ...computedTags]));
+  const mergedAudience = Array.from(new Set([...audienceTags, ...computedTags.filter(keep)]));
+  const customTags = added.filter(t => !hidden.has(t));
   return {
     genreTags,
     mechanicTags,              // 表示用（ジャンルと重複するものを除いたもの）
     allMechanics: rawMechanics, // 絞り込み・検索用（全部そのまま）
     audienceTags: mergedAudience,
-    all: [...genreTags, ...rawMechanics, ...mergedAudience]
+    customTags,                // 自分たちで足したタグ
+    all: [...genreTags, ...rawMechanics, ...mergedAudience, ...customTags]
   };
+}
+
+// ジャンル／メカニクスは検索窓ではなく専用プルダウンに反映する
+function goToClassFilter(kind, value) {
+  state.q = "";
+  document.getElementById("search").value = "";
+  if (kind === "genre") {
+    state.genre = value; state.mechanic = "";
+  } else {
+    state.mechanic = value; state.genre = "";
+  }
+  document.getElementById("genreSelect").value = state.genre;
+  document.getElementById("mechanicSelect").value = state.mechanic;
+  document.getElementById("controls").classList.remove("compact");
+  location.hash = "";
+  showListView();
+  render();
+  window.scrollTo(0, 0);
 }
 
 function goToTagSearch(tag) {
@@ -1823,6 +2366,7 @@ function goToTagSearch(tag) {
   window.scrollTo(0, 0);
 }
 
+// 人気順のまま、閉じているときはCSSで2行分の高さに切る（タグ幅がまちまちでも崩れない）
 function renderTagCloud() {
   const counts = {};
   games.forEach(g => {
@@ -1830,19 +2374,14 @@ function renderTagCloud() {
       counts[t] = (counts[t] || 0) + 1;
     });
   });
-  const ranked = Object.entries(counts).sort((a, b) => b[1] - a[1]);
   const el = document.getElementById("tagCloud");
   if (!el) return;
-  const chip = ([tag, count]) => `<button type="button" data-tag-search="${tag}">#${tag}<span>${count}</span></button>`;
-  const rest = ranked.slice(5, 24);
-  el.innerHTML = `
-    ${ranked.slice(0, 5).map(chip).join("")}
-    ${rest.length ? `
-      <div class="tag-cloud" data-section="more-tags" style="display:none;">${rest.map(chip).join("")}</div>
-    ` : ""}
-  `;
+  el.className = "tag-cloud clamped";
+  el.innerHTML = Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, 30)
+    .map(([tag, count]) => `<button type="button" data-tag-search="${tag}">#${tag}<span>${count}</span></button>`)
+    .join("");
   const more = document.getElementById("tagCloudMore");
-  if (more) more.style.display = rest.length ? "" : "none";
+  if (more) more.textContent = "もっと見る";
 }
 
 // ジャンルの絞り込み候補は、実際にデータにあるものだけを多い順で出す
@@ -1878,12 +2417,39 @@ document.getElementById("tagCloud").addEventListener("click", e => {
   goToTagSearch(btn.dataset.tagSearch);
 });
 
+// 一覧から直接「興味あり」をつけ外しする
+document.getElementById("cardList").addEventListener("click", async e => {
+  const btn = e.target.closest("[data-card-interest]");
+  if (!btn) return;
+  e.preventDefault();
+  const name = ensureMyName();
+  if (!name) return;
+  btn.disabled = true;
+  await toggleInterest(btn.dataset.cardInterest, name);
+  render();
+});
+
+document.getElementById("tagCloudHead").addEventListener("click", () => {
+  const p = document.getElementById("tagCloudPanel");
+  const open = p.style.display === "none";
+  p.style.display = open ? "" : "none";
+  document.querySelector("#tagCloudHead .collapse-mark").textContent = open ? "−" : "＋";
+});
+
+// 検索窓の候補：タグとゲーム名
+function renderSearchSuggest() {
+  const el = document.getElementById("searchSuggest");
+  if (!el) return;
+  const tags = Array.from(new Set(games.flatMap(g => getGameTags(g).all)))
+    .sort((a, b) => a.localeCompare(b, "ja"));
+  el.innerHTML = tags.map(t => `<option value="${t}">`).join("")
+    + games.map(g => `<option value="${g.jp}">`).join("");
+}
+
 document.getElementById("tagCloudMore").addEventListener("click", () => {
-  const rest = document.querySelector('[data-section="more-tags"]');
-  if (!rest) return;
-  const hidden = rest.style.display === "none";
-  rest.style.display = hidden ? "flex" : "none";
-  document.getElementById("tagCloudMore").textContent = hidden ? "閉じる" : "もっと見る";
+  const el = document.getElementById("tagCloud");
+  const clamped = el.classList.toggle("clamped");
+  document.getElementById("tagCloudMore").textContent = clamped ? "もっと見る" : "閉じる";
 });
 
 document.getElementById("genreSelect").addEventListener("change", e => {
@@ -1891,25 +2457,91 @@ document.getElementById("genreSelect").addEventListener("change", e => {
   applyFilterChange();
 });
 
+// ジャンル／メカニクスは間違っていることもあるので、その場で直せるようにする。
+// 検索が効かなくなると困るため、入力は既存の候補付き。
+function buildClassBox(g, kind) {
+  const slug = slugOf(g);
+  const t = getGameTags(g);
+  const { hidden } = getCustomTags(slug);
+  const isGenre = kind === "genre";
+  const label = isGenre ? "ジャンル" : "メカニクス（仕組み）";
+  const tags = isGenre ? t.genreTags : t.allMechanics;
+  const vocab = isGenre ? GENRE_VOCAB : MECHANIC_VOCAB;
+  const base = (isGenre ? genresData[slug] : mechanicsData[slug]) || [];
+  const hiddenHere = [...hidden].filter(x => base.includes(x) || vocab.has(x));
+  const editing = isGenre ? genreEditMode : mechanicEditMode;
+  const listId = isGenre ? "genreVocab" : "mechanicVocab";
+
+  return `
+    <div class="class-box">
+      <div class="class-box-head">
+        <span class="class-box-label">${label}</span>
+        <button type="button" class="link-btn" data-class-edit="${kind}">${editing ? "閉じる" : "直す"}</button>
+      </div>
+      <div class="tag-row">
+        ${tags.length
+          ? tags.map(x => editing
+              ? `<span class="tag-chip tag-chip-edit">${x}<button type="button" data-tag-drop="${x}">×</button></span>`
+              : `<button class="tag-chip" data-class-filter="${kind}" data-value="${x}">${x}</button>`).join("")
+          : `<span class="class-empty">未設定</span>`}
+      </div>
+      ${editing ? `
+      <form class="tag-add-form" style="margin-top:10px;" data-class-form="${kind}" data-slug="${slug}">
+        <input type="text" name="tag" list="${listId}" placeholder="${isGenre ? "ジャンル" : "メカニクス"}を追加" maxlength="20" required>
+        <button type="submit">追加</button>
+      </form>
+      <datalist id="${listId}">${[...vocab].map(v => `<option value="${v}">`).join("")}</datalist>
+      ${hiddenHere.length ? `
+        <div class="tag-edit-note">外したもの（タップで戻す）</div>
+        <div class="tag-row">${hiddenHere.map(x => `<button type="button" class="tag-chip tag-chip-hidden" data-tag-restore="${x}">${x} ↩</button>`).join("")}</div>
+      ` : ""}
+      ` : ""}
+    </div>
+  `;
+}
+
+function buildClassGrid(g) {
+  return `<div class="class-grid">${buildClassBox(g, "genre")}${buildClassBox(g, "mechanic")}</div>`;
+}
+
 function buildTagsAndPitch(g) {
   const slug = slugOf(g);
-  const { genreTags, mechanicTags, audienceTags } = getGameTags(g);
+  const { audienceTags, customTags } = getGameTags(g);
+  const { hidden } = getCustomTags(slug);
   const r = rulesData[slug];
   const sellingPoints = r && r.sellingPoints;
-  const anyTags = genreTags.length || mechanicTags.length || audienceTags.length;
+  const anyTags = audienceTags.length || customTags.length;
 
-  if (!anyTags && (!sellingPoints || sellingPoints.length === 0)) {
-    return "";
-  }
+  // 編集モードのときはタップで検索せず、×で外せるようにする
+  const tagChip = (t, own) => tagEditMode
+    ? `<span class="tag-chip ${own ? "tag-chip-own" : ""} tag-chip-edit">#${t}<button type="button" data-tag-drop="${t}" title="外す">×</button></span>`
+    : `<button class="tag-chip ${own ? "tag-chip-own" : ""}" data-tag-search="${t}">#${t}</button>`;
 
-  const tagChip = t => `<button class="tag-chip" data-tag-search="${t}">#${t}</button>`;
+  const vocab = Array.from(new Set(games.flatMap(x => getGameTags(x).all))).sort((a, b) => a.localeCompare(b, "ja"));
 
   return `
     ${anyTags ? `
     <div class="tag-section">
-      ${genreTags.length ? `<div class="tag-row">${genreTags.map(tagChip).join("")}</div>` : ""}
-      ${mechanicTags.length ? `<div class="tag-row">${mechanicTags.map(tagChip).join("")}</div>` : ""}
-      ${audienceTags.length ? `<div class="tag-row">${audienceTags.map(tagChip).join("")}</div>` : ""}
+      <div class="tag-row">
+        ${audienceTags.map(t => tagChip(t, false)).join("")}
+        ${customTags.map(t => tagChip(t, true)).join("")}
+      </div>
+    </div>` : ""}
+    <div class="tag-edit-bar">
+      <button type="button" class="link-btn" data-tag-edit-toggle>${tagEditMode ? "編集をやめる" : "✏️ タグを編集"}</button>
+    </div>
+    ${tagEditMode ? `
+    <div class="tag-edit-card">
+      <form class="tag-add-form" data-tag-form="${slug}">
+        <input type="text" name="tag" list="tagVocab" placeholder="遊んだ体感でタグを足す（例: 初手が肝心）" maxlength="20" required>
+        <button type="submit">追加</button>
+      </form>
+      <datalist id="tagVocab">${vocab.map(v => `<option value="${v}">`).join("")}</datalist>
+      <div class="tag-edit-note">自分で足したタグは色付きで出ます。元からあるタグを外しても、他のゲームには影響しません。</div>
+      ${hidden.size ? `
+        <div class="tag-edit-note" style="margin-top:8px;">外したタグ（タップで戻す）</div>
+        <div class="tag-row">${[...hidden].map(t => `<button type="button" class="tag-chip tag-chip-hidden" data-tag-restore="${t}">#${t} ↩</button>`).join("")}</div>
+      ` : ""}
     </div>` : ""}
     ${sellingPoints && sellingPoints.length ? `
     <div class="pitch-card">
@@ -1979,8 +2611,47 @@ function fetchAllReviews() {
     fetchCollectionCache("ratings", RATINGS_CACHE_KEY).then(c => { reviewsCache = c; }),
     fetchCollectionCache("history", HISTORY_CACHE_KEY).then(c => { historyCache = c; }),
     fetchCollectionCache("interests", INTERESTS_CACHE_KEY).then(c => { interestsCache = c; }),
+    fetchCollectionCache("customtags", CUSTOMTAGS_CACHE_KEY).then(c => { customTagsCache = c; }),
     fetchProfiles().then(c => { profilesCache = c; })
   ]);
+}
+
+// 自分たちで足したタグ／消したタグ
+function getCustomTags(slug) {
+  const list = customTagsCache[slug] || [];
+  const add = list.filter(c => c.mode === "add");
+  return {
+    added: add.filter(c => !c.kind || c.kind === "tag").map(c => c.tag),
+    addedGenres: add.filter(c => c.kind === "genre").map(c => c.tag),
+    addedMechanics: add.filter(c => c.kind === "mechanic").map(c => c.tag),
+    hidden: new Set(list.filter(c => c.mode === "hide").map(c => c.tag))
+  };
+}
+
+function addCustomTag(slug, tag, name, kind) {
+  if (!firebaseReady) { alert("Firebaseが未設定のため、タグを追加できません。"); return Promise.resolve(); }
+  return db.collection("customtags").add({
+    slug, tag, mode: "add", kind: kind || "tag", name,
+    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+  }).then(fetchAllReviews);
+}
+
+// 元から付いているタグは消せないので「隠す」印を付ける。自分で足したタグはその記録を消す。
+function dropTag(slug, tag, name) {
+  if (!firebaseReady) return Promise.resolve();
+  const own = (customTagsCache[slug] || []).find(c => c.mode === "add" && c.tag === tag);
+  if (own) return db.collection("customtags").doc(own.id).delete().then(fetchAllReviews);
+  return db.collection("customtags").add({
+    slug, tag, mode: "hide", name,
+    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+  }).then(fetchAllReviews);
+}
+
+function restoreTag(slug, tag) {
+  if (!firebaseReady) return Promise.resolve();
+  const doc = (customTagsCache[slug] || []).find(c => c.mode === "hide" && c.tag === tag);
+  if (!doc) return Promise.resolve();
+  return db.collection("customtags").doc(doc.id).delete().then(fetchAllReviews);
 }
 
 function getReviews(slug) {
@@ -2042,20 +2713,45 @@ function getProfile(name) {
   return profilesCache[name] || null;
 }
 
-function saveProfile(name, scores) {
-  const type = topFamilies(scores, 1)[0];
+// 診断結果と称号は同じ人物データなので1つのドキュメントにまとめる。
+// 更新は禁止しているので、消して入れ直す＝他の項目は引き継ぐ。
+function writeProfile(name, patch) {
   if (!firebaseReady) {
-    alert("Firebaseが未設定のため、診断結果を保存できません。");
+    alert("Firebaseが未設定のため、保存できません。");
     return Promise.resolve();
   }
-  // 撮り直しできるよう、同じ名前の古い結果は消してから入れ直す
+  const prev = getProfile(name) || {};
+  const next = {
+    name,
+    type: patch.type !== undefined ? patch.type : (prev.type || ""),
+    scores: patch.scores !== undefined ? patch.scores : (prev.scores || {}),
+    titles: patch.titles !== undefined ? patch.titles : (prev.titles || []),
+    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+  };
   return db.collection("profiles").where("name", "==", name).get()
     .then(snap => Promise.all(snap.docs.map(d => d.ref.delete())))
-    .then(() => db.collection("profiles").add({
-      name, type, scores,
-      createdAt: firebase.firestore.FieldValue.serverTimestamp()
-    }))
+    .then(() => db.collection("profiles").add(next))
     .then(fetchAllReviews);
+}
+
+function saveProfile(name, scores) {
+  return writeProfile(name, { type: topFamilies(scores, 1)[0], scores });
+}
+
+// 名前を登録した時点でサーバーにも残す。そうしないと本人の端末にしか名前が無く、
+// 他の人の「勝った人」候補に出てこない＝戦績に入れてもらえない。
+function registerNameOnServer(name) {
+  if (!firebaseReady || !name) return Promise.resolve();
+  if (getProfile(name)) return Promise.resolve();   // すでに居るなら何もしない
+  return db.collection("profiles").add({
+    name, type: "", scores: {}, titles: [],
+    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+  }).then(fetchAllReviews).catch(err => console.error("名前の登録に失敗", err));
+}
+
+function getSelectedTitles(name) {
+  const p = getProfile(name);
+  return (p && Array.isArray(p.titles)) ? p.titles : [];
 }
 
 function toggleInterest(slug, name) {
@@ -2090,15 +2786,14 @@ function deleteRating(slug, id) {
   return db.collection("ratings").doc(id).delete().then(fetchAllReviews);
 }
 
-function addHistory(slug, name, date, members, memo) {
+function addHistory(rec) {
   if (!firebaseReady) {
     alert("Firebaseが未設定のため、まだ「プレイ履歴」は使えません。");
     return Promise.resolve();
   }
-  return db.collection("history").add({
-    slug, name, date, members, memo,
+  return db.collection("history").add(Object.assign({}, rec, {
     createdAt: firebase.firestore.FieldValue.serverTimestamp()
-  }).then(fetchAllReviews);
+  })).then(fetchAllReviews);
 }
 
 function deleteHistory(slug, id) {
@@ -2119,9 +2814,14 @@ function getMyName() {
 
 // 「積みゲー」判定は自分の評価の有無で見る。履歴の記録は手間がかかって続かないため。
 function hasMyRating(slug) {
+  return myRating(slug) != null;
+}
+
+function myRating(slug) {
   const myName = getMyName();
-  if (!myName) return false;
-  return getReviews(slug).some(r => r.name === myName);
+  if (!myName) return null;
+  const r = getReviews(slug).find(x => x.name === myName);
+  return r ? r.level : null;
 }
 
 function renderUserBadge() {
@@ -2133,22 +2833,25 @@ function renderUserBadge() {
     : `<button id="registerNameBtn" type="button">＋マイページを作る（名前を登録）</button>`;
   const changeBtn = document.getElementById("changeNameBtn");
   if (changeBtn) {
-    changeBtn.addEventListener("click", () => {
+    changeBtn.addEventListener("click", async () => {
       const next = prompt("表示名を変更", name);
       if (next && next.trim()) {
         localStorage.setItem(MY_NAME_KEY, next.trim());
         renderUserBadge();
+        await registerNameOnServer(next.trim());
       }
     });
   }
   const registerBtn = document.getElementById("registerNameBtn");
   if (registerBtn) {
-    registerBtn.addEventListener("click", () => {
+    registerBtn.addEventListener("click", async () => {
       const next = prompt("表示名を入力してください");
       if (next && next.trim()) {
-        localStorage.setItem(MY_NAME_KEY, next.trim());
+        const n = next.trim();
+        localStorage.setItem(MY_NAME_KEY, n);
         renderUserBadge();
-        location.hash = `#player/${encodeURIComponent(next.trim())}`;
+        await registerNameOnServer(n);
+        location.hash = `#player/${encodeURIComponent(n)}`;
       }
     });
   }
@@ -2218,6 +2921,77 @@ function buildRatingItem(r, slug) {
   `;
 }
 
+function namePickList(field, names) {
+  return `<div class="pick-grid">
+    ${names.map(n => `
+      <label class="pick-item">
+        <input type="checkbox" name="${field}" value="${n}">
+        <span>${n}</span>
+      </label>
+    `).join("")}
+  </div>`;
+}
+
+// ゲーム性に応じて必要な欄だけ出す。全部出すと入力が重くなるため。
+function buildPlayForm(slug) {
+  const names = getAllKnownNames();
+  return `
+    <form class="history-form review-form" data-history-slug="${slug}">
+      ${buildSubmitterLine()}
+      <div class="review-form-field">
+        <label>日付</label>
+        <input type="date" name="date" value="${todayStr()}">
+      </div>
+      <div class="review-form-field">
+        <label>ゲーム性</label>
+        <div class="mode-row">
+          ${PLAY_MODES.map((m, i) => `
+            <label class="mode-opt">
+              <input type="radio" name="mode" value="${m.id}" ${i === 0 ? "checked" : ""}>
+              <span>${m.label}<i>${m.note}</i></span>
+            </label>
+          `).join("")}
+        </div>
+      </div>
+
+      <div data-mode-group="versus">
+        <div class="review-form-field">
+          <label>勝った人</label>
+          ${names.length ? namePickList("winners", names) : `<div class="review-count">登録メンバーがいません</div>`}
+        </div>
+        <div class="review-form-field">
+          <label>負けた人</label>
+          ${names.length ? namePickList("losers", names) : ""}
+        </div>
+      </div>
+
+      <div data-mode-group="coop" style="display:none;">
+        <div class="review-form-field">
+          <label>結果</label>
+          <div class="mode-row">
+            <label class="mode-opt"><input type="radio" name="coopResult" value="success" checked><span>成功</span></label>
+            <label class="mode-opt"><input type="radio" name="coopResult" value="fail"><span>失敗</span></label>
+          </div>
+        </div>
+        <div class="review-form-field">
+          <label>参加メンバー</label>
+          ${names.length ? namePickList("players", names) : ""}
+        </div>
+      </div>
+
+      <div class="review-form-field">
+        <label>その他の参加者（未登録の人）</label>
+        <input type="text" name="guests" placeholder="例: 友達C・友達D" maxlength="60">
+      </div>
+      <div class="review-form-field">
+        <label>メモ（任意）</label>
+        <textarea name="memo" placeholder="例: 終盤の大逆転がすごかった" maxlength="200"></textarea>
+      </div>
+      <button type="submit">記録を追加</button>
+    </form>
+  `;
+}
+
 function buildRatingSection(g) {
   const slug = slugOf(g);
   const reviews = getReviews(slug);
@@ -2229,7 +3003,7 @@ function buildRatingSection(g) {
     <div class="review-card">
       <div class="review-header">
         <div class="review-title">みんなの評価</div>
-        ${avg != null ? `<div class="review-avg">${avg}<span>/5</span></div>` : ""}
+        ${avg != null ? `<div class="review-avg">${avg}<span>/10</span></div>` : ""}
       </div>
       <div class="review-count">${reviews.length}件の評価${reviews.length ? "" : "（まだ評価がありません）"}${!firebaseReady ? " ・ ⚠️ Firebase未設定" : ""}</div>
       ${reviews.length && !folded ? `
@@ -2241,13 +3015,13 @@ function buildRatingSection(g) {
       </div>` : ""}
       <button type="button" class="section-toggle-btn section-toggle-btn-primary" data-toggle-section="rating-form">＋自分の評価を入れる</button>
       <div data-section="rating-form" style="display:none;">
-        <form class="rating-form" data-rating-slug="${slug}">
+        <form class="rating-form review-form" data-rating-slug="${slug}">
           ${buildSubmitterLine()}
           <div class="rating-choice-row">
             ${RATING_LEVELS.map(l => `
               <label class="rating-choice">
                 <input type="radio" name="level" value="${l.value}" required>
-                <span>${l.emoji} ${l.label}</span>
+                <span><b style="background:${ratingColor(l.value)}">${l.value}</b>${l.label}</span>
               </label>
             `).join("")}
           </div>
@@ -2265,7 +3039,16 @@ function buildHistoryItem(h, slug) {
         <span class="review-item-name">${h.name ? `<a href="#player/${encodeURIComponent(h.name)}">${h.name}</a>` : "―"}${h.date ? `<span class="review-item-date">${h.date}</span>` : ""}</span>
         <button class="review-item-del" data-del-history-id="${h.id}" data-del-slug="${slug}" title="削除">×</button>
       </div>
-      ${h.members ? `<div class="review-item-members">👥 ${h.members}</div>` : ""}
+      ${(() => {
+        const mode = PLAY_MODES.find(m => m.id === h.mode);
+        const p = historyParticipants(h);
+        const res = historyResultText(h);
+        return `
+          ${mode ? `<div class="review-item-members">🎮 ${mode.label}</div>` : ""}
+          ${res ? `<div class="review-item-members">${res}</div>` : ""}
+          ${p.length ? `<div class="review-item-members">👥 ${p.join("・")}</div>` : ""}
+        `;
+      })()}
       ${h.memo ? `<div class="review-item-memo">${h.memo}</div>` : ""}
     </div>
   `;
@@ -2289,25 +3072,7 @@ function buildHistorySection(g) {
       ` : ""}
       <button type="button" class="section-toggle-btn section-toggle-btn-primary" data-toggle-section="history-form">＋記録を追加する</button>
       <div data-section="history-form" style="display:none;">
-        <form class="history-form" data-history-slug="${slug}">
-          ${buildSubmitterLine()}
-          ${buildOtherMembersPicker()}
-          <div class="review-form-row">
-            <div class="review-form-field">
-              <label>日付</label>
-              <input type="date" name="date" value="${todayStr()}">
-            </div>
-            <div class="review-form-field">
-              <label>その他のメンバー（未登録の人）</label>
-              <input type="text" name="members" placeholder="例: 友達C・友達D" maxlength="60">
-            </div>
-          </div>
-          <div class="review-form-field">
-            <label>メモ（勝敗など自由に）</label>
-            <textarea name="memo" placeholder="例: 接戦の末たくとの勝ち" maxlength="200"></textarea>
-          </div>
-          <button type="submit">記録を追加</button>
-        </form>
+        ${buildPlayForm(slug)}
       </div>
     </div>
   `;
@@ -2422,10 +3187,17 @@ function showDetail(g) {
   const dv = document.getElementById("detailView");
   dv.style.display = "block";
 
-  const avg = averageScore(slugOf(g));
+  const slug = slugOf(g);
+  const avg = averageScore(slug);
+  const mine = myRating(slug);
+  const iLike = getMyName() && getInterests(slug).some(i => i.name === getMyName());
   dv.innerHTML = `
     <a class="detail-back" href="#">← 一覧へ戻る</a>
-    <h1 class="detail-title">${g.jp}</h1>
+    <div class="detail-title-row">
+      <h1 class="detail-title">${g.jp}</h1>
+      <button type="button" class="title-interest ${iLike ? "on" : ""}" data-toggle-interest="${slug}"
+              title="興味あり">${iLike ? "🌟" : "☆"}</button>
+    </div>
     <div class="detail-title-en">${g.en}</div>
     <div class="detail-underline"></div>
     <div class="detail-image-wrap">
@@ -2441,10 +3213,11 @@ function showDetail(g) {
         <div class="value">${g.timeRaw || "不明"}</div>
       </div>
       <div class="detail-spec-box">
-        <div class="label">平均評価</div>
-        <div class="value">${avg != null ? `★ ${avg}/5` : "未評価"}</div>
+        <div class="label">自分 / みんな</div>
+        <div class="value">${mine != null ? mine : "—"} / ${avg != null ? avg : "—"}</div>
       </div>
     </div>
+    ${buildClassGrid(g)}
     ${buildRatingSection(g)}
     ${buildInterestSection(g)}
     ${buildTagsAndPitch(g)}
@@ -2468,10 +3241,43 @@ function ensureMyName() {
   name = next.trim();
   localStorage.setItem(MY_NAME_KEY, name);
   renderUserBadge();
+  registerNameOnServer(name);   // 完了を待たなくてよい（この後の保存でも名前は残るため）
   return name;
 }
 
 document.getElementById("detailView").addEventListener("submit", async e => {
+  const classForm = e.target.closest("[data-class-form]");
+  if (classForm) {
+    e.preventDefault();
+    const kind = classForm.dataset.classForm;
+    const slug = classForm.dataset.slug;
+    const tag = classForm.elements.tag.value.trim().replace(/^#/, "");
+    if (!tag) return;
+    const g = games.find(x => slugOf(x) === slug);
+    const cur = kind === "genre" ? getGameTags(g).genreTags : getGameTags(g).allMechanics;
+    if (cur.includes(tag)) { alert("それはもう付いています。"); return; }
+    classForm.querySelector("button").disabled = true;
+    await addCustomTag(slug, tag, getMyName() || "", kind);
+    if (g) showDetail(g);
+    renderTagCloud(); renderGenreOptions(); renderMechanicOptions(); renderSearchSuggest();
+    return;
+  }
+  const tagForm = e.target.closest("[data-tag-form]");
+  if (tagForm) {
+    e.preventDefault();
+    const slug = tagForm.dataset.tagForm;
+    const tag = tagForm.elements.tag.value.trim().replace(/^#/, "");
+    if (!tag) return;
+    const g = games.find(x => slugOf(x) === slug);
+    const already = g && getGameTags(g).all.includes(tag);
+    if (already) { alert("そのタグはもう付いています。"); return; }
+    tagForm.querySelector("button").disabled = true;
+    await addCustomTag(slug, tag, getMyName() || "");
+    if (g) showDetail(g);
+    renderTagCloud();
+    renderGenreOptions();
+    return;
+  }
   const ratingForm = e.target.closest("[data-rating-slug]");
   const historyForm = e.target.closest("[data-history-slug]");
   if (!ratingForm && !historyForm) return;
@@ -2495,19 +3301,44 @@ document.getElementById("detailView").addEventListener("submit", async e => {
     const slug = historyForm.dataset.historySlug;
     const name = ensureMyName();
     if (!name) return;
-    const date = historyForm.elements.date.value || "";
-    const regMembers = Array.from(historyForm.querySelectorAll('input[name="regMembers"]:checked')).map(el => el.value);
-    const guestMembers = historyForm.elements.members.value.trim();
-    const memberParts = [name, ...regMembers];
-    if (guestMembers) memberParts.push(guestMembers);
-    const members = memberParts.join("・");
-    const memo = historyForm.elements.memo.value.trim();
-    const submitBtn = historyForm.querySelector("button[type=submit]");
-    submitBtn.disabled = true;
-    await addHistory(slug, name, date, members, memo);
+    const pick = f => Array.from(historyForm.querySelectorAll(`input[name="${f}"]:checked`)).map(el => el.value);
+    const mode = (historyForm.querySelector('input[name="mode"]:checked') || {}).value || "solo";
+    const rec = {
+      slug, name,
+      date: historyForm.elements.date.value || "",
+      mode,
+      winners: mode === "coop" ? [] : pick("winners"),
+      losers: mode === "coop" ? [] : pick("losers"),
+      players: mode === "coop" ? pick("players") : [],
+      coopResult: mode === "coop"
+        ? ((historyForm.querySelector('input[name="coopResult"]:checked') || {}).value || "success")
+        : "",
+      guests: historyForm.elements.guests.value.trim(),
+      memo: historyForm.elements.memo.value.trim()
+    };
+    if (mode !== "coop" && !rec.winners.length && !rec.losers.length) {
+      alert("勝った人か負けた人を選んでください。");
+      return;
+    }
+    if (mode === "coop" && !rec.players.length) {
+      alert("参加メンバーを選んでください。");
+      return;
+    }
+    historyForm.querySelector("button[type=submit]").disabled = true;
+    await addHistory(rec);
     const g = games.find(x => slugOf(x) === slug);
     if (g) showDetail(g);
   }
+});
+
+// ゲーム性の切り替えで、必要な入力欄だけ出す
+document.getElementById("detailView").addEventListener("change", e => {
+  if (e.target.name !== "mode") return;
+  const form = e.target.closest("form");
+  if (!form) return;
+  const coop = e.target.value === "coop";
+  form.querySelector('[data-mode-group="versus"]').style.display = coop ? "none" : "";
+  form.querySelector('[data-mode-group="coop"]').style.display = coop ? "" : "none";
 });
 
 document.getElementById("detailView").addEventListener("click", e => {
@@ -2521,6 +3352,12 @@ document.getElementById("detailView").addEventListener("click", e => {
       const g = games.find(x => slugOf(x) === slug);
       if (g) showDetail(g);
     });
+    return;
+  }
+  const winnerBtn = e.target.closest("[data-toggle-winners]");
+  if (winnerBtn) {
+    const l = winnerBtn.parentElement.querySelector(".member-check-list");
+    if (l) l.style.display = l.style.display === "none" ? "flex" : "none";
     return;
   }
   const toggleBtn = e.target.closest("[data-toggle-members]");
@@ -2557,12 +3394,51 @@ document.getElementById("detailView").addEventListener("click", e => {
   }
 });
 
-document.getElementById("detailView").addEventListener("click", e => {
+document.getElementById("detailView").addEventListener("click", async e => {
+  // ジャンル・メカニクスは検索窓ではなく、専用の絞り込みプルダウンに入れる
+  const classFilter = e.target.closest("[data-class-filter]");
+  if (classFilter) {
+    goToClassFilter(classFilter.dataset.classFilter, classFilter.dataset.value);
+    return;
+  }
   const tagBtn = e.target.closest("[data-tag-search]");
   if (tagBtn) {
     goToTagSearch(tagBtn.dataset.tagSearch);
+    return;
+  }
+  if (e.target.closest("[data-tag-edit-toggle]")) {
+    tagEditMode = !tagEditMode;
+    const g = currentDetailGame();
+    if (g) showDetail(g);
+    return;
+  }
+  const classEdit = e.target.closest("[data-class-edit]");
+  if (classEdit) {
+    if (classEdit.dataset.classEdit === "genre") genreEditMode = !genreEditMode;
+    else mechanicEditMode = !mechanicEditMode;
+    const g = currentDetailGame();
+    if (g) showDetail(g);
+    return;
+  }
+  const drop = e.target.closest("[data-tag-drop]");
+  const restore = e.target.closest("[data-tag-restore]");
+  if (drop || restore) {
+    const g = currentDetailGame();
+    if (!g) return;
+    const name = getMyName() || "";
+    (drop || restore).disabled = true;
+    await (drop ? dropTag(slugOf(g), drop.dataset.tagDrop, name)
+                : restoreTag(slugOf(g), restore.dataset.tagRestore));
+    showDetail(g);
+    renderTagCloud();
   }
 });
+
+function currentDetailGame() {
+  const m = location.hash.match(/^#game\/(.+)$/);
+  if (!m) return null;
+  return games.find(x => slugOf(x) === decodeURIComponent(m[1]));
+}
 
 document.getElementById("detailView").addEventListener("click", async e => {
   const ratingDel = e.target.closest("[data-del-rating-id]");
@@ -2630,8 +3506,8 @@ function getPlayerTagAffinity(name) {
     Object.entries(prof.scores).forEach(([fam, score]) => {
       const fm = FAMILIES[fam];
       if (!fm) return;
-      const affinity = 2 + score * 2.5;         // 0→2.0, 1→4.5
-      const shrunk = 3 + (affinity - 3) * w;    // 評価が増えたら3(ふつう)へ寄せる
+      const affinity = 3.5 + score * 5.5;                                   // 0→3.5, 1→9.0
+      const shrunk = RATING_NEUTRAL + (affinity - RATING_NEUTRAL) * w;      // 評価が増えたら真ん中へ寄せる
       fm.mechanics.forEach(m => {
         if (out[m] == null) out[m] = shrunk;
       });
@@ -2652,7 +3528,7 @@ function moodBonusFor(g) {
     if (fm && mech.some(m => fm.mechanics.includes(m))) hit += v;
   });
   const maxV = Math.max(1, ...Object.values(moodScores));
-  return Math.min(1, hit / (maxV * 2)) * 0.9;
+  return Math.min(1, hit / (maxV * 2)) * 1.8;
 }
 
 // 選んだメンバーの好み・興味あり・過去の評価を合成しておすすめを作る。
@@ -2695,8 +3571,8 @@ function buildRecommendations(members) {
       if (lv != null) {
         s = lv;
         k = 4; // 本人の実評価は強い根拠
-        if (lv <= 2) vetoBy.push(m);
-        else if (lv >= 4) reasons.push({ hot: false, text: `${m}が${ratingLabel(lv)}` });
+        if (lv <= RATING_VETO_MAX) vetoBy.push(m);
+        else if (lv >= RATING_LOVE_MIN) reasons.push({ hot: false, text: `${m}が${ratingLabel(lv)}` });
       } else {
         const ts = tags.map(t => affinity[m][t]).filter(v => v != null);
         if (ts.length) {
@@ -2706,7 +3582,7 @@ function buildRecommendations(members) {
       }
       evidence += k;
       // 根拠が薄いものは「ふつう(3)」に引き戻す。タグ1個だけの一致で満点にしない
-      per.push(s == null ? 3 : (k * s + 2 * 3) / (k + 2));
+      per.push(s == null ? RATING_NEUTRAL : (k * s + 2 * RATING_NEUTRAL) / (k + 2));
     });
 
     if (vetoBy.length) {
@@ -2720,7 +3596,7 @@ function buildRecommendations(members) {
       const vals = members.map(m => affinity[m][t]).filter(v => v != null);
       if (!vals.length) return;
       const avg = vals.reduce((a, b) => a + b, 0) / vals.length;
-      if (avg >= 3.5) tagHits.push({ t, avg, n: vals.length });
+      if (avg >= 7) tagHits.push({ t, avg, n: vals.length });
     });
     tagHits.sort((a, b) => b.avg - a.avg || b.n - a.n);
     tagHits.slice(0, 2).forEach(h => {
@@ -2731,10 +3607,10 @@ function buildRecommendations(members) {
       reasons.unshift({ hot: true, text: `🌟 ${wantBy.join("・")} が興味あり` });
     }
 
-    const base = per.length ? per.reduce((a, b) => a + b, 0) / per.length : 3;
+    const base = per.length ? per.reduce((a, b) => a + b, 0) / per.length : RATING_NEUTRAL;
     const mood = moodBonusFor(g);
-    if (mood > 0.4) reasons.push({ hot: true, text: "🌡 今日の気分に合う" });
-    const score = base + wantBy.length * 0.8 + mood;
+    if (mood > 0.8) reasons.push({ hot: true, text: "🌡 今日の気分に合う" });
+    const score = base + wantBy.length * 1.6 + mood;
     const entry = { g, slug, score, reasons };
 
     if (evidence || wantBy.length || mood > 0) scored.push(entry);
@@ -3006,6 +3882,7 @@ function buildAffinityRanking(scores) {
 }
 
 function buildAxisChart(scores) {
+  if (!scores || typeof scores !== "object") return "";
   return Object.entries(scores)
     .sort((a, b) => b[1] - a[1])
     .map(([fam, v]) => {
@@ -3043,7 +3920,9 @@ function sampleGamesForScores(scores, n) {
 
 function buildQuizView() {
   const myName = getMyName();
-  const existing = myName ? getProfile(myName) : null;
+  // 称号だけ選んで診断はまだ、という人もいるので「診断済み」は type と scores で判定する
+  const prof = myName ? getProfile(myName) : null;
+  const existing = (prof && prof.type && FAMILIES[prof.type] && prof.scores) ? prof : null;
   const i = quizAnswers.length;
 
   // まだ始めていない状態
@@ -3133,8 +4012,50 @@ function showQuizView() {
 }
 
 // 相性ランキングのタグをタップしたら、その絞り込みで一覧へ
+document.getElementById("playerView").addEventListener("click", async e => {
+  // 称号をタップ → 獲得条件を表示
+  const info = e.target.closest("[data-title-info]");
+  if (info) {
+    const t = TITLE_DEFS.find(x => x.id === info.dataset.titleInfo);
+    const box = document.querySelector("[data-title-desc]");
+    if (t && box) box.innerHTML = `<b>${t.name}</b>：${t.desc}`;
+    return;
+  }
+  // 表示する称号の選択（最大5つ）
+  const pick = e.target.closest("[data-title-toggle]");
+  if (pick) {
+    const name = getMyName();
+    if (!name) return;
+    const cur = getSelectedTitles(name);
+    const id = pick.dataset.titleToggle;
+    let next;
+    if (cur.includes(id)) next = cur.filter(x => x !== id);
+    else if (cur.length >= 5) { alert("表示できる称号は5つまでです。"); return; }
+    else next = [...cur, id];
+    pick.disabled = true;
+    await writeProfile(name, { titles: next });
+    showPlayerPage(name);
+    const sec = document.querySelector('[data-section="title-pick"]');
+    if (sec) sec.style.display = "";
+    return;
+  }
+});
+
 ["quizView", "playerView"].forEach(id => {
   document.getElementById(id).addEventListener("click", e => {
+    const toggle = e.target.closest("[data-toggle-section]");
+    if (toggle) {
+      const key = toggle.dataset.toggleSection;
+      const target = toggle.parentElement.querySelector(`[data-section="${key}"]`);
+      if (target) target.style.display = target.style.display === "none" ? "" : "none";
+      return;
+    }
+    const cls = e.target.closest("[data-class-filter]");
+    if (cls) {
+      e.preventDefault();
+      goToClassFilter(cls.dataset.classFilter, cls.dataset.value);
+      return;
+    }
     const tag = e.target.closest("[data-tag-search]");
     if (!tag) return;
     e.preventDefault();
@@ -3193,15 +4114,64 @@ function getPlayerRatings(name) {
   return result;
 }
 
-function getPlayerHistory(name) {
+// 記録した本人だけでなく、メンバー欄に名前がある人も「その場にいた人」として扱う。
+// これをしないと、記録係の人しかプレイ回数が増えない。
+const PLAY_MODES = [
+  { id: "solo", label: "単独勝利", note: "1人が勝ち" },
+  { id: "multi", label: "複数勝利", note: "複数人が勝ち" },
+  { id: "team", label: "チーム戦", note: "勝ちチームと負けチーム" },
+  { id: "coop", label: "協力", note: "全員で成功/失敗" }
+];
+
+function historyParticipants(h) {
+  const names = new Set();
+  if (h.name) names.add(h.name);
+  ["winners", "losers", "players"].forEach(k => {
+    if (Array.isArray(h[k])) h[k].forEach(n => { if (n) names.add(n); });
+  });
+  // 旧形式（メンバーを1本の文字列で持っていたころ）にも対応
+  if (typeof h.members === "string") {
+    h.members.split(/[・,、]/).forEach(x => { const t = x.trim(); if (t) names.add(t); });
+  } else if (Array.isArray(h.members)) {
+    h.members.forEach(n => { if (n) names.add(n); });
+  }
+  if (typeof h.guests === "string") {
+    h.guests.split(/[・,、]/).forEach(x => { const t = x.trim(); if (t) names.add(t); });
+  }
+  return [...names];
+}
+
+// 協力ゲームで成功したら、その場の全員を勝者として数える
+function historyWinners(h) {
+  if (h.mode === "coop") {
+    return h.coopResult === "success" ? historyParticipants(h) : [];
+  }
+  if (Array.isArray(h.winners)) return h.winners;
+  return [];
+}
+
+function historyResultText(h) {
+  if (h.mode === "coop") {
+    return h.coopResult === "success" ? "🎉 成功" : h.coopResult === "fail" ? "💥 失敗" : "";
+  }
+  const w = historyWinners(h);
+  return w.length ? `🏆 ${w.join("・")}` : "";
+}
+
+// その人が参加した履歴すべて（記録者かどうかは問わない）
+function getPlayerPlays(name) {
   const result = [];
   Object.keys(historyCache).forEach(slug => {
     (historyCache[slug] || []).forEach(h => {
-      if (h.name === name) result.push(Object.assign({ slug }, h));
+      if (historyParticipants(h).includes(name)) result.push(Object.assign({ slug }, h));
     });
   });
   result.sort((a, b) => (b.date || "").localeCompare(a.date || ""));
   return result;
+}
+
+function getPlayerHistory(name) {
+  return getPlayerPlays(name);
 }
 
 function getPlayerInterests(name) {
@@ -3214,22 +4184,417 @@ function getPlayerInterests(name) {
   return result;
 }
 
-function buildGenreBreakdown(playerRatings) {
-  const genreScores = {};
+// ジャンルLvの対象外。遊び方の傾向を表さないものは除く。
+const GENRE_LV_EXCLUDE = new Set(["子供向け", "2人用", "拡張", "チーム戦系", "レガシー・キャンペーン系"]);
+
+// プレイ回数からジャンルLvを出す。伸びが緩やかになるようべき乗を使う。
+function genreLevel(plays) {
+  return plays > 0 ? Math.max(1, Math.floor(Math.pow(plays, 0.75))) : 0;
+}
+
+// その人の「遊んだ実績」をまとめて集計する（レベル・ジャンルLv・称号すべての土台）
+function getPlayStats(name) {
+  const plays = getPlayerPlays(name);
+  const bySlug = {}, byGenre = {}, byMonth = {}, winsByGenre = {}, byMech = {}, winsByMech = {};
+  const genresSeen = new Set(), mechsSeen = new Set();
+  let wins = 0;
+  plays.forEach(h => {
+    bySlug[h.slug] = (bySlug[h.slug] || 0) + 1;
+    const m = (h.date || "").slice(0, 7);
+    if (m) byMonth[m] = (byMonth[m] || 0) + 1;
+    const won = historyWinners(h).includes(name);
+    if (won) wins++;
+    const g = games.find(x => slugOf(x) === h.slug);
+    if (!g) return;
+    getGameTags(g).genreTags.forEach(t => {
+      genresSeen.add(t);
+      if (!GENRE_LV_EXCLUDE.has(t)) {
+        byGenre[t] = (byGenre[t] || 0) + 1;
+        if (won) winsByGenre[t] = (winsByGenre[t] || 0) + 1;
+      }
+    });
+    getGameTags(g).allMechanics.forEach(t => {
+      mechsSeen.add(t);
+      byMech[t] = (byMech[t] || 0) + 1;
+      if (won) winsByMech[t] = (winsByMech[t] || 0) + 1;
+    });
+  });
+  // 重量級（60分超）を何種類遊んだか
+  const heavy = new Set();
+  Object.keys(bySlug).forEach(s => {
+    const g = games.find(x => slugOf(x) === s);
+    if (g && g.timeMax != null && g.timeMax > 60) heavy.add(s);
+  });
+  const thisMonth = byMonth[todayStr().slice(0, 7)] || 0;
+  return {
+    plays, total: plays.length, kinds: Object.keys(bySlug).length,
+    bySlug, byGenre, byMonth, thisMonth, wins, winsByGenre,
+    byMech, winsByMech, mechsSeen,
+    genresSeen, heavyKinds: heavy.size,
+    ratings: getPlayerRatings(name).length,
+    genreLevels: Object.entries(byGenre)
+      .map(([g, n]) => ({ genre: g, plays: n, lv: genreLevel(n) }))
+      .sort((a, b) => b.lv - a.lv || b.plays - a.plays)
+  };
+}
+
+// 種類ごとの称号を機械的に作る（ジャンル×回数など数が多いので）
+function buildTitleDefs() {
+  const defs = [];
+  const push = (id, name, desc, test) => defs.push({ id, name, desc, test });
+
+  push("kinds10", "はじめの10作品", "10種類のゲームを遊ぶ", s => s.kinds >= 10);
+  push("kinds50", "ボードゲーム探検家", "50種類のゲームを遊ぶ", s => s.kinds >= 50);
+  push("kinds100", "ゲームコレクター", "100種類のゲームを遊ぶ", s => s.kinds >= 100);
+  push("kinds200", "棚の主", "200種類のゲームを遊ぶ", s => s.kinds >= 200);
+
+  push("play100", "百戦錬磨", "通算100プレイ", s => s.total >= 100);
+  push("play500", "五百戦", "通算500プレイ", s => s.total >= 500);
+  push("play1000", "千夜一夜", "通算1000プレイ", s => s.total >= 1000);
+
+  push("win10", "勝ち癖", "10勝する", s => s.wins >= 10);
+  push("win50", "常勝", "50勝する", s => s.wins >= 50);
+  push("win100", "無敗神話", "100勝する", s => s.wins >= 100);
+
+  push("genre5", "いろいろ好き", "5ジャンル以上を経験", s => s.genresSeen.size >= 5);
+  push("genre10", "雑食ゲーマー", "10ジャンル以上を経験", s => s.genresSeen.size >= 10);
+  push("heavy20", "戦略家", "重量級を20種類遊ぶ", s => s.heavyKinds >= 20);
+  push("newMonth5", "新しいもの好き", "1か月に5種類の初プレイ", s => Object.values(s.firstByMonth || {}).some(n => n >= 5));
+  push("rate100", "評論家", "100ゲームを評価する", s => s.ratings >= 100);
+
+  push("hunter", "人狼ハンター", "正体隠匿系を50プレイ", s => (s.byGenre["正体隠匿系"] || 0) >= 50);
+  push("detective", "名探偵", "推理系を30種類遊ぶ", s => (s.kindsByGenre?.["推理系"] || 0) >= 30);
+
+  // ジャンルごとに 10/20/30/40/50 プレイ
+  const GENRE_TITLE = {
+    "戦略系": "戦術家", "協力系": "頼れる仲間", "パーティ系": "盛り上げ役",
+    "心理戦・ブラフ系": "嘘つき", "推理系": "推理狂", "正体隠匿系": "潜入者",
+    "ワード系": "言葉遊び人", "パズル系": "パズラー",
+    "アクション・バランス系": "職人技", "TRPG・物語系": "語り部"
+  };
+  // 10/20/30/40/50 で段位が上がる。同じ名前が並ばないよう5段階すべて別名にする。
+  const TIERS = [[10, ""], [20, "・二段"], [30, "・三段"], [40, "・四段"], [50, "・皆伝"]];
+  Object.entries(GENRE_TITLE).forEach(([genre, base]) => {
+    TIERS.forEach(([n, suffix]) => {
+      push(`g_${genre}_${n}`, `${base}${suffix}`,
+        `${genre}を${n}プレイ`, s => (s.byGenre[genre] || 0) >= n);
+    });
+  });
+
+  // ジャンル別の勝利称号
+  const WIN_TITLE = [
+    ["パーティ系", 100, "俺が主役"], ["パーティ系", 30, "場の中心"],
+    ["正体隠匿系", 50, "嘘の帝王"], ["正体隠匿系", 15, "食わせ者"],
+    ["推理系", 50, "真相究明者"], ["推理系", 15, "推理の芽"],
+    ["戦略系", 50, "盤上の覇者"], ["戦略系", 15, "策士"],
+    ["協力系", 30, "救世主"],
+    ["心理戦・ブラフ系", 30, "読みの達人"],
+    ["ワード系", 30, "言葉の魔術師"],
+    ["パズル系", 30, "解の使者"]
+  ];
+  WIN_TITLE.forEach(([genre, n, title]) => {
+    push(`w_${genre}_${n}`, title, `${genre}で${n}回勝利`, s => (s.winsByGenre[genre] || 0) >= n);
+  });
+
+  // メカニクス別。仕組みの手触りに合わせた名前にする。
+  const MECH_TITLE = {
+    "ダイスロール": "サイコロマスター", "賭け": "天性のギャンブラー", "バースト": "引き際知らず",
+    "チキンレース": "度胸試し", "記憶": "記憶の達人", "セットコレクション": "収集家",
+    "デッキ構築": "デッキビルダー", "トリックテイキング": "トリテ職人", "拡大再生産": "経営者",
+    "ワーカープレイスメント": "現場監督", "競り": "競り師", "交渉": "交渉人",
+    "陣取り": "領主", "リアルタイム": "早撃ち", "ハンドマネージメント": "手札さばき",
+    "ドラフト": "目利き", "パターン認識": "眼力", "直接攻撃": "破壊者",
+    "アクションゲーム": "手先の魔術師", "バランスゲーム": "均衡の支配者",
+    "お絵かき": "絵師", "謎解き": "謎解き人", "言葉遊び": "言葉遊びの名手",
+    "投票/多数決": "選挙参謀", "役割担当": "名脇役"
+  };
+  const MTIERS = [[10, ""], [30, "・熟練"], [50, "・極み"]];
+  Object.entries(MECH_TITLE).forEach(([mech, base]) => {
+    MTIERS.forEach(([n, suffix]) => {
+      push(`m_${mech}_${n}`, `${base}${suffix}`, `${mech}のゲームを${n}プレイ`,
+        s => (s.byMech[mech] || 0) >= n);
+    });
+  });
+
+  push("mech20", "仕組み博士", "20種類のメカニクスを経験", s => s.mechsSeen.size >= 20);
+  push("mech40", "仕組みの求道者", "40種類のメカニクスを経験", s => s.mechsSeen.size >= 40);
+  push("allgenre", "全ジャンル制覇", "対象10ジャンルすべてを経験",
+    s => Object.keys(s.byGenre).length >= 10);
+
+  // 称号そのものを集める称号
+  push("col10", "称号コレクター", "称号を10個集める", (s, owned) => owned >= 10);
+  push("col25", "称号マニア", "称号を25個集める", (s, owned) => owned >= 25);
+  push("col50", "称号王", "称号を50個集める", (s, owned) => owned >= 50);
+  push("col100", "称号の化身", "称号を100個集める", (s, owned) => owned >= 100);
+  return defs;
+}
+
+const TITLE_DEFS = buildTitleDefs();
+
+function getEarnedTitles(name) {
+  const s = getPlayStats(name);
+  // 初プレイを月ごとに数える（「新しいもの好き」用）
+  const firstByMonth = {}, seen = new Set();
+  s.plays.slice().sort((a, b) => (a.date || "").localeCompare(b.date || "")).forEach(h => {
+    if (!seen.has(h.slug)) {
+      seen.add(h.slug);
+      const m = (h.date || "").slice(0, 7);
+      if (m) firstByMonth[m] = (firstByMonth[m] || 0) + 1;
+    }
+  });
+  s.firstByMonth = firstByMonth;
+  // ジャンルごとの「種類数」（「名探偵」用）
+  const kindsByGenre = {};
+  Object.keys(s.bySlug).forEach(slug => {
+    const g = games.find(x => slugOf(x) === slug);
+    if (!g) return;
+    getGameTags(g).genreTags.forEach(t => {
+      kindsByGenre[t] = (kindsByGenre[t] || 0) + 1;
+    });
+  });
+  s.kindsByGenre = kindsByGenre;
+
+  // 称号数を条件にするものがあるので2周する
+  const base = TITLE_DEFS.filter(d => !d.id.startsWith("col")).filter(d => d.test(s, 0));
+  const withCol = TITLE_DEFS.filter(d => d.test(s, base.length));
+  return { stats: s, earned: withCol };
+}
+
+// そのゲーム何回目かの節目ボーナス。20回目以降は10回ごとに10ずつ増やす。
+function milestoneExp(n) {
+  if (n === 5) return 20;
+  if (n === 10) return 30;
+  if (n >= 20 && n % 10 === 0) return 40 + ((n - 20) / 10) * 10;
+  return 0;
+}
+
+function calcExp(name) {
+  const rows = [];
+  const add = (label, exp, detail) => { if (exp > 0) rows.push({ label, exp, detail }); };
+
+  const ratings = getPlayerRatings(name);
+  add("ゲームを評価", ratings.length * 30, `${ratings.length}件 × 30`);
+
+  const plays = getPlayerPlays(name);
+  add("プレイ回数", plays.length * 10, `${plays.length}回 × 10`);
+
+  // 古い順に見て「何回目か」を数える
+  const asc = plays.slice().sort((a, b) => (a.date || "").localeCompare(b.date || ""));
+  const count = {};
+  let firstTime = 0, milestone = 0, milestoneDetail = [];
+  const seenGenres = new Set();
+  let newGenre = 0;
+  asc.forEach(h => {
+    count[h.slug] = (count[h.slug] || 0) + 1;
+    const n = count[h.slug];
+    if (n === 1) firstTime += 30;
+    const m = milestoneExp(n);
+    if (m) { milestone += m; milestoneDetail.push(`${n}回目`); }
+    const g = games.find(x => slugOf(x) === h.slug);
+    if (g) getGameTags(g).genreTags.forEach(t => {
+      if (!seenGenres.has(t)) { seenGenres.add(t); newGenre += 50; }
+    });
+  });
+  add("はじめて遊んだゲーム", firstTime, `${firstTime / 30}本 × 30`);
+  add("やりこみボーナス", milestone, milestoneDetail.join("・"));
+  add("はじめてのジャンル", newGenre, `${seenGenres.size}ジャンル × 50`);
+
+  // 月ごとのプレイ回数
+  const byMonth = {};
+  plays.forEach(h => {
+    const m = (h.date || "").slice(0, 7);
+    if (m) byMonth[m] = (byMonth[m] || 0) + 1;
+  });
+  let monthly = 0, monthDetail = [];
+  Object.entries(byMonth).forEach(([m, n]) => {
+    let e = 0;
+    if (n >= 5) e += 30;
+    if (n >= 10) e += 40;
+    if (e) { monthly += e; monthDetail.push(`${m}（${n}回）`); }
+  });
+  add("よく遊んだ月", monthly, monthDetail.join("・"));
+
+  let win = 0, winCount = 0;
+  plays.forEach(h => {
+    if (historyWinners(h).includes(name)) {
+      win += 5 * historyParticipants(h).length;
+      winCount++;
+    }
+  });
+  add("勝利", win, `${winCount}勝`);
+
+  const total = rows.reduce((a, b) => a + b.exp, 0);
+  return { total, rows, level: levelFromExp(total) };
+}
+
+// 自分の評価をジャンル別・メカニクス別に集計して、点の高い順に並べる
+function buildClassBreakdown(playerRatings, kind) {
+  const acc = {};
   playerRatings.forEach(pr => {
     const g = games.find(x => slugOf(x) === pr.slug);
     if (!g) return;
-    const tags = getGameTags(g).all;
-    if (!tags.length) return;
-    tags.forEach(t => {
-      if (!genreScores[t]) genreScores[t] = { sum: 0, count: 0 };
-      genreScores[t].sum += pr.level;
-      genreScores[t].count += 1;
+    const t = getGameTags(g);
+    (kind === "genre" ? t.genreTags : t.allMechanics).forEach(x => {
+      if (!acc[x]) acc[x] = { sum: 0, count: 0 };
+      acc[x].sum += pr.level;
+      acc[x].count += 1;
     });
   });
-  return Object.entries(genreScores)
-    .map(([genre, v]) => ({ genre, avg: Math.round((v.sum / v.count) * 10) / 10, count: v.count }))
+  return Object.entries(acc)
+    .map(([label, v]) => ({ label, avg: Math.round((v.sum / v.count) * 10) / 10, count: v.count }))
     .sort((a, b) => b.avg - a.avg || b.count - a.count);
+}
+
+const EXP_RULES = [
+  ["ゲームを評価する", "+30"],
+  ["1回プレイ", "+10"],
+  ["はじめて遊ぶゲーム", "+30"],
+  ["同じゲーム5回目", "+20"],
+  ["同じゲーム10回目", "+30"],
+  ["同じゲーム20回目", "+40（以降10回ごとに+10ずつ増加）"],
+  ["はじめてのジャンル", "+50"],
+  ["月に5回プレイ", "+30"],
+  ["月に10回プレイ", "+40（5回分と合わせて+70）"],
+  ["勝利", "5 × その卓の人数"]
+];
+
+function buildLevelCard(name) {
+  const { total, rows, level } = calcExp(name);
+  const pct = Math.round(level.progress * 100);
+  return `
+    <div class="level-card">
+      <div class="level-top">
+        <div>
+          <div class="level-rank">${level.label}</div>
+          <div class="level-exp">通算 ${total.toLocaleString()} EXP</div>
+        </div>
+        <div class="level-num">Lv<b>${level.level}</b></div>
+      </div>
+      <div class="level-bar"><i style="width:${pct}%"></i></div>
+      <div class="level-next">${level.nextNeed != null
+        ? `次の「${level.nextLabel}」まで あと ${(level.nextNeed - total).toLocaleString()} EXP`
+        : "最高ランクに到達しました"}</div>
+      ${rows.length ? `
+        <button type="button" class="section-toggle-btn" data-toggle-section="exp-detail" style="margin-top:10px;">EXPの内訳を見る</button>
+        <div data-section="exp-detail" style="display:none;">
+          <table class="quickref-table exp-table">
+            ${rows.map(r => `<tr><td>${r.label}<i>${r.detail || ""}</i></td><td>+${r.exp.toLocaleString()}</td></tr>`).join("")}
+          </table>
+        </div>
+      ` : ""}
+      <button type="button" class="section-toggle-btn" data-toggle-section="exp-rules" style="margin-top:8px;">EXPの貯め方を見る</button>
+      <div data-section="exp-rules" style="display:none;">
+        <table class="quickref-table exp-table">
+          ${EXP_RULES.map(([k, v]) => `<tr><td>${k}</td><td>${v}</td></tr>`).join("")}
+        </table>
+      </div>
+    </div>
+  `;
+}
+
+function buildStatsCard(s) {
+  return `
+    <div class="stat-grid">
+      <div class="stat-box"><div class="stat-label">遊んだゲーム</div><div class="stat-value">${s.kinds}<i>種類</i></div></div>
+      <div class="stat-box"><div class="stat-label">総プレイ</div><div class="stat-value">${s.total}<i>回</i></div></div>
+      <div class="stat-box"><div class="stat-label">今月</div><div class="stat-value">${s.thisMonth}<i>回</i></div></div>
+    </div>
+  `;
+}
+
+function buildGenreLevels(s) {
+  if (!s.genreLevels.length) return "";
+  return `
+    <div class="review-card">
+      <div class="review-header"><div class="review-title">ジャンルLv</div></div>
+      <div class="pref-list">
+        ${s.genreLevels.slice(0, 8).map(x => `
+          <button type="button" class="pref-row" data-class-filter="genre" data-value="${x.genre}">
+            <span class="pref-name">${x.genre}</span>
+            <span class="pref-score">Lv.${x.lv}<i>（${x.plays}プレイ）</i></span>
+          </button>
+        `).join("")}
+      </div>
+    </div>
+  `;
+}
+
+// 称号はタップで獲得条件を出す。数が多いので、付けているものを先頭に並べる。
+function buildTitlesCard(name, isMe) {
+  const { earned } = getEarnedTitles(name);
+  const selected = getSelectedTitles(name);
+  if (!earned.length) {
+    return `
+      <div class="review-card">
+        <div class="review-header">
+          <div class="review-title">🏅 称号</div>
+          <div class="title-count">0<span> / ${TITLE_DEFS.length}</span></div>
+        </div>
+        <div class="review-count">まだ称号がありません。遊んだり評価したりすると増えていきます。</div>
+        ${isMe ? `<button type="button" class="section-toggle-btn" data-toggle-section="title-all" style="margin-top:10px;">どんな称号があるか見る</button>
+        <div data-section="title-all" style="display:none;">${buildTitleCatalog(new Set())}</div>` : ""}
+      </div>`;
+  }
+  const sel = new Set(selected);
+  const sorted = [...earned].sort((a, b) => (sel.has(b.id) ? 1 : 0) - (sel.has(a.id) ? 1 : 0));
+  return `
+    <div class="review-card">
+      <div class="review-header">
+        <div class="review-title">🏅 称号</div>
+        <div class="title-count">${earned.length}<span> / ${TITLE_DEFS.length}</span></div>
+      </div>
+      <div class="level-bar" style="background:var(--border);margin:0 0 10px;">
+        <i style="width:${Math.round((earned.length / TITLE_DEFS.length) * 100)}%;background:#d8a13a;"></i>
+      </div>
+      <div class="title-wrap">
+        ${sorted.map(t => `
+          <button type="button" class="title-chip ${sel.has(t.id) ? "on" : ""}" data-title-info="${t.id}">
+            ${t.name}
+          </button>
+        `).join("")}
+      </div>
+      <div class="title-desc" data-title-desc>タップすると獲得条件が出ます。${isMe ? "「表示する称号を選ぶ」で名前の下に最大5つ付けられます。" : ""}</div>
+      ${isMe ? `
+        <button type="button" class="section-toggle-btn" data-toggle-section="title-pick" style="margin-top:10px;">表示する称号を選ぶ（${selected.length}/5）</button>
+        <div data-section="title-pick" style="display:none;">
+          <div class="title-wrap" style="margin-top:8px;">
+            ${sorted.map(t => `
+              <button type="button" class="title-chip ${sel.has(t.id) ? "on" : ""}" data-title-toggle="${t.id}">
+                ${sel.has(t.id) ? "✓ " : ""}${t.name}
+              </button>
+            `).join("")}
+          </div>
+          <div class="tag-edit-note">5つを超えると選べません。外したいものをもう一度タップしてください。</div>
+        </div>
+        <button type="button" class="section-toggle-btn" data-toggle-section="title-all" style="margin-top:8px;">未獲得もふくめて全部見る</button>
+        <div data-section="title-all" style="display:none;">${buildTitleCatalog(new Set(earned.map(t => t.id)))}</div>
+      ` : ""}
+    </div>
+  `;
+}
+
+function buildTitleCatalog(earnedIds) {
+  return `
+    <table class="quickref-table" style="margin-top:8px;">
+      ${TITLE_DEFS.map(t => `
+        <tr style="${earnedIds.has(t.id) ? "" : "opacity:.5;"}">
+          <td>${earnedIds.has(t.id) ? "🏅 " : "・"}${t.name}</td>
+          <td style="text-align:left;font-weight:400;color:#c4d1ea;">${t.desc}</td>
+        </tr>
+      `).join("")}
+    </table>
+  `;
+}
+
+function buildBreakdownRows(list, kind, labelText) {
+  if (!list.length) return "";
+  return list.slice(0, 5).map(x => `
+    <button type="button" class="pref-row" data-class-filter="${kind}" data-value="${x.label}">
+      <span class="pref-kind">${labelText}：</span>
+      <span class="pref-name">${x.label}</span>
+      <span class="pref-score">★${x.avg}<i>（${x.count}件）</i></span>
+    </button>
+  `).join("");
 }
 
 let playerPageSort = "level_desc";
@@ -3254,7 +4619,11 @@ function sortPlayerRatings(list) {
 function buildPlayerPage(name) {
   const playerRatings = sortPlayerRatings(getPlayerRatings(name));
   const totalCount = playerRatings.length;
-  const genreBreakdown = buildGenreBreakdown(playerRatings);
+  // ジャンルとメカニクスを混ぜて、点の高い上位5つだけ出す
+  const prefTop = [
+    ...buildClassBreakdown(playerRatings, "genre").map(x => Object.assign({ kind: "genre" }, x)),
+    ...buildClassBreakdown(playerRatings, "mechanic").map(x => Object.assign({ kind: "mechanic" }, x))
+  ].sort((a, b) => b.avg - a.avg || b.count - a.count).slice(0, 5);
   const playerHistory = getPlayerHistory(name);
   const playerInterests = getPlayerInterests(name);
 
@@ -3287,18 +4656,20 @@ function buildPlayerPage(name) {
 
   const prof = getProfile(name);
   const isMe = getMyName() === name;
+  const { stats, earned } = getEarnedTitles(name);
+  const selIds = new Set(getSelectedTitles(name));
+  const shownTitles = earned.filter(t => selIds.has(t.id)).slice(0, 5);
 
   return `
     <a class="detail-back" href="#">← 一覧へ戻る</a>
     <h1 class="detail-title">${name} さんのページ</h1>
+    ${shownTitles.length ? `<div class="title-strip">${shownTitles.map(t => `<span class="title-chip on">${t.name}</span>`).join("")}</div>` : ""}
     <div class="detail-underline"></div>
-    <div class="detail-spec-grid" style="grid-template-columns: 1fr;">
-      <div class="detail-spec-box">
-        <div class="label">遊んだ数</div>
-        <div class="value">${totalCount}件</div>
-      </div>
-    </div>
-    ${prof ? `
+    ${buildLevelCard(name)}
+    ${buildStatsCard(stats)}
+    ${buildGenreLevels(stats)}
+    ${buildTitlesCard(name, isMe)}
+    ${prof && prof.type && FAMILIES[prof.type] ? `
       ${buildTypeHero(prof.type)}
       <div class="review-card">
         <div class="review-header"><div class="review-title">タイプの内訳</div></div>
@@ -3314,13 +4685,20 @@ function buildPlayerPage(name) {
         ${isMe ? `<a class="quiz-cta" style="margin-top:10px;" href="#quiz">🧭 診断をやってみる</a>` : ""}
       </div>
     `}
-    <div class="quickref-card">
-      <div class="quickref-title">🎯 好きなジャンル傾向</div>
-      ${genreBreakdown.length ? `
-        <table class="quickref-table">
-          ${genreBreakdown.slice(0, 5).map(gb => `<tr><td>#${gb.genre}</td><td>★${gb.avg}（${gb.count}件）</td></tr>`).join("")}
-        </table>
-      ` : `<div class="quickref-formula">タグが付いているゲームをまだ評価していません。評価するとここに好みの傾向が表示されます。</div>`}
+    <div class="review-card">
+      <div class="review-header"><div class="review-title">🎯 好みの傾向</div></div>
+      ${prefTop.length ? `
+        <div class="pref-list">
+          ${prefTop.map(x => `
+            <button type="button" class="pref-row" data-class-filter="${x.kind}" data-value="${x.label}">
+              <span class="pref-kind">${x.kind === "genre" ? "ジャンル" : "メカニクス"}：</span>
+              <span class="pref-name">${x.label}</span>
+              <span class="pref-score">★${x.avg}<i>（${x.count}件）</i></span>
+            </button>
+          `).join("")}
+        </div>
+        <div class="review-count" style="margin-top:8px;">自分の評価が高い順。タップするとその条件で一覧を絞り込みます。</div>
+      ` : `<div class="review-count">まだ評価がないため傾向を出せません。ゲームを評価するとここに出ます。</div>`}
     </div>
     ${playerInterests.length ? `
     <div class="review-card">
@@ -3345,7 +4723,8 @@ function buildPlayerPage(name) {
     <div class="review-card">
       <div class="review-header"><div class="review-title">プレイ履歴</div></div>
       ${playerHistory.length ? `
-        <div class="review-list">
+        <button type="button" class="section-toggle-btn" data-toggle-section="player-history">見る（${playerHistory.length}件）</button>
+        <div class="review-list" data-section="player-history" style="display:none;">
           ${playerHistory.map(h => {
             const g = games.find(x => slugOf(x) === h.slug);
             return `
@@ -3354,6 +4733,7 @@ function buildPlayerPage(name) {
                   <span class="review-item-name">${g ? `<a href="#game/${encodeURIComponent(h.slug)}">${g.jp}</a>` : h.slug}${h.date ? `<span class="review-item-date">${h.date}</span>` : ""}</span>
                 </div>
                 ${h.members ? `<div class="review-item-members">👥 ${h.members}</div>` : ""}
+                ${historyWinners(h).length ? `<div class="review-item-members">🏆 ${historyWinners(h).join("・")}</div>` : ""}
                 ${h.memo ? `<div class="review-item-memo">${h.memo}</div>` : ""}
               </div>
             `;
