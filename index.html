@@ -115,6 +115,59 @@
     gap: 8px;
     align-items: center;
   }
+  .levelup-veil {
+    position: fixed;
+    inset: 0;
+    z-index: 100;
+    background: rgba(10, 18, 35, 0.72);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+  }
+  .levelup-card {
+    width: 100%;
+    max-width: 340px;
+    text-align: center;
+    background: linear-gradient(135deg, var(--navy), var(--navy-light));
+    border-radius: 18px;
+    padding: 28px 22px 20px;
+    color: #fff;
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45);
+    animation: levelup-pop 0.35s ease;
+  }
+  @keyframes levelup-pop {
+    from { transform: scale(0.86); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+  }
+  .levelup-eyebrow {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.18em;
+    color: #7ee0a8;
+  }
+  .levelup-num {
+    font-size: 38px;
+    font-weight: 800;
+    line-height: 1.15;
+    margin-top: 6px;
+  }
+  .levelup-num small { font-size: 17px; color: #c4d1ea; font-weight: 600; }
+  .levelup-rank { font-size: 19px; font-weight: 700; margin-top: 6px; }
+  .levelup-sub { font-size: 12.5px; color: #c4d1ea; margin-top: 8px; line-height: 1.6; }
+  .levelup-close {
+    margin-top: 18px;
+    width: 100%;
+    border: 1px solid rgba(255,255,255,0.35);
+    background: rgba(255,255,255,0.14);
+    color: #fff;
+    font-size: 14px;
+    font-weight: 700;
+    padding: 11px;
+    border-radius: 999px;
+    cursor: pointer;
+  }
+
   .back-to-top {
     position: fixed;
     right: 16px;
@@ -1512,10 +1565,12 @@
     padding: 10px 14px;
     cursor: pointer;
   }
-  /* 10段階を縦に並べると長すぎるので2列に。全部が同時に見えるので選び逃しがない */
+  /* 左の列を上から10→6、右の列が5→1。列ごとに読み下せるよう縦方向に並べる */
   .rating-choice-row {
     display: grid;
     grid-template-columns: 1fr 1fr;
+    grid-template-rows: repeat(5, auto);
+    grid-auto-flow: column;
     gap: 6px;
     margin-bottom: 4px;
   }
@@ -1529,11 +1584,12 @@
   .rating-choice span {
     display: flex;
     align-items: center;
-    gap: 6px;
-    padding: 9px 10px;
+    gap: 8px;
+    padding: 10px 10px;
     border: 1px solid var(--border);
-    border-radius: 10px;
-    font-size: 11.5px;
+    border-left-width: 4px;
+    border-radius: 9px;
+    font-size: 12px;
     font-weight: 600;
     line-height: 1.3;
     color: var(--text);
@@ -1543,23 +1599,17 @@
   }
   .rating-choice span b {
     flex-shrink: 0;
-    width: 22px;
-    height: 22px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 11.5px;
-    color: #fff;
+    min-width: 24px;
+    font-size: 17px;
+    font-weight: 800;
+    text-align: center;
   }
   .rating-choice input:checked + span {
     background: var(--accent);
     border-color: var(--accent);
     color: #fff;
   }
-  .rating-choice input:checked + span b {
-    background: rgba(255,255,255,0.28) !important;
-  }
+  .rating-choice input:checked + span b { color: #fff !important; }
   .rating-choice input:focus-visible + span { outline: 2px solid var(--accent); }
   .name-pick-row { margin-bottom: 8px; }
   .new-name-input {
@@ -1781,6 +1831,16 @@
 
 <button type="button" id="backToTop" class="back-to-top" title="一番上へ戻る" aria-label="一番上へ戻る">↑</button>
 
+<div id="levelUp" class="levelup-veil" style="display:none;">
+  <div class="levelup-card">
+    <div class="levelup-eyebrow" id="levelUpEyebrow">LEVEL UP</div>
+    <div class="levelup-num" id="levelUpNum"></div>
+    <div class="levelup-rank" id="levelUpRank"></div>
+    <div class="levelup-sub" id="levelUpSub"></div>
+    <button type="button" class="levelup-close" id="levelUpClose">とじる</button>
+  </div>
+</div>
+
 <footer>
   所有データは <a href="https://bodoge.hoobby.net/" target="_blank" rel="noopener">ボドゲーマ</a> より
 </footer>
@@ -1862,6 +1922,7 @@ const HISTORY_CACHE_KEY = "bg_history_cache_v1";
 const INTERESTS_CACHE_KEY = "bg_interests_cache_v1";
 const MY_NAME_KEY = "bg_myname";
 const REC_MEMBERS_KEY = "bg_rec_members";
+const LAST_LEVEL_KEY = "bg_last_level";
 
 // 10段階。5段階だと「ふつう」に逃げられてしまい、下2つも心理的に押しづらいため。
 const RATING_LEVELS = [
@@ -1872,9 +1933,9 @@ const RATING_LEVELS = [
   { value: 6, label: "誘われたら遊びたい", emoji: "🙂" },
   { value: 5, label: "誘われたら遊ぶ", emoji: "🙂" },
   { value: 4, label: "他に候補がなければ遊ぶ", emoji: "😐" },
-  { value: 3, label: "あまり遊びたくない", emoji: "😕" },
-  { value: 2, label: "もう遊ばなくていい", emoji: "😕" },
-  { value: 1, label: "二度と遊びたくない", emoji: "😩" }
+  { value: 3, label: "あまり好きじゃない", emoji: "😕" },
+  { value: 2, label: "苦手", emoji: "😕" },
+  { value: 1, label: "かなり苦手", emoji: "😩" }
 ];
 const RATING_MAX = 10;
 const RATING_NEUTRAL = 5.5;              // 1〜10のまんなか
@@ -1936,13 +1997,14 @@ function ratingLabel(value) {
   return l ? `${l.emoji} ${value} ${l.label}` : `${value}`;
 }
 
-// 点数がひと目で分かるよう、高い＝緑 / 低い＝赤 のグラデーションにする
+// 5段階のはっきりした色分け。遊びたい＝緑 → 中立＝青灰 → 遊びたくない＝赤。
 function ratingColor(value) {
-  if (value >= 9) return "#2e9e6b";
-  if (value >= 7) return "#5cae7a";
-  if (value >= 5) return "#9aa7bd";
-  if (value >= 4) return "#c2a15a";
-  return "#c96a6a";
+  if (value >= 9) return "#1f8f5f";   // ぜひ遊びたい
+  if (value >= 7) return "#4fae74";   // また遊びたい
+  if (value >= 5) return "#6f7f9c";   // 誘われたら
+  if (value >= 4) return "#d18b34";   // 消極的
+  if (value >= 2) return "#cc6152";   // 遊びたくない
+  return "#a93226";                   // 二度と
 }
 
 const PROFILES_CACHE_KEY = "bg_profiles_cache_v1";
@@ -2095,6 +2157,7 @@ Promise.all([
   renderGenreOptions();
   renderMechanicOptions();
   renderSearchSuggest();
+  checkLevelSinceLastVisit();
   GENRE_VOCAB = new Set(Object.values(genresData).flat().sort((a, b) => a.localeCompare(b, "ja")));
   MECHANIC_VOCAB = new Set(Object.values(mechanicsData).flat().sort((a, b) => a.localeCompare(b, "ja")));
   render();
@@ -3021,7 +3084,7 @@ function buildRatingSection(g) {
             ${RATING_LEVELS.map(l => `
               <label class="rating-choice">
                 <input type="radio" name="level" value="${l.value}" required>
-                <span><b style="background:${ratingColor(l.value)}">${l.value}</b>${l.label}</span>
+                <span style="border-left-color:${ratingColor(l.value)}"><b style="color:${ratingColor(l.value)}">${l.value}</b>${l.label}</span>
               </label>
             `).join("")}
           </div>
@@ -3291,7 +3354,7 @@ document.getElementById("detailView").addEventListener("submit", async e => {
     const level = parseInt(levelInput.value, 10);
     const submitBtn = ratingForm.querySelector("button[type=submit]");
     submitBtn.disabled = true;
-    await addRating(slug, name, level);
+    await withLevelUp(() => addRating(slug, name, level));
     const g = games.find(x => slugOf(x) === slug);
     if (g) showDetail(g);
     return;
@@ -3325,7 +3388,7 @@ document.getElementById("detailView").addEventListener("submit", async e => {
       return;
     }
     historyForm.querySelector("button[type=submit]").disabled = true;
-    await addHistory(rec);
+    await withLevelUp(() => addHistory(rec));
     const g = games.find(x => slugOf(x) === slug);
     if (g) showDetail(g);
   }
@@ -4358,6 +4421,62 @@ function getEarnedTitles(name) {
   const base = TITLE_DEFS.filter(d => !d.id.startsWith("col")).filter(d => d.test(s, 0));
   const withCol = TITLE_DEFS.filter(d => d.test(s, base.length));
   return { stats: s, earned: withCol };
+}
+
+// ── レベルアップの演出 ────────────────────────────────
+// プッシュ通知は静的サイトでは送れないので、
+// 「その場で上がったとき」と「前回来たときより上がっていたとき」に画面で知らせる。
+function rememberLevel(name) {
+  if (!name) return;
+  const cur = calcExp(name);
+  localStorage.setItem(LAST_LEVEL_KEY, JSON.stringify({
+    name, level: cur.level.level, exp: cur.total
+  }));
+}
+
+function showLevelUp(level, gained, sinceLastVisit) {
+  document.getElementById("levelUpEyebrow").textContent =
+    sinceLastVisit ? "おかえりなさい" : "LEVEL UP";
+  document.getElementById("levelUpNum").innerHTML =
+    `Lv<b>${level.level}</b>`;
+  document.getElementById("levelUpRank").textContent = level.label;
+  document.getElementById("levelUpSub").textContent = sinceLastVisit
+    ? `前回から ${gained} レベル上がっています`
+    : (gained > 1 ? `${gained}レベル上がりました！` : "レベルが上がりました！");
+  document.getElementById("levelUp").style.display = "flex";
+}
+
+document.getElementById("levelUpClose").addEventListener("click", () => {
+  document.getElementById("levelUp").style.display = "none";
+});
+document.getElementById("levelUp").addEventListener("click", e => {
+  if (e.target.id === "levelUp") e.currentTarget.style.display = "none";
+});
+
+// 前回このページを見たときからレベルが上がっていたら知らせる
+function checkLevelSinceLastVisit() {
+  const name = getMyName();
+  if (!name) return;
+  let prev = null;
+  try { prev = JSON.parse(localStorage.getItem(LAST_LEVEL_KEY)); } catch (e) { /* 壊れていたら無視 */ }
+  const cur = calcExp(name);
+  if (prev && prev.name === name && cur.level.level > prev.level) {
+    showLevelUp(cur.level, cur.level.level - prev.level, true);
+  }
+  rememberLevel(name);
+}
+
+// EXPが増える操作を包んで、上がったその場で演出を出す
+async function withLevelUp(fn) {
+  const name = getMyName();
+  const before = name ? calcExp(name).level.level : null;
+  await fn();
+  if (!name) return;
+  const after = calcExp(name);
+  if (before != null && after.level.level > before) {
+    showLevelUp(after.level, after.level.level - before, false);
+  }
+  rememberLevel(name);
 }
 
 // そのゲーム何回目かの節目ボーナス。20回目以降は10回ごとに10ずつ増やす。
