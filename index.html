@@ -3345,6 +3345,16 @@ function createSession(rec) {
   }).catch(err => writeFailed(err, "記録の作成"));
 }
 
+// 途中参加・途中離脱に対応するため、メンバーだけ後から書き換える
+function updateSessionMembers(id, members) {
+  const sess = getSession(id);
+  if (sess) sess.members = members.slice();          // 画面はすぐ反映する
+  if (!firebaseReady) return Promise.resolve();
+  return db.collection("sessions").doc(id).update({ members: members.slice() })
+    .then(() => fetchSessions().then(c => { sessionsCache = c; }))
+    .catch(err => writeFailed(err, "メンバーの変更"));
+}
+
 function deleteSession(id) {
   if (!firebaseReady) return Promise.resolve();
   return db.collection("sessions").doc(id).delete()
@@ -4422,6 +4432,7 @@ let membersTab = "members";              // "members" | "log"
 // 記録中の卓（保存するまでは画面の中だけで持つ）
 let logDraft = { sessionId: "", members: [], date: "", query: "", tables: [] };
 let logShown = 5;
+let logMembersOpen = false;
 let expandedPickers = new Set();
 
 function buildMembersView() {
@@ -4517,6 +4528,24 @@ function buildActiveSession(sess) {
         <button type="button" class="link-btn" data-log-close>閉じる</button>
       </div>
       <div class="rec-status">${(sess.members || []).join("・")}（${(sess.members || []).length}人）</div>
+      <button type="button" class="picker-toggle" data-toggle-section="log-members">
+        ${logMembersOpen ? "メンバーの変更をとじる" : "▸ 途中から来た人・帰った人がいる"}
+      </button>
+      <div data-section="log-members" style="display:${logMembersOpen ? "block" : "none"};">
+        ${pickerGrid(allLogNames(sess), "sessmem",
+          n => (sess.members || []).includes(n),
+          n => `data-sess-member="${n}"`)}
+        <form class="review-form" data-log-newmember>
+          <div class="review-form-row">
+            <input name="who" type="text" placeholder="はじめての人はここに名前を入れる" maxlength="20">
+            <button type="submit">追加</button>
+          </div>
+        </form>
+        <div class="review-count" style="margin-top:6px;">
+          足した人は、いま開いている卓にもすぐ入ります。外した人はこれから作る卓に入らなくなります
+          （開いている卓・記録ずみの卓はそのままなので、必要ならその卓で外してください）。
+        </div>
+      </div>
 
       <div class="lv-section-title" style="color:var(--text-sub);margin:14px 0 6px;">遊んだゲームを追加</div>
       <div class="review-form-row">
@@ -4581,6 +4610,13 @@ function pickerGrid(list, key, isOn, attr) {
 
 // 1卓ぶんの入力。メンバーはセッションから減らしたり、途中参加を足したりできる。
 // そのゲームが今日いくつ目の卓か（記録ずみ＋いま入力中）
+function allLogNames(sess) {
+  const set = new Set(getAllKnownNames());
+  (sess.members || []).forEach(n => set.add(n));
+  getSessionTables(sess.id).forEach(h => historyParticipants(h).forEach(n => set.add(n)));
+  return [...set];
+}
+
 function tableNth(slug, i, saved) {
   return saved.filter(h => h.slug === slug).length
     + logDraft.tables.slice(0, i + 1).filter(t => t.slug === slug).length;
@@ -5136,6 +5172,7 @@ async function addToTodaySession(slug) {
     sess = getSession(id) || { id, date: today, members: [me] };
   }
   membersTab = "log";
+  logMembersOpen = (sess.members || []).length < 2;   // 1人なら最初から開いておく
   logDraft = {
     sessionId: sess.id,
     members: (sess.members || [me]).slice(),
@@ -5603,9 +5640,19 @@ document.getElementById("membersView").addEventListener("submit", async e => {
   e.preventDefault();
   const who = form.elements.who.value.trim();
   if (!who) return;
-  if (!logDraft.members.includes(who)) logDraft.members.push(who);
-  await registerNameOnServer(who);
   form.elements.who.value = "";
+  await registerNameOnServer(who);
+  const sess = logDraft.sessionId ? getSession(logDraft.sessionId) : null;
+  if (sess) {
+    // 記録中なら、その会のメンバーに足して卓の候補にも入れる
+    const list = (sess.members || []).slice();
+    if (!list.includes(who)) list.push(who);
+    logDraft.members = list.slice();
+    logDraft.tables.forEach(t => { if (!t.members.includes(who)) t.members.push(who); });
+    await updateSessionMembers(sess.id, list);
+  } else if (!logDraft.members.includes(who)) {
+    logDraft.members.push(who);
+  }
   rerenderMembers();
 });
 
@@ -5687,6 +5734,32 @@ document.getElementById("membersView").addEventListener("click", async e => {
       const cards = document.querySelectorAll(".table-card");
       if (cards.length) cards[cards.length - 1].scrollIntoView({ behavior: "smooth", block: "center" });
     }
+    return;
+  }
+
+  if (e.target.closest('[data-toggle-section="log-members"]')) {
+    logMembersOpen = !logMembersOpen;
+    rerenderMembers();
+    return;
+  }
+
+  const sm = e.target.closest("[data-sess-member]");
+  if (sm) {
+    const sess = getSession(logDraft.sessionId);
+    if (!sess) return;
+    const n = sm.dataset.sessMember;
+    const list = (sess.members || []).slice();
+    const i = list.indexOf(n);
+    if (i >= 0) list.splice(i, 1); else list.push(n);
+    if (!list.length) { alert("メンバーを0人にはできません。"); return; }
+    logDraft.members = list.slice();
+    // 途中から来た人は、まだ結果を入れていない卓にも足しておく
+    logDraft.tables.forEach(t => {
+      if (i >= 0) return;
+      if (!t.members.includes(n)) t.members.push(n);
+    });
+    await updateSessionMembers(sess.id, list);
+    rerenderMembers();
     return;
   }
 
