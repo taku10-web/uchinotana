@@ -86,14 +86,15 @@
   }
   .nav-btn {
     flex: 1;
+    min-width: 0;
     text-align: center;
     text-decoration: none;
     border: 1px solid rgba(255,255,255,0.22);
     background: rgba(255,255,255,0.1);
     color: #fff;
-    font-size: 12.5px;
+    font-size: 11.5px;
     font-weight: 700;
-    padding: 9px 4px;
+    padding: 9px 2px;
     border-radius: 10px;
     cursor: pointer;
     white-space: nowrap;
@@ -691,6 +692,26 @@
     color: var(--pitch-text);
     border-radius: 999px;
     padding: 2px 8px;
+  }
+  .log-row-btns { display: flex; flex-direction: column; gap: 4px; flex-shrink: 0; }
+  .log-again.primary {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #fff;
+  }
+  .log-again.rated {
+    border-color: var(--border);
+    color: var(--text-sub);
+  }
+  .log-today-badge {
+    margin-left: 8px;
+    font-size: 10px;
+    font-weight: 700;
+    background: var(--accent);
+    color: #fff;
+    border-radius: 999px;
+    padding: 2px 8px;
+    vertical-align: middle;
   }
   .day-people { display: flex; flex-wrap: wrap; gap: 6px; }
   .day-person {
@@ -2317,8 +2338,9 @@
   <div class="count"><span id="totalCount">-</span>件所蔵</div>
   <nav class="main-nav">
     <a href="#" class="nav-btn" data-nav="list">🔍 さがす</a>
-    <button type="button" class="nav-btn" data-nav="mypage">👤 マイページ</button>
+    <button type="button" class="nav-btn" data-nav="mypage">👤 マイ</button>
     <a href="#members" class="nav-btn" data-nav="members">👥 みんな</a>
+    <a href="#log" class="nav-btn" data-nav="log">📝 記録</a>
   </nav>
 </header>
 
@@ -2414,6 +2436,7 @@
   <div id="membersView" style="display:none;"></div>
   <div id="recommendView" style="display:none;"></div>
   <div id="todayView" style="display:none;"></div>
+  <div id="logView" style="display:none;"></div>
   <div id="quizView" style="display:none;"></div>
 </main>
 
@@ -2479,7 +2502,7 @@ try {
 // ── 自動更新 ───────────────────────────────
 // iPhoneはHTMLを長く握るので、新しい版が出ていたらURLを変えて読み直す。
 // （同じURLの再読み込みだとキャッシュが返ってきてしまうため）
-const APP_BUILD = "2026-09-11-0301";
+const APP_BUILD = "2026-09-11-0320";
 
 function markVersion(extra) {
   const el = document.getElementById("appVersion");
@@ -3716,6 +3739,7 @@ function renderUserBadge() {
   const h = location.hash;
   const cur = h.startsWith("#player/") ? "mypage"
     : h === "#members" ? "members"
+    : h === "#log" ? "log"
     : (h === "" || h === "#" || h.startsWith("#game/")) ? "list" : "";
   document.querySelectorAll("[data-nav]").forEach(b => b.classList.toggle("on", b.dataset.nav === cur));
 }
@@ -4149,6 +4173,7 @@ function showDetail(g) {
   document.getElementById("membersView").style.display = "none";
   document.getElementById("recommendView").style.display = "none";
   document.getElementById("todayView").style.display = "none";
+  document.getElementById("logView").style.display = "none";
   document.getElementById("quizView").style.display = "none";
   const dv = document.getElementById("detailView");
   dv.style.display = "block";
@@ -4541,10 +4566,10 @@ function showListView() {
   document.getElementById("membersView").style.display = "none";
   document.getElementById("recommendView").style.display = "none";
   document.getElementById("todayView").style.display = "none";
+  document.getElementById("logView").style.display = "none";
   document.getElementById("quizView").style.display = "none";
 }
 
-let membersTab = "members";              // "members" | "log"
 // 記録中の卓（保存するまでは画面の中だけで持つ）
 let logDraft = { sessionId: "", members: [], date: "", query: "", tables: [] };
 let logShown = 5;
@@ -4556,11 +4581,7 @@ function buildMembersView() {
     <button type="button" class="detail-back" data-back>← 戻る</button>
     <h1 class="detail-title">みんな</h1>
     <div class="detail-underline"></div>
-    <div class="tab-row">
-      <button type="button" class="tab-btn ${membersTab === "members" ? "on" : ""}" data-members-tab="members">👥 メンバー</button>
-      <button type="button" class="tab-btn ${membersTab === "log" ? "on" : ""}" data-members-tab="log">📝 ゲーム記録</button>
-    </div>
-    ${membersTab === "members" ? buildMembersTab() : buildLogTab()}
+    ${buildMembersTab()}
   `;
 }
 
@@ -4596,43 +4617,103 @@ function buildMembersTab() {
   `;
 }
 
-function buildLogTab() {
-  const cur = logDraft.sessionId ? getSession(logDraft.sessionId) : null;
+// ── ゲーム記録（独立ページ）───────────────────
+// 「その日に何を遊んだか」が常に出ているのが目的なので、閉じる操作は用意しない。
+// 日付は朝5時で切り替わる。過去の日は下の一覧から選ぶ。
+let logDate = "";
+
+function currentLogDate() {
+  return logDate || todayStr();
+}
+
+function sessionOf(date) {
+  return sessionsCache.find(x => x.date === date) || null;
+}
+
+function buildLogView() {
+  const date = currentLogDate();
+  const sess = sessionOf(date);
+  const isToday = date === todayStr();
   return `
-    ${cur ? buildActiveSession(cur) : buildSessionStart()}
+    <button type="button" class="detail-back" data-back>← 戻る</button>
+    <h1 class="detail-title">ゲーム記録</h1>
+    <div class="detail-underline"></div>
+    <div class="review-card">
+      <div class="review-header">
+        <div class="review-title">${date}${isToday ? "<span class=\"log-today-badge\">今日</span>" : ""}</div>
+      </div>
+      ${sess ? buildLogSession(sess) : buildLogEmpty(date)}
+    </div>
     ${buildSessionLog()}
   `;
 }
 
-function buildSessionStart() {
+function buildLogEmpty(date) {
   const names = getAllKnownNames();
   const picked = logDraft.members;
-  const today = todayStr();
-  const openToday = sessionsCache.filter(x => x.date === today);
   return `
-    <div class="review-card">
-      <div class="review-header"><div class="review-title">今日いるメンバーを選ぶ</div></div>
-      ${pickerGrid(names, "start", n => picked.includes(n), n => `data-log-member="${n}"`)}
-      <form class="review-form" data-log-newmember style="margin-top:10px;">
+    <div class="review-count" style="margin-bottom:12px;">
+      まだ記録がありません。ゲームのページで <b>「🎲 今日やる！」</b> を押すと、ここに並びます。<br>
+      先にメンバーを決めておくこともできます。
+    </div>
+    ${pickerGrid(names, "start", n => picked.includes(n), n => `data-log-member="${n}"`)}
+    <form class="review-form" data-log-newmember style="margin-top:6px;">
+      <div class="review-form-row">
+        <input name="who" type="text" placeholder="いない人はここに名前を入れて追加" maxlength="20">
+        <button type="submit">追加</button>
+      </div>
+    </form>
+    <button type="button" class="detail-cta detail-cta-primary" data-log-start style="margin-top:12px;">
+      ${picked.length ? `${picked.length}人で始める` : "メンバーを選んで始める"}
+    </button>
+  `;
+}
+
+function buildLogSession(sess) {
+  const tables = getSessionTables(sess.id);
+  const waiting = tables.filter(h => !historyHasResult(h)).length;
+  return `
+    <div class="rec-status">${(sess.members || []).join("・")}（${(sess.members || []).length}人）</div>
+    <button type="button" class="picker-toggle" data-toggle-section="log-members">
+      ${logMembersOpen ? "メンバーの変更をとじる" : "▸ 途中から来た人・帰った人がいる"}
+    </button>
+    <div data-section="log-members" style="display:${logMembersOpen ? "block" : "none"};">
+      ${pickerGrid(allLogNames(sess), "sessmem",
+        n => (sess.members || []).includes(n),
+        n => `data-sess-member="${n}"`)}
+      <form class="review-form" data-log-newmember>
         <div class="review-form-row">
-          <input name="who" type="text" placeholder="いない人はここに名前を入れて追加" maxlength="20">
+          <input name="who" type="text" placeholder="はじめての人はここに名前を入れる" maxlength="20">
           <button type="submit">追加</button>
         </div>
       </form>
-      <div class="review-form-field" style="margin-top:10px;">
-        <label>日付</label>
-        <input type="date" id="logDate" value="${logDraft.date || today}">
+      <div class="review-count" style="margin-top:6px;">
+        足した人は、これから作る卓に入ります。記録ずみの卓はそのままです。
       </div>
-      <button type="button" class="detail-cta detail-cta-primary" data-log-start
-              ${picked.length < 1 ? "disabled" : ""} style="margin-top:12px;">
-        ${picked.length ? `${picked.length}人で記録を始める` : "メンバーを選んでください"}
-      </button>
-      ${openToday.length ? `
-        <div class="rec-status" style="margin-top:10px;">今日の記録がすでにあります：</div>
-        ${openToday.map(x => `<button type="button" class="section-toggle-btn" data-log-open="${x.id}" style="margin-top:6px;">${x.date}　${(x.members || []).join("・")} の続きを書く</button>`).join("")}
-      ` : ""}
     </div>
+
+    <div class="lv-section-title" style="color:var(--text-sub);margin:16px 0 8px;">
+      遊んだゲーム（${tables.length}卓）${waiting ? `<span class="log-waiting-badge">結果待ち ${waiting}</span>` : ""}
+    </div>
+    ${tables.length
+      ? tables.map((h, i) => buildTableRow(h, i, sess, tables)).join("")
+      : `<div class="review-count">まだ1卓もありません。ゲームのページで「🎲 今日やる！」を押してください。</div>`}
+
+    ${buildDayPeople(tables)}
   `;
+}
+
+function showLogView() {
+  hideAllViews();
+  const lv = document.getElementById("logView");
+  lv.style.display = "block";
+  lv.innerHTML = buildLogView();
+  window.scrollTo(0, 0);
+}
+
+function rerenderLog() {
+  const lv = document.getElementById("logView");
+  if (lv && lv.style.display !== "none") lv.innerHTML = buildLogView();
 }
 
 // 卓は「追加した時点で保存」し、結果はあとから入れる。
@@ -4645,74 +4726,6 @@ function historyHasResult(h) {
 let editingId = "";      // いま結果を入れている卓のid
 let pendingDelete = "";  // ✕を1回押した卓（もう一度押すと消える）
 let editDraft = null;    // {members, mode, winners, coopResult}
-
-function buildActiveSession(sess) {
-  const tables = getSessionTables(sess.id);
-  const waiting = tables.filter(h => !historyHasResult(h)).length;
-  return `
-    <div class="review-card">
-      <div class="review-header">
-        <div class="review-title">${sess.date} の記録</div>
-        <button type="button" class="link-btn" data-log-close>閉じる</button>
-      </div>
-      <div class="rec-status">${(sess.members || []).join("・")}（${(sess.members || []).length}人）</div>
-      <button type="button" class="picker-toggle" data-toggle-section="log-members">
-        ${logMembersOpen ? "メンバーの変更をとじる" : "▸ 途中から来た人・帰った人がいる"}
-      </button>
-      <div data-section="log-members" style="display:${logMembersOpen ? "block" : "none"};">
-        ${pickerGrid(allLogNames(sess), "sessmem",
-          n => (sess.members || []).includes(n),
-          n => `data-sess-member="${n}"`)}
-        <form class="review-form" data-log-newmember>
-          <div class="review-form-row">
-            <input name="who" type="text" placeholder="はじめての人はここに名前を入れる" maxlength="20">
-            <button type="submit">追加</button>
-          </div>
-        </form>
-        <div class="review-count" style="margin-top:6px;">
-          足した人は、これから作る卓に入ります。記録ずみの卓はそのままです。
-        </div>
-      </div>
-
-      <div class="lv-section-title" style="color:var(--text-sub);margin:16px 0 8px;">
-        今日遊んだゲーム（${tables.length}卓）${waiting ? `<span class="log-waiting-badge">結果待ち ${waiting}</span>` : ""}
-      </div>
-      ${tables.length
-        ? tables.map((h, i) => buildTableRow(h, i, sess, tables)).join("")
-        : `<div class="review-count">まだ1卓もありません。下から遊んだゲームを足してください。</div>`}
-
-      ${buildDayPeople(tables)}
-
-      <div class="lv-section-title" style="color:var(--text-sub);margin:18px 0 6px;">遊んだゲームを足す</div>
-      ${buildRecentChips(sess)}
-      <div class="review-form-row">
-        <input type="text" id="logSearch" placeholder="ゲーム名で検索"
-               value="${(logDraft.query || "").replace(/"/g, "&quot;")}"
-               autocomplete="off" autocorrect="off" autocapitalize="off">
-      </div>
-      <div id="logHits">${buildLogHits()}</div>
-    </div>
-  `;
-}
-
-// よく遊ぶものは検索させない。最近の卓からタップで足せるようにする。
-function buildRecentChips(sess) {
-  const seen = [];
-  const all = [];
-  Object.keys(historyCache).forEach(slug => (historyCache[slug] || []).forEach(h => all.push(h)));
-  all.sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
-  all.forEach(h => { if (!seen.includes(h.slug) && seen.length < 8) seen.push(h.slug); });
-  if (!seen.length) return "";
-  return `
-    <div class="log-hits" style="margin:0 0 8px;">
-      ${seen.map(slug => {
-        const g = games.find(x => slugOf(x) === slug);
-        return `<button type="button" class="log-hit" data-log-add="${slug}">${g ? g.jp : slug}</button>`;
-      }).join("")}
-    </div>
-    <div class="review-count" style="margin-bottom:8px;">↑ 最近遊んだもの。無ければ下で検索してください。</div>
-  `;
-}
 
 // その日にいた人と、その日の勝敗
 function buildDayPeople(tables) {
@@ -4756,9 +4769,16 @@ function buildTableRow(h, i, sess, tables) {
         <i>${historyParticipants(h).join("・")}</i>
       </div>
       ${done
-        ? `<div class="log-row-res">${historyResultText(h)}</div>
-           <button type="button" class="log-again" data-log-again="${h.id}">もう1回</button>`
-        : `<button type="button" class="log-again" data-table-edit="${h.id}">結果を入れる</button>`}
+        ? `<div class="log-row-res">${historyResultText(h)}</div>`
+        : ""}
+      <div class="log-row-btns">
+        ${done
+          ? `<button type="button" class="log-again" data-log-again="${h.id}">もう1回</button>`
+          : `<button type="button" class="log-again primary" data-table-edit="${h.id}">結果を入れる</button>`}
+        <button type="button" class="log-again ${myRating(h.slug) == null ? "" : "rated"}" data-log-rate="${h.slug}">
+          ${myRating(h.slug) == null ? "評価する" : `評価 ${myRating(h.slug)}`}
+        </button>
+      </div>
       <button type="button" class="review-item-del ${pendingDelete === h.id ? "confirm" : ""}"
               data-log-del="${h.id}" data-log-del-slug="${h.slug}"
               title="消す">${pendingDelete === h.id ? "消す？" : "×"}</button>
@@ -4839,22 +4859,6 @@ function lastModeFor(slug) {
   return list.length ? (list[0].mode || "solo") : "solo";
 }
 
-function buildLogHits() {
-  const q = logDraft.query.trim();
-  if (!q) return "";
-  const k = normalizeSearch(q);
-  const hits = games.filter(g =>
-    normalizeSearch(g.jp).includes(k) || normalizeSearch(g.en || "").includes(k)
-  ).slice(0, 10);
-  if (!hits.length) return `<div class="review-count" style="margin-top:8px;">見つかりませんでした</div>`;
-  const done = {};
-  getSessionTables(logDraft.sessionId).forEach(h => { done[h.slug] = (done[h.slug] || 0) + 1; });
-  return `<div class="log-hits">${hits.map(g => {
-    const n = done[slugOf(g)] || 0;
-    return `<button type="button" class="log-hit" data-log-add="${slugOf(g)}">${g.jp}${n ? `<i>今日${n}回</i>` : ""}</button>`;
-  }).join("")}</div>`;
-}
-
 // 人数が多いと縦に伸びるので、1行ぶんだけ出して残りは折りたたむ
 function pickerGrid(list, key, isOn, attr) {
   const open = expandedPickers.has(key);
@@ -4880,12 +4884,20 @@ function allLogNames(sess) {
 
 // 過去の会を日付順に。何を遊んだ日か一覧で分かるようにする。
 function buildSessionLog() {
-  const list = sessionsCache.filter(x => x.id !== logDraft.sessionId);
-  if (!list.length) return "";
+  const cur = currentLogDate();
+  const list = sessionsCache.filter(x => x.date !== cur);
+  if (!list.length) {
+    return cur !== todayStr()
+      ? `<div class="review-card"><button type="button" class="section-toggle-btn" data-log-today>今日に戻る</button></div>`
+      : "";
+  }
   const shown = list.slice(0, logShown);
   return `
     <div class="review-card">
-      <div class="review-header"><div class="review-title">これまでの記録（${list.length}日）</div></div>
+      <div class="review-header">
+        <div class="review-title">ほかの日の記録（${list.length}日）</div>
+        ${cur !== todayStr() ? `<button type="button" class="link-btn" data-log-today>今日に戻る</button>` : ""}
+      </div>
       ${shown.map(x => {
         const tables = getSessionTables(x.id);
         const titles = tables.map(h => {
@@ -5385,21 +5397,11 @@ async function ensureTodayTable(slug, me) {
 
 // 今日の記録を開いた状態で みんな/ゲーム記録 へ移動する
 function openTodayLog() {
-  const me = getMyName();
-  const sess = sessionsCache.find(x => x.date === todayStr());
-  membersTab = "log";
+  logDate = "";                 // 常に今日から見せる
   editingId = ""; editDraft = null;
-  if (sess) {
-    logMembersOpen = (sess.members || []).length < 2;
-    logDraft = {
-      sessionId: sess.id,
-      members: (sess.members || (me ? [me] : [])).slice(),
-      date: sess.date, query: "", tables: []
-    };
-  } else {
-    logDraft = { sessionId: "", members: me ? [me] : [], date: todayStr(), query: "", tables: [] };
-  }
-  location.hash = "#members";
+  const sess = sessionOf(todayStr());
+  logMembersOpen = !!sess && (sess.members || []).length < 2;
+  location.hash = "#log";
 }
 
 // その場に留まる操作は、何が起きたか分からないと不安なので短く知らせる
@@ -5418,7 +5420,7 @@ function toast(msg) {
 }
 
 function hideAllViews() {
-  ["controls", "listView", "detailView", "playerView", "membersView", "recommendView", "quizView", "todayView"]
+  ["controls", "listView", "detailView", "playerView", "membersView", "recommendView", "quizView", "todayView", "logView"]
     .forEach(id => { const el = document.getElementById(id); if (el) el.style.display = "none"; });
 }
 
@@ -5723,6 +5725,7 @@ function showQuizView() {
   document.getElementById("membersView").style.display = "none";
   document.getElementById("recommendView").style.display = "none";
   document.getElementById("todayView").style.display = "none";
+  document.getElementById("logView").style.display = "none";
   const qv = document.getElementById("quizView");
   qv.style.display = "block";
   qv.innerHTML = buildQuizView();
@@ -5851,24 +5854,7 @@ function rerenderMembers() {
   mv.innerHTML = buildMembersView();
 }
 
-function updateLogHits(el) {
-  logDraft.query = el.value;
-  const box = document.getElementById("logHits");
-  if (box) box.innerHTML = buildLogHits();
-}
-
-document.getElementById("membersView").addEventListener("input", e => {
-  if (e.target.id === "logSearch") updateLogHits(e.target);
-  if (e.target.id === "logDate") logDraft.date = e.target.value;
-});
-// 日本語入力は端末によって input が飛ばないことがあるので、変換確定でも引き直す
-["compositionend", "change", "keyup"].forEach(ev => {
-  document.getElementById("membersView").addEventListener(ev, e => {
-    if (e.target.id === "logSearch") updateLogHits(e.target);
-  });
-});
-
-document.getElementById("membersView").addEventListener("submit", async e => {
+document.getElementById("logView").addEventListener("submit", async e => {
   const form = e.target.closest("[data-log-newmember]");
   if (!form) return;
   e.preventDefault();
@@ -5876,9 +5862,9 @@ document.getElementById("membersView").addEventListener("submit", async e => {
   if (!who) return;
   form.elements.who.value = "";
   await registerNameOnServer(who);
-  const sess = logDraft.sessionId ? getSession(logDraft.sessionId) : null;
+  const sess = sessionOf(currentLogDate());
   if (sess) {
-    // 記録中なら、その会のメンバーに足して卓の候補にも入れる
+    // すでに始まっていれば、その会のメンバーに足す
     const list = (sess.members || []).slice();
     if (!list.includes(who)) list.push(who);
     logDraft.members = list.slice();
@@ -5886,19 +5872,16 @@ document.getElementById("membersView").addEventListener("submit", async e => {
   } else if (!logDraft.members.includes(who)) {
     logDraft.members.push(who);
   }
-  rerenderMembers();
+  rerenderLog();
 });
 
-document.getElementById("membersView").addEventListener("click", async e => {
-  const tab = e.target.closest("[data-members-tab]");
-  if (tab) { membersTab = tab.dataset.membersTab; rerenderMembers(); return; }
-
+document.getElementById("logView").addEventListener("click", async e => {
   const mem = e.target.closest("[data-log-member]");
   if (mem) {
     const n = mem.dataset.logMember;
     const i = logDraft.members.indexOf(n);
     if (i >= 0) logDraft.members.splice(i, 1); else logDraft.members.push(n);
-    rerenderMembers();
+    rerenderLog();
     return;
   }
 
@@ -5910,69 +5893,61 @@ document.getElementById("membersView").addEventListener("click", async e => {
     start.disabled = true;
     start.textContent = "作成中…";
     const id = await createSession({
-      date: logDraft.date || todayStr(),
+      date: currentLogDate(),
       members: logDraft.members.slice(),
       createdBy: me
     });
-    if (id) { logDraft.sessionId = id; logDraft.tables = []; logDraft.query = ""; }
-    rerenderMembers();   // 失敗したときも元のボタンに戻す
+    if (id) logMembersOpen = false;
+    rerenderLog();   // 失敗したときも元のボタンに戻す
     return;
   }
 
   const open = e.target.closest("[data-log-open]");
   if (open) {
     const sess = getSession(open.dataset.logOpen);
-    logDraft.sessionId = open.dataset.logOpen;
-    logDraft.members = sess ? (sess.members || []).slice() : [];
-    logDraft.date = sess ? sess.date : todayStr();
-    logDraft.tables = []; logDraft.query = "";
-    rerenderMembers();
+    logDate = sess ? sess.date : todayStr();
+    editingId = ""; editDraft = null;
+    logMembersOpen = false;
+    rerenderLog();
     window.scrollTo(0, 0);
     return;
   }
 
-  if (e.target.closest("[data-log-close]")) {
-    logDraft = { sessionId: "", members: [], date: "", query: "", tables: [] };
-    rerenderMembers();
+  if (e.target.closest("[data-log-today]")) {
+    logDate = "";
+    editingId = ""; editDraft = null;
+    rerenderLog();
+    window.scrollTo(0, 0);
     return;
   }
 
-  if (e.target.closest("[data-log-more]")) { logShown += 5; rerenderMembers(); return; }
+  if (e.target.closest("[data-log-more]")) { logShown += 5; rerenderLog(); return; }
 
-  // 卓は足した時点で保存する。こうしないと他の人の画面に出てこない。
-  const add = e.target.closest("[data-log-add]");
-  if (add) {
-    const sess = getSession(logDraft.sessionId);
-    const me = ensureMyName();
-    if (!sess || !me) return;
-    add.disabled = true;
-    logDraft.query = "";
-    await addTableToSession(sess, add.dataset.logAdd, (sess.members || []).slice(), me);
-    rerenderMembers();
-    return;
-  }
+  // 記録から、そのゲームの評価画面へ飛ぶ
+  const rate = e.target.closest("[data-log-rate]");
+  if (rate) { goToDetailSection(rate.dataset.logRate, "rating"); return; }
 
   const again = e.target.closest("[data-log-again]");
   if (again) {
-    const prev = getSessionTables(logDraft.sessionId).find(h => h.id === again.dataset.logAgain);
-    const sess = getSession(logDraft.sessionId);
+    const prev = getSessionTables((sessionOf(currentLogDate()) || {}).id).find(h => h.id === again.dataset.logAgain);
+    const sess = sessionOf(currentLogDate());
     const me = ensureMyName();
     if (!prev || !sess || !me) return;
     again.disabled = true;
     await addTableToSession(sess, prev.slug, historyParticipants(prev), me);
-    rerenderMembers();
+    rerenderLog();
     return;
   }
 
   if (e.target.closest('[data-toggle-section="log-members"]')) {
     logMembersOpen = !logMembersOpen;
-    rerenderMembers();
+    rerenderLog();
     return;
   }
 
   const sm = e.target.closest("[data-sess-member]");
   if (sm) {
-    const sess = getSession(logDraft.sessionId);
+    const sess = sessionOf(currentLogDate());
     if (!sess) return;
     const n = sm.dataset.sessMember;
     const list = (sess.members || []).slice();
@@ -5981,21 +5956,21 @@ document.getElementById("membersView").addEventListener("click", async e => {
     if (!list.length) { alert("メンバーを0人にはできません。"); return; }
     logDraft.members = list.slice();
     await updateSessionMembers(sess.id, list);
-    rerenderMembers();
+    rerenderLog();
     return;
   }
 
   const pOpen = e.target.closest("[data-picker-open]");
-  if (pOpen) { expandedPickers.add(pOpen.dataset.pickerOpen); rerenderMembers(); return; }
+  if (pOpen) { expandedPickers.add(pOpen.dataset.pickerOpen); rerenderLog(); return; }
   const pClose = e.target.closest("[data-picker-close]");
-  if (pClose) { expandedPickers.delete(pClose.dataset.pickerClose); rerenderMembers(); return; }
+  if (pClose) { expandedPickers.delete(pClose.dataset.pickerClose); rerenderLog(); return; }
 
   // 結果を入れる（前回のやり方を引き継いでおく）
   const ed = e.target.closest("[data-table-edit]");
   if (ed) {
-    const h = getSessionTables(logDraft.sessionId).find(x => x.id === ed.dataset.tableEdit);
+    const h = getSessionTables((sessionOf(currentLogDate()) || {}).id).find(x => x.id === ed.dataset.tableEdit);
     if (!h) return;
-    const sess0 = getSession(logDraft.sessionId);
+    const sess0 = sessionOf(currentLogDate());
     // 結果待ちの卓は仮のメンバーしか入っていないので、その日のメンバーを初期値にする。
     // すでに結果が入っている卓は、実際にいた人をそのまま出す。
     const base = historyHasResult(h)
@@ -6009,7 +5984,7 @@ document.getElementById("membersView").addEventListener("click", async e => {
       coopResult: h.coopResult || ""
     };
     expandedPickers.clear();
-    rerenderMembers();
+    rerenderLog();
     const card = document.querySelector(".table-card");
     if (card) card.scrollIntoView({ behavior: "smooth", block: "center" });
     return;
@@ -6017,7 +5992,7 @@ document.getElementById("membersView").addEventListener("click", async e => {
 
   if (e.target.closest("[data-table-cancel]")) {
     editingId = ""; editDraft = null;
-    rerenderMembers();
+    rerenderLog();
     return;
   }
 
@@ -6029,18 +6004,18 @@ document.getElementById("membersView").addEventListener("click", async e => {
       editDraft.members.splice(k, 1);
       editDraft.winners = editDraft.winners.filter(w => w !== n);
     } else editDraft.members.push(n);
-    rerenderMembers();
+    rerenderLog();
     return;
   }
 
   const tmode = e.target.closest("[data-table-mode]");
-  if (tmode && editDraft) { editDraft.mode = tmode.dataset.tableMode; rerenderMembers(); return; }
+  if (tmode && editDraft) { editDraft.mode = tmode.dataset.tableMode; rerenderLog(); return; }
 
   const tcoop = e.target.closest("[data-table-coop]");
   if (tcoop && editDraft) {
     const v = tcoop.dataset.tableCoop;
     editDraft.coopResult = editDraft.coopResult === v ? "" : v;
-    rerenderMembers();
+    rerenderLog();
     return;
   }
 
@@ -6051,7 +6026,7 @@ document.getElementById("membersView").addEventListener("click", async e => {
     if (k >= 0) editDraft.winners.splice(k, 1);
     else if (editDraft.mode === "solo") editDraft.winners = [n];   // 単独勝利は付け替え
     else editDraft.winners.push(n);
-    rerenderMembers();
+    rerenderLog();
     return;
   }
 
@@ -6059,8 +6034,8 @@ document.getElementById("membersView").addEventListener("click", async e => {
   if (save && editDraft) {
     const missing = tableMissing(editDraft);
     if (missing) { toast(missing); return; }
-    const h = getSessionTables(logDraft.sessionId).find(x => x.id === save.dataset.tableSave);
-    const sess = getSession(logDraft.sessionId);
+    const h = getSessionTables((sessionOf(currentLogDate()) || {}).id).find(x => x.id === save.dataset.tableSave);
+    const sess = sessionOf(currentLogDate());
     if (!h || !sess) { toast("記録先が見つかりませんでした。画面を開き直してください"); return; }
     const me = ensureMyName();
     if (!me) return;
@@ -6079,7 +6054,9 @@ document.getElementById("membersView").addEventListener("click", async e => {
       guests: "", memo: ""
     }));
     editingId = ""; editDraft = null;
-    rerenderMembers();
+    rerenderLog();
+    if (myRating(h.slug) == null) toast("記録しました。「評価する」からそのゲームの評価に進めます");
+    else toast("記録しました");
     return;
   }
 
@@ -6088,16 +6065,16 @@ document.getElementById("membersView").addEventListener("click", async e => {
     // 1回目は確認、2回目で消す。ダイアログに頼らないので端末を選ばない。
     if (pendingDelete !== del.dataset.logDel) {
       pendingDelete = del.dataset.logDel;
-      rerenderMembers();
+      rerenderLog();
       clearTimeout(pendingDelete._t);
-      pendingDelete._t = setTimeout(() => { pendingDelete = ""; rerenderMembers(); }, 4000);
+      pendingDelete._t = setTimeout(() => { pendingDelete = ""; rerenderLog(); }, 4000);
       return;
     }
     pendingDelete = "";
     del.disabled = true;
     await deleteHistory(del.dataset.logDelSlug, del.dataset.logDel);
     if (editingId === del.dataset.logDel) { editingId = ""; editDraft = null; }
-    rerenderMembers();
+    rerenderLog();
     toast("この卓を消しました");
     return;
   }
@@ -6120,6 +6097,7 @@ function showMembersView() {
   document.getElementById("playerView").style.display = "none";
   document.getElementById("recommendView").style.display = "none";
   document.getElementById("todayView").style.display = "none";
+  document.getElementById("logView").style.display = "none";
   document.getElementById("quizView").style.display = "none";
   const mv = document.getElementById("membersView");
   mv.style.display = "block";
@@ -7012,6 +6990,7 @@ function showPlayerPage(name) {
   document.getElementById("membersView").style.display = "none";
   document.getElementById("recommendView").style.display = "none";
   document.getElementById("todayView").style.display = "none";
+  document.getElementById("logView").style.display = "none";
   document.getElementById("quizView").style.display = "none";
   const pv = document.getElementById("playerView");
   pv.style.display = "block";
@@ -7043,6 +7022,10 @@ function router() {
   }
   if (location.hash === "#members") {
     showMembersView();
+    return;
+  }
+  if (location.hash === "#log") {
+    showLogView();
     return;
   }
   if (location.hash === "#recommend") {
