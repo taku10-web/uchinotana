@@ -2433,7 +2433,7 @@
 
 <footer>
   所有データは <a href="https://bodoge.hoobby.net/" target="_blank" rel="noopener">ボドゲーマ</a> より
-  <div class="app-version">v2026.08.18-a</div>
+  <div class="app-version" id="appVersion"></div>
 </footer>
 
 <!-- Firebase (みんなの評価の共有保存に使用) -->
@@ -2466,6 +2466,31 @@ try {
 </script>
 
 <script>
+// ── 自動更新 ───────────────────────────────
+// iPhoneはHTMLを長く握るので、新しい版が出ていたらURLを変えて読み直す。
+// （同じURLの再読み込みだとキャッシュが返ってきてしまうため）
+const APP_BUILD = "2026-09-11-0243";
+
+function markVersion(extra) {
+  const el = document.getElementById("appVersion");
+  if (el) el.textContent = "v" + APP_BUILD + (extra || "");
+}
+
+function checkForUpdate() {
+  markVersion();
+  fetch("data/version.json", { cache: "no-store" })
+    .then(r => r.ok ? r.json() : null)
+    .then(v => {
+      if (!v || !v.build || v.build === APP_BUILD) return;
+      const params = new URLSearchParams(location.search);
+      // 一度読み直しても変わらないときは、そこで止める（無限に読み直さない）
+      if (params.get("v") === v.build) { markVersion("（更新待ち）"); return; }
+      params.set("v", v.build);
+      location.replace(location.pathname + "?" + params.toString() + location.hash);
+    })
+    .catch(() => { /* 圏外などは何もしない */ });
+}
+
 const THEME_KEY = "bg_theme";
 function applyTheme(theme) {
   document.documentElement.setAttribute("data-theme", theme);
@@ -2757,6 +2782,7 @@ Promise.all([
   render();
   router();
   initGuide();
+  checkForUpdate();
 });
 
 document.getElementById("search").addEventListener("input", e => {

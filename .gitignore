@@ -5,4 +5,5 @@ data/meta_raw.json
 new_games.json
 qr_uchinotana.png
 *.py
+!deploy.py
 tag_vocabulary.json
