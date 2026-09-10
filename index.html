@@ -511,6 +511,109 @@
     text-align: center;
   }
   .toast.on { opacity: 1; }
+  /* 評価：好み／リプレイ性 */
+  /* 写真 */
+  .photo-block { margin: 10px 0 4px; }
+  .photo-strip { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 6px; }
+  .photo-thumb { position: relative; flex-shrink: 0; }
+  .photo-thumb img {
+    width: 108px;
+    height: 108px;
+    object-fit: cover;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    cursor: pointer;
+    background: #f1f2f5;
+  }
+  .photo-del {
+    position: absolute;
+    top: -6px;
+    right: -6px;
+    border: none;
+    background: rgba(27,39,51,0.82);
+    color: #fff;
+    border-radius: 999px;
+    width: 22px;
+    height: 22px;
+    font-size: 13px;
+    line-height: 1;
+    cursor: pointer;
+  }
+  .photo-del.confirm { width: auto; padding: 0 9px; font-size: 10.5px; font-weight: 700; background: #c9483c; }
+  .photo-add {
+    display: inline-block;
+    border: 1px dashed var(--accent);
+    color: var(--accent);
+    background: var(--accent-soft);
+    border-radius: 10px;
+    padding: 8px 14px;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+  }
+  .lightbox {
+    position: fixed;
+    inset: 0;
+    background: rgba(10,20,28,0.92);
+    z-index: 100;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: 12px;
+    padding: 16px;
+  }
+  .lightbox.on { display: flex; }
+  .lightbox img { max-width: 100%; max-height: 84vh; border-radius: 10px; }
+  .lightbox-hint { color: #cfe2ef; font-size: 12px; }
+  .rule-block { margin-bottom: 22px; }
+  .detail-section-title-sm .link-btn { float: right; }
+
+  .recent-day { margin-bottom: 14px; }
+  .recent-day-head {
+    font-size: 12.5px;
+    font-weight: 700;
+    color: var(--accent);
+    border-bottom: 2px solid var(--accent-soft);
+    padding-bottom: 4px;
+    margin-bottom: 4px;
+  }
+  .recent-day-head i { font-style: normal; font-weight: 500; color: var(--text-sub); margin-left: 8px; }
+  .rating-axes { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 4px; }
+  .rating-axis { font-size: 11.5px; color: var(--text-sub); }
+  .rating-axis b { font-size: 15px; margin-left: 5px; }
+  .rating-axis.avg { font-weight: 700; color: var(--text); }
+  .rating-slider-block { margin: 14px 0 4px; }
+  .rating-slider-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    font-size: 12.5px;
+    font-weight: 700;
+    margin-bottom: 4px;
+  }
+  .rating-slider-val { font-size: 11.5px; font-weight: 500; color: var(--text-sub); }
+  .rating-slider-val b { font-size: 19px; margin-right: 6px; }
+  .rating-slider {
+    width: 100%;
+    accent-color: var(--accent);
+    height: 28px;
+  }
+  .rating-slider-scale {
+    display: flex;
+    justify-content: space-between;
+    font-size: 9.5px;
+    color: var(--text-sub);
+  }
+  .rating-slider-scale span:nth-child(2) { text-align: center; }
+  .rating-slider-scale span:last-child { text-align: right; }
+  .rating-avg-preview {
+    text-align: center;
+    font-size: 12.5px;
+    color: var(--text-sub);
+    margin: 12px 0 4px;
+  }
+  .rating-avg-preview b { font-size: 22px; color: var(--text); margin-left: 6px; }
   .review-item-members.waiting { color: var(--pitch-text); font-weight: 700; }
   /* ✕を1回押した状態。もう一度押すと消える。 */
   .review-item-del.confirm {
@@ -2503,7 +2606,7 @@ try {
 // ── 自動更新 ───────────────────────────────
 // iPhoneはHTMLを長く握るので、新しい版が出ていたらURLを変えて読み直す。
 // （同じURLの再読み込みだとキャッシュが返ってきてしまうため）
-const APP_BUILD = "2026-09-11-0344";
+const APP_BUILD = "2026-09-11-0426";
 
 function markVersion(extra) {
   const el = document.getElementById("appVersion");
@@ -3680,16 +3783,36 @@ function toggleInterest(slug, name) {
   }).then(() => refetchOne("interests")).catch(err => writeFailed(err, "興味ありの登録"));
 }
 
-function addRating(slug, name, level) {
+// 評価は「好み」と「リプレイ性」の2軸。平均を level として持ち、
+// 並べ替えや推薦は今までどおり level を見る。
+function ratingTaste(r) {
+  return r.taste != null ? r.taste : r.level;
+}
+function ratingReplay(r) {
+  return r.replay != null ? r.replay : r.level;
+}
+function ratingAvg(r) {
+  const t = ratingTaste(r), v = ratingReplay(r);
+  if (t == null && v == null) return r.level;
+  if (t == null) return v;
+  if (v == null) return t;
+  return Math.round(((t + v) / 2) * 10) / 10;
+}
+
+function addRating(slug, name, taste, replay, memo) {
   localStorage.setItem(MY_NAME_KEY, name);
   if (!firebaseReady) {
     alert("Firebaseが未設定のため、まだ「評価」は使えません。");
     return Promise.resolve();
   }
-  return db.collection("ratings").add({
-    slug, name, level,
+  const level = Math.round(((taste + replay) / 2) * 10) / 10;
+  // 書き換えは許可していないので、自分の古い評価を消してから入れ直す
+  const mine = getReviews(slug).filter(r => r.name === name);
+  const prior = Promise.all(mine.map(r => db.collection("ratings").doc(r.id).delete()));
+  return prior.then(() => db.collection("ratings").add({
+    slug, name, taste, replay, level, memo: memo || "",
     createdAt: firebase.firestore.FieldValue.serverTimestamp()
-  }).then(() => refetchOne("ratings")).catch(err => writeFailed(err, "評価の保存"));
+  })).then(() => refetchOne("ratings")).catch(err => writeFailed(err, "評価の保存"));
 }
 
 function deleteRating(slug, id) {
@@ -3845,17 +3968,24 @@ function buildOtherMembersPicker() {
 }
 
 function buildRatingItem(r, slug) {
+  const t = ratingTaste(r), v = ratingReplay(r), a = ratingAvg(r);
+  const both = r.taste != null && r.replay != null;
   return `
     <div class="review-item">
       <div class="review-item-top">
         <span class="review-item-name"><a href="#player/${encodeURIComponent(r.name)}">${r.name}</a></span>
-        <span>
-          <span class="review-item-level">${ratingLabel(r.level)}</span>
-          ${r.name === getMyName()
-            ? `<button class="review-item-del" data-del-rating-id="${r.id}" data-del-slug="${slug}" title="削除">×</button>`
-            : ""}
-        </span>
+        ${r.name === getMyName()
+          ? `<button class="link-btn" data-edit-rating="${r.id}" data-edit-slug="${slug}">直す</button>`
+          : ""}
       </div>
+      <div class="rating-axes">
+        ${both ? `
+          <span class="rating-axis">好み<b style="color:${ratingColor(t)}">${t}</b></span>
+          <span class="rating-axis">リプレイ性<b style="color:${ratingColor(v)}">${v}</b></span>
+        ` : ""}
+        <span class="rating-axis avg">平均<b style="color:${ratingColor(a)}">${a}</b></span>
+      </div>
+      ${r.memo ? `<div class="review-item-memo">${r.memo}</div>` : ""}
     </div>
   `;
 }
@@ -3952,24 +4082,51 @@ function buildRatingSection(g) {
       <div class="review-list" data-section="rating-list" style="display:none;">
         ${reviews.map(r => buildRatingItem(r, slug)).join("")}
       </div>` : ""}
-      <button type="button" class="section-toggle-btn section-toggle-btn-primary" data-toggle-section="rating-form">＋自分の評価を入れる</button>
-      <div data-section="rating-form" style="display:none;">
-        <form class="rating-form review-form" data-rating-slug="${slug}">
-          ${buildSubmitterLine()}
-          <div class="rating-choice-row">
-            ${RATING_LEVELS.map(l => `
-              <label class="rating-choice">
-                <input type="radio" name="level" value="${l.value}" required>
-                <span style="border-left-color:${ratingColor(l.value)}"><b style="color:${ratingColor(l.value)}">${l.value}</b>${l.label}</span>
-              </label>
-            `).join("")}
-          </div>
-          <button type="submit">評価を送る</button>
-        </form>
-      </div>
+      ${buildRatingForm(slug)}
     </div>
   `;
 }
+
+// 好み・リプレイ性はスライダーで入れる。目盛りの意味を必ず添える。
+const TASTE_WORDS  = { 10: "最高", 9: "とても好き", 8: "好き", 7: "やや好き", 6: "ちょっと good", 5: "普通", 4: "やや苦手", 3: "苦手", 2: "かなり苦手", 1: "大嫌い" };
+const REPLAY_WORDS = { 10: "いつでも遊びたい", 9: "また誘いたい", 8: "また遊びたい", 7: "たまになら", 6: "誘われたら", 5: "普通", 4: "気が向けば", 3: "あまり気が進まない", 2: "できれば遠慮したい", 1: "二度と遊ばない" };
+
+function buildRatingForm(slug) {
+  const me = getMyName();
+  const mine = me ? getReviews(slug).find(r => r.name === me) : null;
+  const t = mine ? (ratingTaste(mine) || 5) : 5;
+  const v = mine ? (ratingReplay(mine) || 5) : 5;
+  const slider = (name, label, value, words) => `
+    <div class="rating-slider-block">
+      <div class="rating-slider-head">
+        <span>${label}</span>
+        <span class="rating-slider-val" data-val-for="${name}">
+          <b style="color:${ratingColor(value)}">${value}</b>${words[value] || ""}
+        </span>
+      </div>
+      <input type="range" name="${name}" min="1" max="10" step="1" value="${value}" class="rating-slider">
+      <div class="rating-slider-scale"><span>${words[1]}</span><span>${words[5]}</span><span>${words[10]}</span></div>
+    </div>`;
+  return `
+    <button type="button" class="section-toggle-btn section-toggle-btn-primary" data-toggle-section="rating-form">
+      ${mine ? "自分の評価を直す" : "＋自分の評価を入れる"}
+    </button>
+    <div data-section="rating-form" style="display:${ratingFormOpen ? "block" : "none"};">
+      <form class="rating-form review-form" data-rating-slug="${slug}">
+        ${buildSubmitterLine()}
+        ${slider("taste", "好み", t, TASTE_WORDS)}
+        ${slider("replay", "リプレイ性", v, REPLAY_WORDS)}
+        <div class="rating-avg-preview">平均 <b data-rating-avg>${Math.round(((t + v) / 2) * 10) / 10}</b></div>
+        <div class="review-form-field">
+          <label>感想（任意）</label>
+          <textarea name="memo" rows="2" maxlength="300" placeholder="遊んでみて思ったこと">${mine && mine.memo ? mine.memo : ""}</textarea>
+        </div>
+        <button type="submit">${mine ? "評価を直す" : "評価を送る"}</button>
+      </form>
+    </div>`;
+}
+
+let ratingFormOpen = false;
 
 function buildHistoryItem(h, slug) {
   return `
@@ -4052,12 +4209,114 @@ function getRuleEdit(slug) {
     ((b.createdAt && b.createdAt.seconds) || 0) - ((a.createdAt && a.createdAt.seconds) || 0))[0];
 }
 
+// ── 写真 ───────────────────────────────────
+// Storageを別に用意しなくて済むように、端末側で縮めてFirestoreに1枚1件で入れる。
+// 全部を起動時に読むと重いので、そのゲームを開いたときだけ取りに行く。
+const PHOTO_MAX_PX = 1400;
+const PHOTO_MAX_BYTES = 700000;
+let photoCache = {};          // slug -> [写真]
+let photoLoading = {};
+
+function getPhotos(slug, kind) {
+  return (photoCache[slug] || []).filter(p => p.kind === kind);
+}
+
+function fetchPhotos(slug) {
+  if (!firebaseReady || photoLoading[slug]) return Promise.resolve(photoCache[slug] || []);
+  photoLoading[slug] = true;
+  return db.collection("photos").where("slug", "==", slug).get().then(snap => {
+    const list = [];
+    snap.forEach(d => list.push(Object.assign({ id: d.id }, d.data())));
+    list.sort((a, b) => (a.createdAt?.seconds || 0) - (b.createdAt?.seconds || 0));
+    photoCache[slug] = list;
+    photoLoading[slug] = false;
+    return list;
+  }).catch(err => {
+    console.error("photos取得エラー", err);
+    photoLoading[slug] = false;
+    return [];
+  });
+}
+
+// 端末側で長辺1400pxまで縮め、700KBを超えないところまで品質を落とす
+function shrinkImage(file) {
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      let w = img.naturalWidth, h = img.naturalHeight;
+      const scale = Math.min(1, PHOTO_MAX_PX / Math.max(w, h));
+      w = Math.max(1, Math.round(w * scale));
+      h = Math.max(1, Math.round(h * scale));
+      const c = document.createElement("canvas");
+      c.width = w; c.height = h;
+      const ctx = c.getContext("2d");
+      ctx.fillStyle = "#fff";
+      ctx.fillRect(0, 0, w, h);
+      ctx.drawImage(img, 0, 0, w, h);
+      let q = 0.78;
+      let data = c.toDataURL("image/jpeg", q);
+      while (data.length > PHOTO_MAX_BYTES && q > 0.35) {
+        q -= 0.08;
+        data = c.toDataURL("image/jpeg", q);
+      }
+      if (data.length > PHOTO_MAX_BYTES) { reject(new Error("この写真は大きすぎて保存できませんでした")); return; }
+      resolve(data);
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error("画像として読めませんでした")); };
+    img.src = url;
+  });
+}
+
+function addPhoto(slug, kind, data, name) {
+  if (!firebaseReady) { alert("Firebaseが未設定のため、写真を保存できません。"); return Promise.resolve(null); }
+  return db.collection("photos").add({
+    slug, kind, data, name: name || "",
+    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+  }).then(ref => {
+    photoCache[slug] = (photoCache[slug] || []).concat([{ id: ref.id, slug, kind, data, name }]);
+    return ref.id;
+  }).catch(err => writeFailed(err, "写真の保存"));
+}
+
+function deletePhoto(slug, id) {
+  if (!firebaseReady) return Promise.resolve();
+  return db.collection("photos").doc(id).delete().then(() => {
+    photoCache[slug] = (photoCache[slug] || []).filter(p => p.id !== id);
+  }).catch(err => writeFailed(err, "写真の削除"));
+}
+
+// 写真の並びと追加ボタン。どの場所のものかは kind で分ける。
+function buildPhotoBlock(slug, kind, label) {
+  const list = getPhotos(slug, kind);
+  return `
+    <div class="photo-block">
+      ${list.length ? `<div class="photo-strip">
+        ${list.map(p => `
+          <div class="photo-thumb">
+            <img src="${p.data}" alt="${label}" data-photo-view="${p.id}" data-photo-slug="${slug}">
+            <button type="button" class="photo-del ${pendingPhotoDelete === p.id ? "confirm" : ""}"
+                    data-photo-del="${p.id}" data-photo-slug="${slug}">${pendingPhotoDelete === p.id ? "消す？" : "×"}</button>
+          </div>`).join("")}
+      </div>` : ""}
+      <label class="photo-add">
+        <input type="file" accept="image/*" data-photo-add="${kind}" data-photo-slug="${slug}" hidden>
+        📷 ${label}の写真を追加${list.length ? `（${list.length}枚）` : ""}
+      </label>
+    </div>
+  `;
+}
+
+let pendingPhotoDelete = "";
+
 function quickRefData(g) {
   const slug = slugOf(g);
   const r = rulesData[slug] || {};
   const e = getRuleEdit(slug) || {};
   return {
     winCondition: e.winCondition !== undefined && e.winCondition !== "" ? e.winCondition : (r.winCondition || ""),
+    setup: Array.isArray(e.setup) && e.setup.length ? e.setup : (r.setup || []),
     rules: Array.isArray(e.rules) && e.rules.length ? e.rules : (r.rules || []),
     scoreNote: e.scoreNote !== undefined && e.scoreNote !== "" ? e.scoreNote : "",
     scoreTable: e.scoreNote ? null : (r.scoreTable || null),
@@ -4109,6 +4368,7 @@ function buildQuickRef(g) {
   // 情報が無いゲームでも、直すボタンだけは出しておく
   if (!hasAny) {
     return `<div class="review-count">まだ情報がありません。</div>
+      ${buildPhotoBlock(slug, "quickref", "早見表")}
       <div class="tag-edit-bar" style="margin-top:10px;">
         <button type="button" class="link-btn" data-quickref-edit>✏️ 早見表を書く</button>
       </div>`;
@@ -4135,6 +4395,7 @@ function buildQuickRef(g) {
       ${d.rules.length ? `
       <div class="quickref-sub">自分の手番でできること</div>
       <ul class="quickref-list">${d.rules.map(s => `<li>${s}</li>`).join("")}</ul>` : ""}
+      ${buildPhotoBlock(slug, "quickref", "早見表")}
       <div class="tag-edit-bar" style="margin-top:12px;">
         <button type="button" class="link-btn" data-quickref-edit>✏️ 早見表を直す</button>
         ${d.edited ? `<span class="tag-edit-note" style="margin-left:6px;">（手直し済み）</span>` : ""}
@@ -4157,25 +4418,51 @@ function hostOf(u) {
   }
 }
 
+// 準備とルールは別々に直せるようにする。どちらも写真を足せる。
 function buildSetupSection(g) {
   const slug = slugOf(g);
-  const r = rulesData[slug];
-  if (!r) return "";
-  const hasSetup = r.setup && r.setup.length;
+  const r = rulesData[slug] || {};
+  const d = quickRefData(g);
   const hasSources = r.sources && r.sources.length;
-  if (!hasSetup && !hasSources) return "";
   return `
-    ${hasSetup ? `
     <div class="detail-section-eyebrow">DESCRIPTION</div>
     <h2 class="detail-section-title">簡単準備＆ルール</h2>
-    <div class="detail-section-title-sm">ゲームの準備</div>
-    <ol class="detail-list">${r.setup.map(s => `<li>${s}</li>`).join("")}</ol>` : ""}
+
+    ${buildRuleBlock(slug, "setup", "ゲームの準備", d.setup)}
+    ${buildRuleBlock(slug, "rules", "ルール", d.rules)}
+
     ${hasSources ? `
     <div class="detail-sources">
       参考: ${r.sources.map(u => `<a href="${u}" target="_blank" rel="noopener">${hostOf(u)}</a>`).join(" ・ ")}
     </div>` : ""}
   `;
 }
+
+function buildRuleBlock(slug, kind, label, lines) {
+  const editing = ruleEditKind === kind;
+  return `
+    <div class="rule-block">
+      <div class="detail-section-title-sm">
+        ${label}
+        <button type="button" class="link-btn" data-rule-edit="${kind}">${editing ? "閉じる" : "直す"}</button>
+      </div>
+      ${editing ? `
+        <form class="review-form" data-rule-form="${kind}" data-slug="${slug}">
+          <div class="review-form-field">
+            <label>1行に1項目で書いてください</label>
+            <textarea name="lines" rows="7">${lines.join("\n")}</textarea>
+          </div>
+          <button type="submit">保存する</button>
+        </form>
+      ` : (lines.length
+        ? `<ol class="detail-list">${lines.map(x => `<li>${x}</li>`).join("")}</ol>`
+        : `<div class="review-count">まだ書かれていません。「直す」から足せます。</div>`)}
+      ${buildPhotoBlock(slug, kind, label)}
+    </div>
+  `;
+}
+
+let ruleEditKind = "";
 
 function buildInterestSection(g) {
   const slug = slugOf(g);
@@ -4263,6 +4550,12 @@ function showDetail(g) {
     ${collapsibleSection("history", `📖 プレイ履歴・戦績（${getHistory(slugOf(g)).length}件）`, buildHistorySection(g), false)}
   `;
   applyPendingDetailSection();
+  // 写真はそのゲームを開いたときだけ読む（全部を起動時に読むと重い）
+  if (!photoCache[slugOf(g)]) {
+    fetchPhotos(slugOf(g)).then(list => {
+      if (list.length && currentDetailGame() === g) showDetail(g);
+    });
+  }
 }
 
 // 作品名が長いときは自動で字を詰めて、1行に収まるようにする
@@ -4306,9 +4599,11 @@ document.getElementById("detailView").addEventListener("submit", async e => {
     e.preventDefault();
     const slug = qrForm.dataset.quickrefSlug;
     qrForm.querySelector("button[type=submit]").disabled = true;
+    const cur0 = quickRefData(games.find(x => slugOf(x) === slug));
     await saveRuleEdit(slug, {
       winCondition: qrForm.elements.winCondition.value.trim(),
       scoreNote: qrForm.elements.scoreNote.value.trim(),
+      setup: cur0.setup,
       rules: qrForm.elements.rules.value.split("\n").map(x => x.trim()).filter(Boolean)
     }, getMyName() || "");
     quickrefEditMode = false;
@@ -4316,6 +4611,29 @@ document.getElementById("detailView").addEventListener("submit", async e => {
     if (g) showDetail(g);
     return;
   }
+  const ruleForm = e.target.closest("[data-rule-form]");
+  if (ruleForm) {
+    e.preventDefault();
+    const kind = ruleForm.dataset.ruleForm;
+    const slug = ruleForm.dataset.slug;
+    const name = ensureMyName();
+    if (!name) return;
+    const lines = ruleForm.elements.lines.value.split("\n").map(x => x.trim()).filter(Boolean);
+    ruleForm.querySelector("button[type=submit]").disabled = true;
+    const cur = quickRefData(games.find(x => slugOf(x) === slug));
+    await saveRuleEdit(slug, {
+      winCondition: cur.winCondition,
+      scoreNote: cur.scoreNote,
+      setup: kind === "setup" ? lines : cur.setup,
+      rules: kind === "rules" ? lines : cur.rules
+    }, name);
+    ruleEditKind = "";
+    const g = games.find(x => slugOf(x) === slug);
+    if (g) showDetail(g);
+    toast("保存しました");
+    return;
+  }
+
   const classForm = e.target.closest("[data-class-form]");
   if (classForm) {
     e.preventDefault();
@@ -4356,14 +4674,18 @@ document.getElementById("detailView").addEventListener("submit", async e => {
   if (ratingForm) {
     const slug = ratingForm.dataset.ratingSlug;
     const name = ensureMyName();
-    const levelInput = ratingForm.querySelector('input[name="level"]:checked');
-    if (!name || !levelInput) return;
-    const level = parseInt(levelInput.value, 10);
+    if (!name) return;
+    const taste = parseInt(ratingForm.elements.taste.value, 10);
+    const replay = parseInt(ratingForm.elements.replay.value, 10);
+    const memo = (ratingForm.elements.memo.value || "").trim();
     const submitBtn = ratingForm.querySelector("button[type=submit]");
     submitBtn.disabled = true;
-    await withLevelUp(() => addRating(slug, name, level));
+    submitBtn.textContent = "送信中…";
+    await withLevelUp(() => addRating(slug, name, taste, replay, memo));
+    ratingFormOpen = false;
     const g = games.find(x => slugOf(x) === slug);
     if (g) showDetail(g);
+    toast("評価を保存しました。あとから直せます");
     return;
   }
 
@@ -4559,6 +4881,55 @@ document.getElementById("detailView").addEventListener("click", async e => {
     logDate = openLog.dataset.openLog || "";
     editingId = ""; editDraft = null; logMembersOpen = false;
     location.hash = "#log";
+    return;
+  }
+  const ruleEdit = e.target.closest("[data-rule-edit]");
+  if (ruleEdit) {
+    const k = ruleEdit.dataset.ruleEdit;
+    ruleEditKind = ruleEditKind === k ? "" : k;
+    const g = currentDetailGame();
+    if (g) showDetail(g);
+    return;
+  }
+
+  const photoView = e.target.closest("[data-photo-view]");
+  if (photoView) {
+    const p = (photoCache[photoView.dataset.photoSlug] || []).find(x => x.id === photoView.dataset.photoView);
+    if (p) openLightbox(p.data);
+    return;
+  }
+
+  const photoDel = e.target.closest("[data-photo-del]");
+  if (photoDel) {
+    const id = photoDel.dataset.photoDel;
+    if (pendingPhotoDelete !== id) {
+      pendingPhotoDelete = id;
+      const g0 = currentDetailGame();
+      if (g0) showDetail(g0);
+      clearTimeout(pendingPhotoDelete._t);
+      setTimeout(() => {
+        if (pendingPhotoDelete !== id) return;
+        pendingPhotoDelete = "";
+        const g1 = currentDetailGame();
+        if (g1) showDetail(g1);
+      }, 4000);
+      return;
+    }
+    pendingPhotoDelete = "";
+    await deletePhoto(photoDel.dataset.photoSlug, id);
+    const g = currentDetailGame();
+    if (g) showDetail(g);
+    toast("写真を消しました");
+    return;
+  }
+
+  const editRating = e.target.closest("[data-edit-rating]");
+  if (editRating) {
+    ratingFormOpen = true;
+    const g = games.find(x => slugOf(x) === editRating.dataset.editSlug);
+    if (g) showDetail(g);
+    const form = document.querySelector("[data-rating-slug]");
+    if (form) form.scrollIntoView({ behavior: "smooth", block: "center" });
     return;
   }
   const jumpOpen = e.target.closest("[data-jump-open]");
@@ -5452,6 +5823,59 @@ function toast(msg) {
   toast._t = setTimeout(() => el.classList.remove("on"), 2200);
 }
 
+// 写真を選んだら、その場で縮めて保存する
+document.getElementById("detailView").addEventListener("change", async e => {
+  const input = e.target.closest("[data-photo-add]");
+  if (!input || !input.files || !input.files[0]) return;
+  const file = input.files[0];
+  const slug = input.dataset.photoSlug;
+  const kind = input.dataset.photoAdd;
+  const name = ensureMyName();
+  input.value = "";
+  if (!name) return;
+  toast("写真を用意しています…");
+  try {
+    const data = await shrinkImage(file);
+    const id = await addPhoto(slug, kind, data, name);
+    const g = currentDetailGame();
+    if (g) showDetail(g);
+    if (id) toast("写真を追加しました");
+  } catch (err) {
+    console.error("写真の処理に失敗", err);
+    toast(err.message || "この写真は使えませんでした");
+  }
+});
+
+// 写真は原寸で見られるようにする
+function openLightbox(src) {
+  let el = document.getElementById("lightbox");
+  if (!el) {
+    el = document.createElement("div");
+    el.id = "lightbox";
+    el.className = "lightbox";
+    el.addEventListener("click", () => el.classList.remove("on"));
+    document.body.appendChild(el);
+  }
+  el.innerHTML = `<img src="${src}" alt="写真"><div class="lightbox-hint">タップで閉じる</div>`;
+  el.classList.add("on");
+}
+
+// スライダーの数字と言葉、平均をその場で更新する
+document.getElementById("detailView").addEventListener("input", e => {
+  if (!e.target.classList.contains("rating-slider")) return;
+  const form = e.target.closest("form");
+  const words = e.target.name === "taste" ? TASTE_WORDS : REPLAY_WORDS;
+  const v = parseInt(e.target.value, 10);
+  const out = form.querySelector(`[data-val-for="${e.target.name}"]`);
+  if (out) out.innerHTML = `<b style="color:${ratingColor(v)}">${v}</b>${words[v] || ""}`;
+  const avg = form.querySelector("[data-rating-avg]");
+  if (avg) {
+    const t = parseInt(form.elements.taste.value, 10);
+    const r = parseInt(form.elements.replay.value, 10);
+    avg.textContent = Math.round(((t + r) / 2) * 10) / 10;
+  }
+});
+
 function hideAllViews() {
   ["controls", "listView", "detailView", "playerView", "membersView", "recommendView", "quizView", "todayView", "logView"]
     .forEach(id => { const el = document.getElementById(id); if (el) el.style.display = "none"; });
@@ -5812,7 +6236,6 @@ document.getElementById("playerView").addEventListener("click", async e => {
     if (more) {
       const key = more.dataset.showMore;
       if (key === "rated") ratedShown += 10;
-      else if (key === "joined") joinedShown += 10;
       else historyShown += 10;
       if (currentPlayerName) {
         const pv = document.getElementById("playerView");
@@ -6695,120 +7118,77 @@ function buildGenreWinRates(s) {
   return `<div class="genre-grid">${s.genreStats.map(row).join("")}</div>`;
 }
 
-// マイページ用の個人オススメ。診断タイプ・勝率の高いジャンル・お気に入り・興味ありを
-// あわせて点をつけ、まだ遊んでいないゲームから3つ選ぶ。
-const PERSONAL_REC_COUNT = 3;
+// 直近3日ぶんを出し、それより前は日付を選んで見る
+let recentDayPick = "";
 
-function personalRecScores(name, stats) {
-  // getPlayerTagAffinity は「評価したゲームのタグ平均」＋「診断タイプ」を混ぜたもの。
-  // 評価が増えるほど診断の影響が薄まるようになっている。
-  const affinity = getPlayerTagAffinity(name);
-  const interested = new Set(getPlayerInterests(name).map(pi => pi.slug));
-  // 勝率が高いジャンルほど加点。回数が少ないうちは効きを弱める。
-  const genreEdge = {};
-  stats.genreStats.forEach(x => {
-    if (x.winRate == null) return;
-    genreEdge[x.genre] = ((x.winRate - 50) / 100) * Math.min(1, x.rated / 5);
-  });
-
-  const out = [];
-  games.forEach(g => {
-    const slug = slugOf(g);
-    if (stats.playedSlugs.has(slug)) return;          // 未プレイのものだけ
-    const tags = getGameTags(g).all;
-    if (tags.includes("拡張")) return;                 // 単体では遊べない
-
-    const reasons = [];
-    const hits = tags.map(t => ({ t, v: affinity[t] })).filter(x => x.v != null);
-    let score = RATING_NEUTRAL, evidence = hits.length;
-    if (hits.length) {
-      const mean = hits.reduce((a, b) => a + b.v, 0) / hits.length;
-      // タグ1個だけの一致で満点にしないよう「ふつう」へ引き戻す
-      score = (hits.length * mean + 2 * RATING_NEUTRAL) / (hits.length + 2);
-      hits.sort((a, b) => b.v - a.v);
-      hits.filter(h => h.v >= 7).slice(0, 2).forEach(h => {
-        reasons.push({ hot: false, text: `${h.t} が好み（★${Math.round(h.v * 10) / 10}）` });
-      });
-    }
-
-    let edge = 0, edgeGenre = null;
-    getGameTags(g).genreTags.forEach(t => {
-      if (genreEdge[t] != null && genreEdge[t] > edge) { edge = genreEdge[t]; edgeGenre = t; }
-    });
-    if (edgeGenre) {
-      const gs = stats.genreStats.find(x => x.genre === edgeGenre);
-      reasons.push({ hot: false, text: `${edgeGenre} は勝率${gs.winRate}%` });
-      evidence += 1;
-    }
-
-    const want = interested.has(slug);
-    if (want) { reasons.unshift({ hot: true, text: "🌟 興味ありに入れている" }); evidence += 2; }
-
-    out.push({ g, slug, evidence, score: score + edge * 2 + (want ? 1.6 : 0), reasons });
-  });
-
-  out.sort((a, b) => b.score - a.score);
-  return out;
-}
-
-// 自分が参加した卓を新しい順に。未評価のものが目で分かるようにしておく。
-let joinedShown = 10;
-
-function buildJoinedList(name, isMe) {
-  const list = getPlayerPlays(name)
-    .slice()
-    .sort((a, b) => (b.date || "").localeCompare(a.date || ""));
-  if (!list.length) {
-    return `<div class="review-count">まだ参加した記録がありません。「みんな」タブのゲーム記録から入れられます。</div>`;
+function buildRecentDays(name) {
+  const plays = getPlayerPlays(name);
+  if (!plays.length) {
+    return `<div class="review-count">まだ参加した記録がありません。ゲームのページで「🎲 今日やる！」を押すと残ります。</div>`;
   }
+  const byDate = {};
+  plays.forEach(h => { (byDate[h.date || "日付なし"] = byDate[h.date || "日付なし"] || []).push(h); });
+  const dates = Object.keys(byDate).sort((a, b) => b.localeCompare(a));
+  const shown = recentDayPick ? [recentDayPick] : dates.slice(0, 3);
+  const rest = dates.filter(d => !dates.slice(0, 3).includes(d));
   const rated = new Set(getPlayerRatings(name).map(r => r.slug));
-  const shown = list.slice(0, joinedShown);
   return `
-    ${shown.map(h => {
-      const g = games.find(x => slugOf(x) === h.slug);
-      const done = rated.has(h.slug);
-      return `
-        <div class="joined-row">
-          <div class="joined-main">
-            <a class="joined-name" href="#game/${encodeURIComponent(h.slug)}">${g ? g.jp : h.slug}</a>
-            <span class="joined-date">${h.date || ""}</span>
-          </div>
-          <span class="joined-badge ${done ? "done" : ""}">${done ? "評価ずみ" : "未評価"}</span>
-          <button type="button" class="joined-btn" data-joined-history="${h.slug}">戦績</button>
-        </div>`;
-    }).join("")}
-    ${list.length > joinedShown
-      ? `<button type="button" class="section-toggle-btn" data-show-more="joined" style="margin-top:8px;">もっと見る（残り${list.length - joinedShown}件）</button>`
-      : ""}
+    ${rest.length ? `
+      <div class="review-form-field" style="margin-bottom:12px;">
+        <label>日付で見る</label>
+        <select class="sort-select" data-recent-day style="width:100%;">
+          <option value="">直近3日（${dates.slice(0, 3).join("・")}）</option>
+          ${dates.map(d => `<option value="${d}" ${recentDayPick === d ? "selected" : ""}>${d}（${byDate[d].length}卓）</option>`).join("")}
+        </select>
+      </div>` : ""}
+    ${shown.map(d => `
+      <div class="recent-day">
+        <div class="recent-day-head">${d}<i>${byDate[d].length}卓</i></div>
+        ${byDate[d].map(h => {
+          const g = games.find(x => slugOf(x) === h.slug);
+          const res = historyResultText(h);
+          const won = historyWinners(h).includes(name);
+          return `
+            <div class="joined-row">
+              <div class="joined-main">
+                <a class="joined-name" href="#game/${encodeURIComponent(h.slug)}">${g ? g.jp : h.slug}</a>
+                <span class="joined-date">${res ? `${won ? "○ " : ""}${res}` : "⏳ 結果待ち"}</span>
+              </div>
+              <span class="joined-badge ${rated.has(h.slug) ? "done" : ""}">${rated.has(h.slug) ? "評価ずみ" : "未評価"}</span>
+              <button type="button" class="joined-btn" data-joined-history="${h.slug}">戦績</button>
+            </div>`;
+        }).join("")}
+      </div>`).join("")}
   `;
 }
 
-function buildPersonalRecs(name, stats, isMe) {
-  const all = personalRecScores(name, stats);
-  const top = all.filter(x => x.evidence > 0).slice(0, PERSONAL_REC_COUNT);
-  if (!top.length) {
-    return `<div class="review-count">${isMe
-      ? "まだ判断材料がありません。評価・興味あり・タイプ診断のどれかを登録すると出せるようになります。"
-      : `${name} さんの好みのデータがまだ足りません。`}</div>
-      ${isMe ? `<a class="quiz-cta" style="margin-top:10px;" href="#quiz">🧭 タイプ診断をやってみる</a>` : ""}`;
+// 自分がいちばん高く評価したゲーム
+function buildBestRated(name) {
+  const list = getPlayerRatings(name)
+    .map(pr => {
+      const full = (reviewsCache[pr.slug] || []).find(r => r.id === pr.id) || pr;
+      return { slug: pr.slug, g: games.find(x => slugOf(x) === pr.slug), r: full };
+    })
+    .filter(x => x.g)
+    .sort((a, b) => (ratingAvg(b.r) || 0) - (ratingAvg(a.r) || 0))
+    .slice(0, 5);
+  if (!list.length) {
+    return `<div class="review-count">まだ評価がありません。ゲームのページから点を付けると、ここに並びます。</div>`;
   }
-  return `
-    ${top.map((e, i) => `
-      <a class="rec-item" href="#game/${encodeURIComponent(e.slug)}">
-        <div class="rec-rank">${i + 1}</div>
-        <img src="${gameImg(e.g, "mini")}" alt="${e.g.jp}" onerror="this.style.visibility='hidden'">
-        <div class="rec-body">
-          <div class="rec-title">${e.g.jp}</div>
-          <div class="rec-spec">${e.g.playersRaw || "人数不明"} ・ ${e.g.timeRaw || "時間不明"}</div>
-          <div class="rec-reason">${e.reasons.length
-            ? e.reasons.map(r => `<span class="${r.hot ? "hot" : ""}">${r.text}</span>`).join("")
-            : "<span>棚のなかで相性がよさそうなもの</span>"}</div>
+  return list.map((x, i) => `
+    <a class="rec-item" href="#game/${encodeURIComponent(x.slug)}">
+      <div class="rec-rank">${i + 1}</div>
+      <img src="${gameImg(x.g, "mini")}" alt="${x.g.jp}" onerror="this.style.visibility='hidden'">
+      <div class="rec-body">
+        <div class="rec-title">${x.g.jp}</div>
+        <div class="rec-spec">${x.g.playersRaw || "人数不明"} ・ ${x.g.timeRaw || "時間不明"}</div>
+        <div class="rating-axes">
+          ${x.r.taste != null ? `<span class="rating-axis">好み<b style="color:${ratingColor(ratingTaste(x.r))}">${ratingTaste(x.r)}</b></span>` : ""}
+          ${x.r.replay != null ? `<span class="rating-axis">リプレイ性<b style="color:${ratingColor(ratingReplay(x.r))}">${ratingReplay(x.r)}</b></span>` : ""}
+          <span class="rating-axis avg">平均<b style="color:${ratingColor(ratingAvg(x.r))}">${ratingAvg(x.r)}</b></span>
         </div>
-      </a>`).join("")}
-    <div class="review-count" style="margin-top:8px;">
-      タイプ診断・勝率の高いジャンル・評価・興味ありから、まだ遊んでいないゲームを選んでいます。
-    </div>
-  `;
+      </div>
+    </a>`).join("");
 }
 
 // 称号はタップで獲得条件を出す。数が多いので、付けているものを先頭に並べる。
@@ -6973,7 +7353,6 @@ function buildPlayerPage(name) {
     <div class="player-game-list">${gameRows}</div>
     ${moreBtn("rated", ratedShown, totalCount)}` : `<div class="review-count">まだ評価がありません</div>`;
 
-  const recInner = buildPersonalRecs(name, stats, isMe);
 
   const typeInner = prof && prof.type && FAMILIES[prof.type] ? `
     ${buildTypeHero(prof.type)}
@@ -7010,8 +7389,8 @@ function buildPlayerPage(name) {
     <div class="detail-underline"></div>
     ${buildLevelCard(name, stats)}
     ${collapsibleSection("p-titles", `🏅 称号（${earned.length} / ${TITLE_DEFS.length}）`, buildTitlesCard(name, isMe), false)}
-    ${collapsibleSection("p-rec", isMe ? "🎁 あなたへのオススメ" : `🎁 ${name} さんへのオススメ`, recInner, true)}
-    ${collapsibleSection("p-joined", `🎲 参加したゲーム（${playerHistory.length}件）`, buildJoinedList(name, isMe), true)}
+    ${collapsibleSection("p-recent", "🎲 直近のゲーム履歴", buildRecentDays(name), true)}
+    ${collapsibleSection("p-best", isMe ? "⭐ 自分の評価トップ5" : `⭐ ${name} さんの評価トップ5`, buildBestRated(name), true)}
   `;
 }
 
@@ -7032,6 +7411,16 @@ function showPlayerPage(name) {
 }
 
 document.getElementById("playerView").addEventListener("change", e => {
+  if (e.target.matches("[data-recent-day]")) {
+    recentDayPick = e.target.value;
+    if (currentPlayerName) {
+      const pv = document.getElementById("playerView");
+      pv.innerHTML = buildPlayerPage(currentPlayerName);
+      const sec = pv.querySelector('[data-section="p-recent"]');
+      if (sec) sec.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+    return;
+  }
   if (e.target.id !== "playerSortSelect") return;
   playerPageSort = e.target.value;
   if (!currentPlayerName) return;
