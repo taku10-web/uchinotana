@@ -1353,8 +1353,8 @@
   }
   .card-main:active { opacity: 0.7; }
   .card img {
-    width: 64px;
-    height: 64px;
+    width: 124px;
+    height: 93px;
     object-fit: contain;
     border-radius: 8px;
     background: #f1f2f5;
@@ -1365,10 +1365,10 @@
     flex: 1;
   }
   .card-title-jp {
-    font-size: 15px;
-    font-weight: 600;
+    font-size: 16px;
+    font-weight: 700;
     line-height: 1.35;
-    margin-bottom: 2px;
+    margin-bottom: 5px;
   }
   .detail-badge-mini {
     display: inline-block;
@@ -1633,7 +1633,7 @@
     margin-bottom: 24px;
   }
   .detail-image-wrap img {
-    max-width: 260px;
+    max-width: 340px;
     width: 100%;
     height: auto;
     border-radius: 10px;
@@ -2503,7 +2503,7 @@ try {
 // ── 自動更新 ───────────────────────────────
 // iPhoneはHTMLを長く握るので、新しい版が出ていたらURLを変えて読み直す。
 // （同じURLの再読み込みだとキャッシュが返ってきてしまうため）
-const APP_BUILD = "2026-09-11-0328";
+const APP_BUILD = "2026-09-11-0344";
 
 function markVersion(extra) {
   const el = document.getElementById("appVersion");
@@ -2982,7 +2982,7 @@ function render() {
     const slug = slugOf(g);
     const avg = averageScore(slug);
     const mine = myRating(slug);
-    const { genreTags, mechanicTags, audienceTags } = getGameTags(g);
+    const { genreTags, audienceTags } = getGameTags(g);
     const otherTags = audienceTags;
     const r = rulesData[slug];
     const pitches = (r && r.sellingPoints) || [];
@@ -2992,10 +2992,9 @@ function render() {
     return `
     <div class="card">
       <a class="card-main" href="#game/${encodeURIComponent(slug)}">
-        <img src="${g.img}" alt="${g.jp}" loading="lazy" onerror="this.style.visibility='hidden'">
+        <img src="${gameImg(g, "card")}" alt="${g.jp}" loading="lazy" onerror="this.style.visibility='hidden'">
         <div class="card-body">
           <div class="card-title-jp">${g.jp}</div>
-          <div class="card-title-en">${g.en}</div>
           <div class="spec-row">
             ${specHtml(g.playersRaw)}
             ${specHtml(g.timeRaw)}
@@ -3003,7 +3002,6 @@ function render() {
             <span class="score-pill">みんな ${avg != null ? `<b>${avg}</b>` : "—"}</span>
           </div>
           ${genreTags.length ? `<div class="card-class"><span>ジャンル：</span>${genreTags.join("・")}</div>` : ""}
-          ${mechanicTags.length ? `<div class="card-class"><span>メカニクス（仕組み）：</span>${mechanicTags.join("・")}</div>` : ""}
           ${otherTags.length ? `<div class="card-tags">${otherTags.map((t, ti) => `<span class="card-tag" ${ti >= 4 ? 'data-extra-tag="1"' : ""}>#${t}</span>`).join("")}${otherTags.length > 4 ? `<button type="button" class="card-more-tag" data-more-tag="${slug}">＋${otherTags.length - 4}</button>` : ""}</div>` : ""}
           ${pitches.length ? `
           <div class="card-pitch-box">
@@ -3027,6 +3025,20 @@ function render() {
     </div>
   `;
   }).join("");
+}
+
+// ボドゲーマの画像はサイズと品質がURLに埋まっている。
+// 既定は126x94・品質50のサムネイルで粗いので、置き場所に合わせて取り直す。
+const IMG_SIZES = {
+  card:   "dw=auto,dh=224,cw=300,ch=224,da=l,ds=s,q=82,cc=FFFFFF",
+  detail: "dw=auto,dh=600,cw=800,ch=600,da=l,ds=s,q=88,cc=FFFFFF",
+  mini:   "dw=auto,dh=140,cw=188,ch=140,da=l,ds=s,q=80,cc=FFFFFF"
+};
+
+function gameImg(g, kind) {
+  const url = (g && g.img) || "";
+  const spec = IMG_SIZES[kind] || IMG_SIZES.card;
+  return url.replace(/small_light\([^)]*\)/, "small_light(" + spec + ")");
 }
 
 function slugOf(g) {
@@ -4219,7 +4231,7 @@ function showDetail(g) {
     </div>
     <div class="detail-underline"></div>
     <div class="detail-image-wrap">
-      <img src="${g.img}" alt="${g.jp}" onerror="this.style.visibility='hidden'">
+      <img src="${gameImg(g, "detail")}" alt="${g.jp}" onerror="this.style.visibility='hidden'">
     </div>
     <div class="detail-spec-grid">
       <div class="detail-spec-box">
@@ -5160,7 +5172,7 @@ function buildRecommendView() {
   const row = (e, i) => `
     <a class="rec-item" href="#game/${encodeURIComponent(e.slug)}">
       <div class="rec-rank">${i + 1}</div>
-      <img src="${e.g.img}" alt="${e.g.jp}" onerror="this.style.visibility='hidden'">
+      <img src="${gameImg(e.g, "mini")}" alt="${e.g.jp}" onerror="this.style.visibility='hidden'">
       <div class="rec-body">
         <div class="rec-title">${e.g.jp}</div>
         <div class="rec-spec">${e.g.playersRaw || "人数不明"} ・ ${e.g.timeRaw || "時間不明"}</div>
@@ -5280,7 +5292,7 @@ function buildTodayResult() {
       ${picks.map((e, i) => `
         <a class="rec-item" href="#game/${encodeURIComponent(e.slug)}">
           <div class="rec-rank">${i + 1}</div>
-          <img src="${e.g.img}" alt="${e.g.jp}" onerror="this.style.visibility='hidden'">
+          <img src="${gameImg(e.g, "mini")}" alt="${e.g.jp}" onerror="this.style.visibility='hidden'">
           <div class="rec-body">
             <div class="rec-title">${e.g.jp}</div>
             <div class="rec-spec">${e.g.playersRaw || "人数不明"} ・ ${e.g.timeRaw || "時間不明"}</div>
@@ -5719,7 +5731,7 @@ function buildQuizView() {
       <div class="player-game-list">
         ${picks.map(p => `
           <a class="player-game-row" href="#game/${encodeURIComponent(slugOf(p.g))}">
-            <img src="${p.g.img}" alt="${p.g.jp}" onerror="this.style.visibility='hidden'">
+            <img src="${gameImg(p.g, "mini")}" alt="${p.g.jp}" onerror="this.style.visibility='hidden'">
             <div class="player-game-row-body">
               <div class="player-game-row-title">${p.g.jp}</div>
               <div class="player-game-row-level">${getGameTags(p.g).allMechanics.slice(0, 3).map(m => "#" + m).join(" ")}</div>
@@ -6784,7 +6796,7 @@ function buildPersonalRecs(name, stats, isMe) {
     ${top.map((e, i) => `
       <a class="rec-item" href="#game/${encodeURIComponent(e.slug)}">
         <div class="rec-rank">${i + 1}</div>
-        <img src="${e.g.img}" alt="${e.g.jp}" onerror="this.style.visibility='hidden'">
+        <img src="${gameImg(e.g, "mini")}" alt="${e.g.jp}" onerror="this.style.visibility='hidden'">
         <div class="rec-body">
           <div class="rec-title">${e.g.jp}</div>
           <div class="rec-spec">${e.g.playersRaw || "人数不明"} ・ ${e.g.timeRaw || "時間不明"}</div>
@@ -6900,7 +6912,7 @@ function buildPlayerPage(name) {
     if (!g) return "";
     return `
       <a class="player-game-row" href="#game/${encodeURIComponent(pi.slug)}">
-        <img src="${g.img}" alt="${g.jp}" onerror="this.style.visibility='hidden'">
+        <img src="${gameImg(g, "detail")}" alt="${g.jp}" onerror="this.style.visibility='hidden'">
         <div class="player-game-row-body">
           <div class="player-game-row-title">${g.jp}</div>
         </div>
@@ -6913,7 +6925,7 @@ function buildPlayerPage(name) {
     if (!g) return "";
     return `
       <a class="player-game-row" href="#game/${encodeURIComponent(pr.slug)}">
-        <img src="${g.img}" alt="${g.jp}" onerror="this.style.visibility='hidden'">
+        <img src="${gameImg(g, "detail")}" alt="${g.jp}" onerror="this.style.visibility='hidden'">
         <div class="player-game-row-body">
           <div class="player-game-row-title">${g.jp}</div>
           <div class="player-game-row-level">${ratingLabel(pr.level)}</div>
