@@ -492,6 +492,30 @@
   .detail-title-row .detail-title { flex: 1; min-width: 0; }
   /* 端末に古い版が残っていないか確かめるための表示 */
   .app-version { font-size: 10px; opacity: .5; margin-top: 6px; }
+  .toast {
+    position: fixed;
+    left: 50%;
+    bottom: 26px;
+    transform: translateX(-50%);
+    background: var(--navy);
+    color: #fff;
+    font-size: 13px;
+    font-weight: 600;
+    padding: 11px 20px;
+    border-radius: 999px;
+    z-index: 95;
+    opacity: 0;
+    pointer-events: none;
+    max-width: 90vw;
+    text-align: center;
+  }
+  .toast.on { opacity: 1; }
+  /* まだ記録できない状態。押せなくするのではなく、押したら理由を言う。 */
+  .detail-cta-primary.not-ready {
+    background: var(--border);
+    color: var(--text-sub);
+    box-shadow: none;
+  }
   .guide-veil {
     position: fixed;
     inset: 0;
@@ -629,11 +653,49 @@
     align-items: center;
     gap: 8px;
     border-bottom: 1px solid var(--border);
-    padding: 8px 0;
+    padding: 10px 0;
+  }
+  /* 結果がまだ入っていない卓は目立たせる */
+  .log-row.waiting {
+    background: var(--pitch-bg);
+    border-radius: 8px;
+    padding: 10px 10px;
+    border-bottom: none;
+    margin-bottom: 6px;
   }
   .log-row-name { flex: 1; font-size: 13px; font-weight: 600; min-width: 0; }
-  .log-row-res { font-size: 11.5px; color: var(--text-sub); text-align: right; }
-  .log-row-res i { display: block; font-style: normal; font-size: 10px; opacity: .8; }
+  .log-row-name i {
+    display: block;
+    font-style: normal;
+    font-size: 10.5px;
+    font-weight: 400;
+    color: var(--text-sub);
+    margin-top: 2px;
+  }
+  .log-row-res { font-size: 12px; font-weight: 600; text-align: right; flex-shrink: 0; }
+  .log-waiting-badge {
+    margin-left: 8px;
+    font-size: 10px;
+    font-weight: 700;
+    background: var(--pitch-bg);
+    color: var(--pitch-text);
+    border-radius: 999px;
+    padding: 2px 8px;
+  }
+  .day-people { display: flex; flex-wrap: wrap; gap: 6px; }
+  .day-person {
+    display: flex;
+    align-items: baseline;
+    gap: 7px;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    padding: 6px 12px;
+    text-decoration: none;
+    color: var(--text);
+  }
+  .day-person-name { font-size: 12.5px; font-weight: 700; }
+  .day-person-res { font-size: 11.5px; font-weight: 700; color: var(--accent); }
+  .day-person-res i { font-style: normal; font-weight: 400; color: var(--text-sub); margin-left: 5px; }
   .log-nth {
     display: inline-block;
     margin-left: 6px;
@@ -758,6 +820,18 @@
   .detail-act.on i { color: var(--accent); }
   .detail-act-today { border-color: var(--accent); }
   .detail-act-today i { color: var(--accent); }
+  /* 今日の記録に入れたものは塗って、押したことが一目で分かるようにする */
+  .detail-act.on-today {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #fff;
+  }
+  .detail-act.on-today i { color: #dff0fb; }
+  .card-act.on-today {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #fff;
+  }
   /* 幅があれば横並び、狭ければ縦積み。タグが複数でも崩れないようにする */
   .class-grid {
     display: grid;
@@ -2843,6 +2917,7 @@ function render() {
   empty.style.display = "none";
 
   const myName = getMyName();
+  const todaySess = sessionsCache.find(x => x.date === todayStr());
   list.innerHTML = filtered.map(g => {
     const slug = slugOf(g);
     const avg = averageScore(slug);
@@ -2853,6 +2928,7 @@ function render() {
     const pitches = (r && r.sellingPoints) || [];
     const iLike = myName && getInterests(slug).some(i => i.name === myName);
     const histCount = getHistory(slug).length;
+    const todayCount = todaySess ? getSessionTables(todaySess.id).filter(h => h.slug === slug).length : 0;
     return `
     <div class="card">
       <a class="card-main" href="#game/${encodeURIComponent(slug)}">
@@ -2885,7 +2961,7 @@ function render() {
       <div class="card-actions">
         <button type="button" class="card-act ${iLike ? "on" : ""}" data-card-interest="${slug}">${iLike ? "🌟 興味あり" : "☆ 興味あり"}</button>
         <button type="button" class="card-act" data-card-rate="${slug}">${mine != null ? `⭐ 評価 ${mine}` : "⭐ 評価する"}</button>
-        <button type="button" class="card-act" data-played="${slug}">🎲 遊んだ</button>
+        <button type="button" class="card-act ${todayCount ? "on-today" : ""}" data-played="${slug}">🎲 今日やる${todayCount ? ` ${todayCount}` : ""}</button>
         <button type="button" class="card-act" data-card-history="${slug}">📖 戦績${histCount ? `（${histCount}）` : ""}</button>
       </div>
     </div>
@@ -3067,12 +3143,10 @@ document.getElementById("cardList").addEventListener("click", async e => {
     const name = ensureMyName();
     if (!name) return;
     played.disabled = true;
-    played.textContent = "記録中…";
-    await withLevelUp(() => addHistory({
-      slug: played.dataset.played, name, date: todayStr(), mode: "",
-      winners: [], losers: [], players: [name], coopResult: "", guests: "", memo: "", quick: true
-    }));
+    played.textContent = "追加中…";
+    const sess = await withLevelUp(() => ensureTodayTable(played.dataset.played, name));
     render();
+    if (sess !== null) toast("今日の記録に追加しました");
     return;
   }
   // 評価・戦績は詳細ページの該当セクションを開いた状態で飛ばす
@@ -4043,7 +4117,8 @@ function showDetail(g) {
   const mine = myRating(slug);
   const iLike = getMyName() && getInterests(slug).some(i => i.name === getMyName());
   const interestCount = getInterests(slug).length;
-  const myPlayCount = getMyName() ? getPlayerPlays(getMyName()).filter(h => h.slug === slug).length : 0;
+  const todaySess = sessionsCache.find(x => x.date === todayStr());
+  const todayCount = todaySess ? getSessionTables(todaySess.id).filter(h => h.slug === slug).length : 0;
   dv.innerHTML = `
     <button type="button" class="detail-back" data-back>← 戻る</button>
     <div class="detail-title-row">
@@ -4053,14 +4128,14 @@ function showDetail(g) {
     <div class="detail-act-row">
       <button type="button" class="detail-act ${iLike ? "on" : ""}" data-toggle-interest="${slug}">
         ${iLike ? "🌟" : "☆"}<i>興味あり</i><b>${interestCount || "—"}</b></button>
-      <button type="button" class="detail-act" data-played="${slug}">
-        🎲<i>遊んだ</i><b>${myPlayCount || "—"}</b></button>
+      <button type="button" class="detail-act detail-act-today ${todayCount ? "on-today" : ""}" data-played="${slug}">
+        🎲<i>今日やる！</i><b>${todayCount || "—"}</b></button>
       <button type="button" class="detail-act" data-jump="detailRecord">
         ⭐<i>MY評価</i><b>${mine != null ? mine : "—"}</b></button>
       <button type="button" class="detail-act" data-jump-open="history">
         📖<i>過去戦績</i><b>${getHistory(slug).length || "—"}</b></button>
       <button type="button" class="detail-act" data-jump-open="quickref">📕<i>ルール早見表</i></button>
-      <button type="button" class="detail-act detail-act-today" data-today-add="${slug}">📝<i>今日遊ぶ</i></button>
+      <button type="button" class="detail-act" data-go-log>📝<i>記録を見る</i></button>
     </div>
     <div class="detail-underline"></div>
     <div class="detail-image-wrap">
@@ -4338,13 +4413,16 @@ document.getElementById("detailView").addEventListener("click", async e => {
     const name = ensureMyName();
     if (!name) return;
     played.disabled = true;
-    played.textContent = "記録中…";
-    await withLevelUp(() => addHistory({
-      slug: played.dataset.played, name, date: todayStr(), mode: "",
-      winners: [], losers: [], players: [name], coopResult: "", guests: "", memo: "", quick: true
-    }));
+    const sess = await withLevelUp(() => ensureTodayTable(played.dataset.played, name));
     const g = currentDetailGame();
     if (g) showDetail(g);
+    render();   // 一覧に戻ったときも色が合うようにする
+    if (sess !== null) toast("今日の記録に追加しました。結果は「記録を見る」から入れられます");
+    return;
+  }
+
+  if (e.target.closest("[data-go-log]")) {
+    openTodayLog();
     return;
   }
   if (e.target.closest("[data-tag-edit-toggle]")) {
@@ -4382,11 +4460,6 @@ function currentDetailGame() {
 }
 
 document.getElementById("detailView").addEventListener("click", async e => {
-  const todayAdd = e.target.closest("[data-today-add]");
-  if (todayAdd) {
-    await addToTodaySession(todayAdd.dataset.todayAdd);
-    return;
-  }
   const jumpOpen = e.target.closest("[data-jump-open]");
   if (jumpOpen) {
     const key = jumpOpen.dataset.jumpOpen;
@@ -4519,8 +4592,19 @@ function buildSessionStart() {
   `;
 }
 
+// 卓は「追加した時点で保存」し、結果はあとから入れる。
+// こうしないと、ゲーム側から足した卓がその日の記録に出てこない。
+function historyHasResult(h) {
+  if (h.mode === "coop") return h.coopResult === "success" || h.coopResult === "fail";
+  return (h.winners || []).length > 0 && (h.losers || []).length > 0;
+}
+
+let editingId = "";      // いま結果を入れている卓のid
+let editDraft = null;    // {members, mode, winners, coopResult}
+
 function buildActiveSession(sess) {
-  const saved = getSessionTables(sess.id);
+  const tables = getSessionTables(sess.id);
+  const waiting = tables.filter(h => !historyHasResult(h)).length;
   return `
     <div class="review-card">
       <div class="review-header">
@@ -4542,40 +4626,173 @@ function buildActiveSession(sess) {
           </div>
         </form>
         <div class="review-count" style="margin-top:6px;">
-          足した人は、いま開いている卓にもすぐ入ります。外した人はこれから作る卓に入らなくなります
-          （開いている卓・記録ずみの卓はそのままなので、必要ならその卓で外してください）。
+          足した人は、これから作る卓に入ります。記録ずみの卓はそのままです。
         </div>
       </div>
 
-      <div class="lv-section-title" style="color:var(--text-sub);margin:14px 0 6px;">遊んだゲームを追加</div>
+      <div class="lv-section-title" style="color:var(--text-sub);margin:16px 0 8px;">
+        今日遊んだゲーム（${tables.length}卓）${waiting ? `<span class="log-waiting-badge">結果待ち ${waiting}</span>` : ""}
+      </div>
+      ${tables.length
+        ? tables.map((h, i) => buildTableRow(h, i, sess, tables)).join("")
+        : `<div class="review-count">まだ1卓もありません。下から遊んだゲームを足してください。</div>`}
+
+      ${buildDayPeople(tables)}
+
+      <div class="lv-section-title" style="color:var(--text-sub);margin:18px 0 6px;">遊んだゲームを足す</div>
+      ${buildRecentChips(sess)}
       <div class="review-form-row">
         <input type="text" id="logSearch" placeholder="ゲーム名で検索"
                value="${(logDraft.query || "").replace(/"/g, "&quot;")}"
                autocomplete="off" autocorrect="off" autocapitalize="off">
       </div>
       <div id="logHits">${buildLogHits()}</div>
-
-      ${logDraft.tables.map((t, i) => buildTableEditor(t, i, sess, tableNth(t.slug, i, saved))).join("")}
-
-      ${saved.length ? `
-        <div class="lv-section-title" style="color:var(--text-sub);margin:18px 0 6px;">記録ずみ（${saved.length}卓）</div>
-        ${saved.map((h, si) => {
-          const g = games.find(x => slugOf(x) === h.slug);
-          const nth = saved.slice(0, si + 1).filter(x => x.slug === h.slug).length;
-          return `
-            <div class="log-row">
-              <div class="log-row-name">${g ? g.jp : h.slug}${nth > 1 ? `<span class="log-nth">${nth}回目</span>` : ""}</div>
-              <div class="log-row-res">${historyResultText(h) || "結果なし"}<i>${historyParticipants(h).join("・")}</i></div>
-              <button type="button" class="log-again" data-log-again="${h.id}">もう1回</button>
-              ${h.name === getMyName() ? `<button type="button" class="review-item-del" data-del-history-id="${h.id}" data-del-slug="${h.slug}" title="削除">×</button>` : ""}
-            </div>`;
-        }).join("")}
-      ` : ""}
     </div>
   `;
 }
 
-// 検索結果だけを差し替える。画面ごと作り直すと日本語入力が途中で切れてしまうため。
+// よく遊ぶものは検索させない。最近の卓からタップで足せるようにする。
+function buildRecentChips(sess) {
+  const seen = [];
+  const all = [];
+  Object.keys(historyCache).forEach(slug => (historyCache[slug] || []).forEach(h => all.push(h)));
+  all.sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
+  all.forEach(h => { if (!seen.includes(h.slug) && seen.length < 8) seen.push(h.slug); });
+  if (!seen.length) return "";
+  return `
+    <div class="log-hits" style="margin:0 0 8px;">
+      ${seen.map(slug => {
+        const g = games.find(x => slugOf(x) === slug);
+        return `<button type="button" class="log-hit" data-log-add="${slug}">${g ? g.jp : slug}</button>`;
+      }).join("")}
+    </div>
+    <div class="review-count" style="margin-bottom:8px;">↑ 最近遊んだもの。無ければ下で検索してください。</div>
+  `;
+}
+
+// その日にいた人と、その日の勝敗
+function buildDayPeople(tables) {
+  const stat = {};
+  tables.forEach(h => {
+    const people = historyParticipants(h);
+    const won = historyWinners(h);
+    const done = historyHasResult(h);
+    people.forEach(n => {
+      if (!stat[n]) stat[n] = { tables: 0, wins: 0, rated: 0 };
+      stat[n].tables += 1;
+      if (done) {
+        stat[n].rated += 1;
+        if (won.includes(n)) stat[n].wins += 1;
+      }
+    });
+  });
+  const rows = Object.entries(stat).sort((a, b) => b[1].wins - a[1].wins || b[1].tables - a[1].tables);
+  if (!rows.length) return "";
+  return `
+    <div class="lv-section-title" style="color:var(--text-sub);margin:18px 0 6px;">今日いた人（${rows.length}人）</div>
+    <div class="day-people">
+      ${rows.map(([n, v]) => `
+        <a class="day-person" href="#player/${encodeURIComponent(n)}">
+          <span class="day-person-name">${n}</span>
+          <span class="day-person-res">${v.rated ? `${v.wins}勝${v.rated - v.wins}敗` : "—"}<i>${v.tables}卓</i></span>
+        </a>`).join("")}
+    </div>
+  `;
+}
+
+function buildTableRow(h, i, sess, tables) {
+  const g = games.find(x => slugOf(x) === h.slug);
+  const nth = tables.slice(0, i + 1).filter(x => x.slug === h.slug).length;
+  const name = `${g ? g.jp : h.slug}${nth > 1 ? `<span class="log-nth">${nth}回目</span>` : ""}`;
+  if (editingId === h.id && editDraft) return buildTableEditor(h, name, sess);
+  const done = historyHasResult(h);
+  return `
+    <div class="log-row ${done ? "" : "waiting"}">
+      <div class="log-row-name">${name}
+        <i>${historyParticipants(h).join("・")}</i>
+      </div>
+      ${done
+        ? `<div class="log-row-res">${historyResultText(h)}</div>
+           <button type="button" class="log-again" data-log-again="${h.id}">もう1回</button>`
+        : `<button type="button" class="log-again" data-table-edit="${h.id}">結果を入れる</button>`}
+      <button type="button" class="review-item-del" data-log-del="${h.id}" data-log-del-slug="${h.slug}" title="消す">×</button>
+    </div>
+  `;
+}
+
+// 結果の入力。前回そのゲームでどう遊んだかを引き継いで、選ぶ手間を減らす。
+function buildTableEditor(h, name, sess) {
+  const t = editDraft;
+  const pool = [...new Set([...(sess.members || []), ...t.members, ...historyParticipants(h)])];
+  const winnerLabel = t.mode === "solo" ? "勝った人（1人）"
+    : t.mode === "team" ? "勝ったチームの人"
+    : "勝った人（選ばなかった人は負け）";
+  return `
+    <div class="table-card">
+      <div class="table-card-head">
+        <span>${name}</span>
+        <button type="button" class="link-btn" data-table-cancel>とじる</button>
+      </div>
+      <div class="review-form-field">
+        <label>この卓にいた人（${t.members.length}人）</label>
+        ${pickerGrid(pool, "m", n => t.members.includes(n), n => `data-table-member="${n}"`)}
+      </div>
+      <div class="review-form-field">
+        <label>やり方</label>
+        <div class="rec-pick-grid">
+          ${PLAY_MODES.map(m => `
+            <button type="button" class="rec-pick ${t.mode === m.id ? "on" : ""}" data-table-mode="${m.id}">
+              ${m.label}
+            </button>`).join("")}
+        </div>
+      </div>
+      ${t.mode === "coop" ? `
+        <div class="review-form-field">
+          <label>結果</label>
+          <div class="rec-pick-grid">
+            <button type="button" class="rec-pick ${t.coopResult === "success" ? "on" : ""}" data-table-coop="success">🎉 成功</button>
+            <button type="button" class="rec-pick ${t.coopResult === "fail" ? "on" : ""}" data-table-coop="fail">💥 失敗</button>
+          </div>
+        </div>` : `
+        <div class="review-form-field">
+          <label>${winnerLabel}</label>
+          ${pickerGrid(t.members, "w", n => t.winners.includes(n), n => `data-table-winner="${n}"`)}
+        </div>`}
+      <button type="button" class="detail-cta detail-cta-primary ${tableReady(t) ? "" : "not-ready"}"
+        data-table-save="${h.id}">${tableSaveLabel(t)}</button>
+    </div>
+  `;
+}
+
+// 足りないものを一言で返す（記録できるときは空）
+function tableMissing(t) {
+  if (!t.members.length) return "この卓にいた人を選んでください";
+  if (t.mode === "coop") {
+    return (t.coopResult === "success" || t.coopResult === "fail") ? "" : "成功か失敗を選んでください";
+  }
+  // 勝ち負けは相手がいないと決まらない。1人なら協力（ソロ）で記録する。
+  if (t.members.length < 2) return "1人だけのときは「協力」を選んで、成功か失敗で記録してください";
+  if (!t.winners.length) return "勝った人を選んでください";
+  if (t.mode === "solo" && t.winners.length !== 1) return "単独勝利は1人だけ選んでください";
+  if (t.winners.length >= t.members.length) return "全員勝ちにはできません。負けた人を残してください";
+  return "";
+}
+
+function tableSaveLabel(t) {
+  return tableMissing(t) || "この結果で記録する";
+}
+
+function tableReady(t) {
+  return !tableMissing(t);
+}
+
+// そのゲームを前にどう遊んだか（やり方だけ引き継ぐ）
+function lastModeFor(slug) {
+  const list = (historyCache[slug] || []).filter(historyHasResult)
+    .sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
+  return list.length ? (list[0].mode || "solo") : "solo";
+}
+
 function buildLogHits() {
   const q = logDraft.query.trim();
   if (!q) return "";
@@ -4608,79 +4825,11 @@ function pickerGrid(list, key, isOn, attr) {
   `;
 }
 
-// 1卓ぶんの入力。メンバーはセッションから減らしたり、途中参加を足したりできる。
-// そのゲームが今日いくつ目の卓か（記録ずみ＋いま入力中）
 function allLogNames(sess) {
   const set = new Set(getAllKnownNames());
   (sess.members || []).forEach(n => set.add(n));
   getSessionTables(sess.id).forEach(h => historyParticipants(h).forEach(n => set.add(n)));
   return [...set];
-}
-
-function tableNth(slug, i, saved) {
-  return saved.filter(h => h.slug === slug).length
-    + logDraft.tables.slice(0, i + 1).filter(t => t.slug === slug).length;
-}
-
-function buildTableEditor(t, i, sess, nth) {
-  const g = games.find(x => slugOf(x) === t.slug);
-  const pool = [...new Set([...(sess.members || []), ...t.members])];
-  const winnerLabel = t.mode === "solo" ? "勝った人（1人）"
-    : t.mode === "team" ? "勝ったチームの人"
-    : "勝った人（選ばなかった人は負け）";
-  return `
-    <div class="table-card">
-      <div class="table-card-head">
-        <span>${g ? g.jp : t.slug}${nth > 1 ? `<span class="log-nth">${nth}回目</span>` : ""}</span>
-        <button type="button" class="link-btn" data-table-remove="${i}">やめる</button>
-      </div>
-      <div class="review-form-field">
-        <label>この卓にいた人（${t.members.length}人）</label>
-        ${pickerGrid(pool, `m${i}`, n => t.members.includes(n), n => `data-table-member="${i}:${n}"`)}
-      </div>
-      <div class="review-form-field">
-        <label>やり方</label>
-        <div class="rec-pick-grid">
-          ${PLAY_MODES.map(m => `
-            <button type="button" class="rec-pick ${t.mode === m.id ? "on" : ""}" data-table-mode="${i}:${m.id}">
-              ${m.label}
-            </button>`).join("")}
-        </div>
-        <div class="review-count" style="margin-top:4px;">${(PLAY_MODES.find(m => m.id === t.mode) || {}).note || ""}</div>
-      </div>
-      ${t.mode === "coop" ? `
-        <div class="review-form-field">
-          <label>結果</label>
-          <div class="rec-pick-grid">
-            <button type="button" class="rec-pick ${t.coopResult === "success" ? "on" : ""}" data-table-coop="${i}:success">🎉 成功</button>
-            <button type="button" class="rec-pick ${t.coopResult === "fail" ? "on" : ""}" data-table-coop="${i}:fail">💥 失敗</button>
-          </div>
-        </div>` : `
-        <div class="review-form-field">
-          <label>${winnerLabel}</label>
-          ${pickerGrid(t.members, `w${i}`, n => t.winners.includes(n), n => `data-table-winner="${i}:${n}"`)}
-        </div>`}
-      <button type="button" class="detail-cta detail-cta-primary" data-table-save="${i}"
-        ${tableReady(t) ? "" : "disabled"}>${tableSaveLabel(t)}</button>
-    </div>
-  `;
-}
-
-function tableSaveLabel(t) {
-  if (t.members.length < 2) return "この卓にいた人を2人以上選んでください";
-  if (t.mode === "coop") return tableReady(t) ? "この卓を記録する" : "成功か失敗を選んでください";
-  if (!t.winners.length) return "勝った人を選んでください";
-  if (t.mode === "solo" && t.winners.length !== 1) return "単独勝利は1人だけ選んでください";
-  if (t.winners.length >= t.members.length) return "全員勝ちにはできません";
-  return "この卓を記録する";
-}
-
-function tableReady(t) {
-  if (t.members.length < 2) return false;
-  if (t.mode === "coop") return t.coopResult === "success" || t.coopResult === "fail";
-  if (!t.winners.length || t.winners.length >= t.members.length) return false;
-  if (t.mode === "solo") return t.winners.length === 1;
-  return true;
 }
 
 // 過去の会を日付順に。何を遊んだ日か一覧で分かるようにする。
@@ -5160,27 +5309,51 @@ function todayRecommend() {
   return picks;
 }
 
-// 詳細画面の「今日コレ」から、みんなの今日の記録に卓を足す
-async function addToTodaySession(slug) {
-  const me = ensureMyName();
-  if (!me) return;
+// 今日の会を用意して、そこに卓を1つ足す（結果は後から入れる）
+async function ensureTodayTable(slug, me) {
   const today = todayStr();
   let sess = sessionsCache.find(x => x.date === today);
   if (!sess) {
     const id = await createSession({ date: today, members: [me], createdBy: me });
-    if (!id) return;
+    if (!id) return null;
     sess = getSession(id) || { id, date: today, members: [me] };
   }
+  await addTableToSession(sess, slug, (sess.members || [me]).slice(), me);
+  return sess;
+}
+
+// 今日の記録を開いた状態で みんな/ゲーム記録 へ移動する
+function openTodayLog() {
+  const me = getMyName();
+  const sess = sessionsCache.find(x => x.date === todayStr());
   membersTab = "log";
-  logMembersOpen = (sess.members || []).length < 2;   // 1人なら最初から開いておく
-  logDraft = {
-    sessionId: sess.id,
-    members: (sess.members || [me]).slice(),
-    date: sess.date,
-    query: "",
-    tables: [{ slug, members: (sess.members || [me]).slice(), mode: "solo", winners: [], coopResult: "" }]
-  };
+  editingId = ""; editDraft = null;
+  if (sess) {
+    logMembersOpen = (sess.members || []).length < 2;
+    logDraft = {
+      sessionId: sess.id,
+      members: (sess.members || (me ? [me] : [])).slice(),
+      date: sess.date, query: "", tables: []
+    };
+  } else {
+    logDraft = { sessionId: "", members: me ? [me] : [], date: todayStr(), query: "", tables: [] };
+  }
   location.hash = "#members";
+}
+
+// その場に留まる操作は、何が起きたか分からないと不安なので短く知らせる
+function toast(msg) {
+  let el = document.getElementById("toast");
+  if (!el) {
+    el = document.createElement("div");
+    el.id = "toast";
+    el.className = "toast";
+    document.body.appendChild(el);
+  }
+  el.textContent = msg;
+  el.classList.add("on");
+  clearTimeout(toast._t);
+  toast._t = setTimeout(() => el.classList.remove("on"), 2200);
 }
 
 function hideAllViews() {
@@ -5648,7 +5821,6 @@ document.getElementById("membersView").addEventListener("submit", async e => {
     const list = (sess.members || []).slice();
     if (!list.includes(who)) list.push(who);
     logDraft.members = list.slice();
-    logDraft.tables.forEach(t => { if (!t.members.includes(who)) t.members.push(who); });
     await updateSessionMembers(sess.id, list);
   } else if (!logDraft.members.includes(who)) {
     logDraft.members.push(who);
@@ -5706,34 +5878,28 @@ document.getElementById("membersView").addEventListener("click", async e => {
 
   if (e.target.closest("[data-log-more]")) { logShown += 5; rerenderMembers(); return; }
 
+  // 卓は足した時点で保存する。こうしないと他の人の画面に出てこない。
   const add = e.target.closest("[data-log-add]");
   if (add) {
     const sess = getSession(logDraft.sessionId);
-    logDraft.tables.push({
-      slug: add.dataset.logAdd,
-      members: sess ? (sess.members || []).slice() : [],
-      mode: "solo", winners: [], coopResult: ""
-    });
+    const me = ensureMyName();
+    if (!sess || !me) return;
+    add.disabled = true;
     logDraft.query = "";
+    await addTableToSession(sess, add.dataset.logAdd, (sess.members || []).slice(), me);
     rerenderMembers();
     return;
   }
 
   const again = e.target.closest("[data-log-again]");
   if (again) {
-    const id = again.dataset.logAgain;
-    const prev = getSessionTables(logDraft.sessionId).find(h => h.id === id);
-    if (prev) {
-      logDraft.tables.push({
-        slug: prev.slug,
-        members: historyParticipants(prev),
-        mode: prev.mode || "solo",
-        winners: [], coopResult: ""
-      });
-      rerenderMembers();
-      const cards = document.querySelectorAll(".table-card");
-      if (cards.length) cards[cards.length - 1].scrollIntoView({ behavior: "smooth", block: "center" });
-    }
+    const prev = getSessionTables(logDraft.sessionId).find(h => h.id === again.dataset.logAgain);
+    const sess = getSession(logDraft.sessionId);
+    const me = ensureMyName();
+    if (!prev || !sess || !me) return;
+    again.disabled = true;
+    await addTableToSession(sess, prev.slug, historyParticipants(prev), me);
+    rerenderMembers();
     return;
   }
 
@@ -5753,11 +5919,6 @@ document.getElementById("membersView").addEventListener("click", async e => {
     if (i >= 0) list.splice(i, 1); else list.push(n);
     if (!list.length) { alert("メンバーを0人にはできません。"); return; }
     logDraft.members = list.slice();
-    // 途中から来た人は、まだ結果を入れていない卓にも足しておく
-    logDraft.tables.forEach(t => {
-      if (i >= 0) return;
-      if (!t.members.includes(n)) t.members.push(n);
-    });
     await updateSessionMembers(sess.id, list);
     rerenderMembers();
     return;
@@ -5768,62 +5929,87 @@ document.getElementById("membersView").addEventListener("click", async e => {
   const pClose = e.target.closest("[data-picker-close]");
   if (pClose) { expandedPickers.delete(pClose.dataset.pickerClose); rerenderMembers(); return; }
 
-  const rm = e.target.closest("[data-table-remove]");
-  if (rm) { logDraft.tables.splice(Number(rm.dataset.tableRemove), 1); rerenderMembers(); return; }
+  // 結果を入れる（前回のやり方を引き継いでおく）
+  const ed = e.target.closest("[data-table-edit]");
+  if (ed) {
+    const h = getSessionTables(logDraft.sessionId).find(x => x.id === ed.dataset.tableEdit);
+    if (!h) return;
+    const sess0 = getSession(logDraft.sessionId);
+    // 結果待ちの卓は仮のメンバーしか入っていないので、その日のメンバーを初期値にする。
+    // すでに結果が入っている卓は、実際にいた人をそのまま出す。
+    const base = historyHasResult(h)
+      ? historyParticipants(h)
+      : [...new Set([...((sess0 && sess0.members) || []), ...historyParticipants(h)])];
+    editingId = h.id;
+    editDraft = {
+      members: base,
+      mode: h.mode || lastModeFor(h.slug),
+      winners: (h.winners || []).slice(),
+      coopResult: h.coopResult || ""
+    };
+    expandedPickers.clear();
+    rerenderMembers();
+    const card = document.querySelector(".table-card");
+    if (card) card.scrollIntoView({ behavior: "smooth", block: "center" });
+    return;
+  }
+
+  if (e.target.closest("[data-table-cancel]")) {
+    editingId = ""; editDraft = null;
+    rerenderMembers();
+    return;
+  }
 
   const tm = e.target.closest("[data-table-member]");
-  if (tm) {
-    const [i, n] = splitAt(tm.dataset.tableMember);
-    const t = logDraft.tables[i];
-    const k = t.members.indexOf(n);
+  if (tm && editDraft) {
+    const n = tm.dataset.tableMember;
+    const k = editDraft.members.indexOf(n);
     if (k >= 0) {
-      t.members.splice(k, 1);
-      t.winners = t.winners.filter(w => w !== n);
-    } else t.members.push(n);
+      editDraft.members.splice(k, 1);
+      editDraft.winners = editDraft.winners.filter(w => w !== n);
+    } else editDraft.members.push(n);
     rerenderMembers();
     return;
   }
 
   const tmode = e.target.closest("[data-table-mode]");
-  if (tmode) {
-    const [i, v] = splitAt(tmode.dataset.tableMode);
-    logDraft.tables[i].mode = v;
-    rerenderMembers();
-    return;
-  }
+  if (tmode && editDraft) { editDraft.mode = tmode.dataset.tableMode; rerenderMembers(); return; }
 
   const tcoop = e.target.closest("[data-table-coop]");
-  if (tcoop) {
-    const [i, v] = splitAt(tcoop.dataset.tableCoop);
-    logDraft.tables[i].coopResult = logDraft.tables[i].coopResult === v ? "" : v;
+  if (tcoop && editDraft) {
+    const v = tcoop.dataset.tableCoop;
+    editDraft.coopResult = editDraft.coopResult === v ? "" : v;
     rerenderMembers();
     return;
   }
 
   const tw = e.target.closest("[data-table-winner]");
-  if (tw) {
-    const [i, n] = splitAt(tw.dataset.tableWinner);
-    const t = logDraft.tables[i];
-    const k = t.winners.indexOf(n);
-    if (k >= 0) t.winners.splice(k, 1);
-    else if (t.mode === "solo") t.winners = [n];   // 単独勝利は付け替え
-    else t.winners.push(n);
+  if (tw && editDraft) {
+    const n = tw.dataset.tableWinner;
+    const k = editDraft.winners.indexOf(n);
+    if (k >= 0) editDraft.winners.splice(k, 1);
+    else if (editDraft.mode === "solo") editDraft.winners = [n];   // 単独勝利は付け替え
+    else editDraft.winners.push(n);
     rerenderMembers();
     return;
   }
 
   const save = e.target.closest("[data-table-save]");
-  if (save) {
-    const i = Number(save.dataset.tableSave);
-    const t = logDraft.tables[i];
+  if (save && editDraft) {
+    const missing = tableMissing(editDraft);
+    if (missing) { toast(missing); return; }
+    const h = getSessionTables(logDraft.sessionId).find(x => x.id === save.dataset.tableSave);
     const sess = getSession(logDraft.sessionId);
-    if (!t || !sess || !tableReady(t)) return;
+    if (!h || !sess) { toast("記録先が見つかりませんでした。画面を開き直してください"); return; }
     const me = ensureMyName();
     if (!me) return;
     save.disabled = true;
     save.textContent = "記録中…";
+    const t = editDraft;
+    // historyは書き換えできない決まりなので、消して入れ直す
+    await deleteHistory(h.slug, h.id);
     await withLevelUp(() => addHistory({
-      slug: t.slug, name: me, date: sess.date, sessionId: sess.id,
+      slug: h.slug, name: h.name || me, date: sess.date, sessionId: sess.id,
       mode: t.mode,
       winners: t.mode === "coop" ? [] : t.winners.slice(),
       losers: t.mode === "coop" ? [] : t.members.filter(n => !t.winners.includes(n)),
@@ -5831,35 +6017,30 @@ document.getElementById("membersView").addEventListener("click", async e => {
       coopResult: t.mode === "coop" ? t.coopResult : "",
       guests: "", memo: ""
     }));
-    logDraft.tables.splice(i, 1);
+    editingId = ""; editDraft = null;
     rerenderMembers();
     return;
   }
 
-  const rep = e.target.closest("[data-table-repeat]");
-  if (rep) {
-    const t = logDraft.tables[Number(rep.dataset.tableRepeat)];
-    if (t) {
-      logDraft.tables.push({ slug: t.slug, members: t.members.slice(), mode: t.mode, winners: [], coopResult: "" });
-      rerenderMembers();
-    }
-    return;
-  }
-
-  const del = e.target.closest("[data-del-history-id]");
+  const del = e.target.closest("[data-log-del]");
   if (del) {
-    if (!confirm("この記録を消しますか？")) return;
+    if (!confirm("この卓を消しますか？")) return;
     del.disabled = true;
-    await deleteHistory(del.dataset.delSlug, del.dataset.delHistoryId);
+    await deleteHistory(del.dataset.logDelSlug, del.dataset.logDel);
+    if (editingId === del.dataset.logDel) { editingId = ""; editDraft = null; }
     rerenderMembers();
     return;
   }
 });
 
-// "3:たくと" のような値を [番号, 名前] に分ける（名前にコロンが入っても平気なように）
-function splitAt(v) {
-  const i = v.indexOf(":");
-  return [Number(v.slice(0, i)), v.slice(i + 1)];
+// その日の記録に卓を1つ足す（結果はまだ空＝結果待ち）
+async function addTableToSession(sess, slug, members, me) {
+  const people = members && members.length ? members.slice() : [me];
+  return addHistory({
+    slug, name: me, date: sess.date, sessionId: sess.id,
+    mode: "", winners: [], losers: [], players: people,
+    coopResult: "", guests: "", memo: ""
+  });
 }
 
 function showMembersView() {

@@ -1,5 +1,55 @@
 [
   {
+    "jp": "トゥー・スロース・トゥ・ウィン",
+    "en": "Too Sloth To Win",
+    "href": "/games/too-sloth-win",
+    "img": "https://image-bodoge.cdn-hoobby.net/small_light(dw=auto,dh=94,cw=126,ch=94,da=l,ds=s,q=50,cc=FFFFFF)/picture_a2ca8219-8848-4cc8-86c4-c373917735de.jpg",
+    "players": "3～5人",
+    "time": "20分前後",
+    "age": "8歳～",
+    "year": "2025年"
+  },
+  {
+    "jp": "バンディド",
+    "en": "Bandido",
+    "href": "/games/bandido",
+    "img": "https://image-bodoge.cdn-hoobby.net/small_light(dw=auto,dh=94,cw=126,ch=94,da=l,ds=s,q=50,cc=FFFFFF)/picture_a15e49fb-0dbb-43bc-917a-0879be0c3346.jpg",
+    "players": "1～4人",
+    "time": "10～15分",
+    "age": "6歳～",
+    "year": "2016年"
+  },
+  {
+    "jp": "ゴーダ！ゴーダ！キャットアタック",
+    "en": "Gouda! Gouda! Cat Attack",
+    "href": "/games/gouda-gouda-cat-attack",
+    "img": "https://image-bodoge.cdn-hoobby.net/small_light(dw=auto,dh=94,cw=126,ch=94,da=l,ds=s,q=50,cc=FFFFFF)/picture_d04d1c6f-2b69-49b4-88f1-047f954eca62.webp",
+    "players": "2～6人",
+    "time": "30～45分",
+    "age": "8歳～",
+    "year": "2002年"
+  },
+  {
+    "jp": "ムーンリープ",
+    "en": "Moon Leap",
+    "href": "/games/moon-leap",
+    "img": "https://image-bodoge.cdn-hoobby.net/small_light(dw=auto,dh=94,cw=126,ch=94,da=l,ds=s,q=50,cc=FFFFFF)/picture_a0244ab0-83e4-4971-bdb9-db6128790598.jpg",
+    "players": "2～4人",
+    "time": "30分前後",
+    "age": "7歳～",
+    "year": "1998年"
+  },
+  {
+    "jp": "カスタムスロットミリオネア",
+    "en": "Custom Slot Millionaire",
+    "href": "/games/custom-slot-millionaire",
+    "img": "https://image-bodoge.cdn-hoobby.net/small_light(dw=auto,dh=94,cw=126,ch=94,da=l,ds=s,q=50,cc=FFFFFF)/picture_d494bc12-50df-4a63-a3dd-33aced59e13e.jpg",
+    "players": "2～4人",
+    "time": "30分前後",
+    "age": "10歳～",
+    "year": "2026年"
+  },
+  {
     "jp": "シュプールノート",
     "en": "Spur Note",
     "href": "/games/spur-note",
@@ -463,7 +513,7 @@
     "jp": "エージェントブラック",
     "en": "Agent Black",
     "href": "/games/agent-black",
-    "img": "https://image-bodoge.cdn-hoobby.net/small_light(dw=auto,dh=94,cw=126,ch=94,da=l,ds=s,q=50,cc=FFFFFF)/picture_106ae2b9-d3cf-44eb-864a-5c70c8b133e1.jpeg",
+    "img": "https://image-bodoge.cdn-hoobby.net/small_light(dw=auto,dh=94,cw=126,ch=94,da=l,ds=s,q=50,cc=FFFFFF)/picture_441136d9-a79f-4d1b-ad48-5f82000d943b.jpeg",
     "players": "2～6人",
     "time": "20～30分",
     "age": "14歳～",
@@ -703,7 +753,7 @@
     "jp": "パンダロイヤル",
     "en": "Panda Royale",
     "href": "/games/panda-royale",
-    "img": "https://image-bodoge.cdn-hoobby.net/small_light(dw=auto,dh=94,cw=126,ch=94,da=l,ds=s,q=50,cc=FFFFFF)/picture_a9658a46-5b18-43b8-a23d-0149211fcd33.jpeg",
+    "img": "https://image-bodoge.cdn-hoobby.net/small_light(dw=auto,dh=94,cw=126,ch=94,da=l,ds=s,q=50,cc=FFFFFF)/picture_b2b850ae-9f1d-4b11-a2c9-8be3f90eeed0.webp",
     "players": "2～10人",
     "time": "20～30分",
     "age": "8歳～",
@@ -1005,7 +1055,7 @@
     "href": "/games/maigo",
     "img": "https://image-bodoge.cdn-hoobby.net/small_light(dw=auto,dh=94,cw=126,ch=94,da=l,ds=s,q=50,cc=FFFFFF)/picture_e7a30ce8-9bc4-46bc-9526-4a9b15ba51bf.png",
     "players": "2～4人",
-    "time": "10～20分",
+    "time": "30～60分",
     "age": "10歳～",
     "year": "2023年"
   },

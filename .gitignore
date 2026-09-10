@@ -1,0 +1,8 @@
+# 手元だけで使うもの（公開サイトには不要）
+.DS_Store
+data/.DS_Store
+data/meta_raw.json
+new_games.json
+qr_uchinotana.png
+*.py
+tag_vocabulary.json
