@@ -511,6 +511,7 @@
     text-align: center;
   }
   .toast.on { opacity: 1; }
+  .review-item-members.waiting { color: var(--pitch-text); font-weight: 700; }
   /* ✕を1回押した状態。もう一度押すと消える。 */
   .review-item-del.confirm {
     background: #c9483c;
@@ -2502,7 +2503,7 @@ try {
 // ── 自動更新 ───────────────────────────────
 // iPhoneはHTMLを長く握るので、新しい版が出ていたらURLを変えて読み直す。
 // （同じURLの再読み込みだとキャッシュが返ってきてしまうため）
-const APP_BUILD = "2026-09-11-0320";
+const APP_BUILD = "2026-09-11-0328";
 
 function markVersion(extra) {
   const el = document.getElementById("appVersion");
@@ -3371,7 +3372,9 @@ function fetchCollectionCache(collectionName, cacheKey) {
       if (!cache[d.slug]) cache[d.slug] = [];
       cache[d.slug].push(Object.assign({ id: doc.id }, d));
     });
-    Object.values(cache).forEach(list => list.sort((a, b) => (b.date || "").localeCompare(a.date || "")));
+    Object.values(cache).forEach(list => list.sort((a, b) =>
+      (b.date || "").localeCompare(a.date || "") ||
+      ((b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0))));
     localStorage.setItem(cacheKey, JSON.stringify(cache));
     return cache;
   }).catch(err => {
@@ -3969,9 +3972,17 @@ function buildHistoryItem(h, slug) {
         const mode = PLAY_MODES.find(m => m.id === h.mode);
         const p = historyParticipants(h);
         const res = historyResultText(h);
+        if (!historyHasResult(h)) {
+          return `
+            <div class="review-item-members waiting">⏳ 結果がまだ入っていません</div>
+            ${p.length ? `<div class="review-item-members">👥 ${p.join("・")}</div>` : ""}
+            <button type="button" class="section-toggle-btn" data-open-log="${h.date || ""}" style="margin-top:6px;">
+              ${h.date || "その日"}の記録で結果を入れる
+            </button>`;
+        }
         return `
           ${mode ? `<div class="review-item-members">🎮 ${mode.label}</div>` : ""}
-          ${res ? `<div class="review-item-members">${res}</div>` : ""}
+          ${res ? `<div class="review-item-members"><b>${res}</b></div>` : ""}
           ${p.length ? `<div class="review-item-members">👥 ${p.join("・")}</div>` : ""}
         `;
       })()}
@@ -3986,7 +3997,10 @@ function buildHistorySection(g) {
   const [recent, ...older] = history;
 
   return `
-      <div class="review-count">${history.length}件の記録${history.length ? "" : "（まだ記録がありません）"}${!firebaseReady ? " ・ ⚠️ Firebase未設定" : ""}</div>
+      <div class="review-count">${history.length}件の記録${history.length ? "" : "（まだ記録がありません）"}${(() => {
+        const w = history.filter(h => !historyHasResult(h)).length;
+        return w ? `　<b style="color:var(--pitch-text);">結果待ち ${w}件</b>` : "";
+      })()}${!firebaseReady ? " ・ ⚠️ Firebase未設定" : ""}</div>
       ${recent ? `
       <div class="review-list">${buildHistoryItem(recent, slug)}</div>
       ` : ""}
@@ -4528,6 +4542,13 @@ function currentDetailGame() {
 }
 
 document.getElementById("detailView").addEventListener("click", async e => {
+  const openLog = e.target.closest("[data-open-log]");
+  if (openLog) {
+    logDate = openLog.dataset.openLog || "";
+    editingId = ""; editDraft = null; logMembersOpen = false;
+    location.hash = "#log";
+    return;
+  }
   const jumpOpen = e.target.closest("[data-jump-open]");
   if (jumpOpen) {
     const key = jumpOpen.dataset.jumpOpen;
