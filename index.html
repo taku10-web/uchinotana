@@ -510,6 +510,16 @@
     text-align: center;
   }
   .toast.on { opacity: 1; }
+  /* ✕を1回押した状態。もう一度押すと消える。 */
+  .review-item-del.confirm {
+    background: #c9483c;
+    color: #fff;
+    border-radius: 999px;
+    padding: 4px 10px;
+    font-size: 11px;
+    font-weight: 700;
+    width: auto;
+  }
   /* まだ記録できない状態。押せなくするのではなく、押したら理由を言う。 */
   .detail-cta-primary.not-ready {
     background: var(--border);
@@ -2469,7 +2479,7 @@ try {
 // ── 自動更新 ───────────────────────────────
 // iPhoneはHTMLを長く握るので、新しい版が出ていたらURLを変えて読み直す。
 // （同じURLの再読み込みだとキャッシュが返ってきてしまうため）
-const APP_BUILD = "2026-09-11-0243";
+const APP_BUILD = "2026-09-11-0301";
 
 function markVersion(extra) {
   const el = document.getElementById("appVersion");
@@ -3169,10 +3179,12 @@ document.getElementById("cardList").addEventListener("click", async e => {
     const name = ensureMyName();
     if (!name) return;
     played.disabled = true;
-    played.textContent = "追加中…";
-    const sess = await withLevelUp(() => ensureTodayTable(played.dataset.played, name));
+    played.textContent = "…";
+    const r = await withLevelUp(() => toggleTodayTable(played.dataset.played, name));
     render();
-    if (sess !== null) toast("今日の記録に追加しました");
+    if (r === "added") toast("今日の記録に追加しました");
+    else if (r === "removed") toast("今日の記録から取り消しました");
+    else if (r === "hasResult") toast("もう結果が入っています");
     return;
   }
   // 評価・戦績は詳細ページの該当セクションを開いた状態で飛ばす
@@ -3740,8 +3752,11 @@ document.querySelector('[data-nav="list"]').addEventListener("click", e => {
   renderUserBadge();
 });
 
+// 一日の区切りは朝5時。深夜まで遊んでも同じ日の記録に入るようにする。
+const DAY_START_HOUR = 5;
+
 function todayStr() {
-  const d = new Date();
+  const d = new Date(Date.now() - DAY_START_HOUR * 3600 * 1000);
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
@@ -4439,11 +4454,13 @@ document.getElementById("detailView").addEventListener("click", async e => {
     const name = ensureMyName();
     if (!name) return;
     played.disabled = true;
-    const sess = await withLevelUp(() => ensureTodayTable(played.dataset.played, name));
+    const r = await withLevelUp(() => toggleTodayTable(played.dataset.played, name));
+    if (r === "added") toast("今日の記録に追加しました。結果は「記録を見る」から入れられます");
+    else if (r === "removed") toast("今日の記録から取り消しました");
+    else if (r === "hasResult") toast("もう結果が入っています。もう1卓やるなら記録画面の「もう1回」から");
     const g = currentDetailGame();
     if (g) showDetail(g);
     render();   // 一覧に戻ったときも色が合うようにする
-    if (sess !== null) toast("今日の記録に追加しました。結果は「記録を見る」から入れられます");
     return;
   }
 
@@ -4626,6 +4643,7 @@ function historyHasResult(h) {
 }
 
 let editingId = "";      // いま結果を入れている卓のid
+let pendingDelete = "";  // ✕を1回押した卓（もう一度押すと消える）
 let editDraft = null;    // {members, mode, winners, coopResult}
 
 function buildActiveSession(sess) {
@@ -4741,7 +4759,9 @@ function buildTableRow(h, i, sess, tables) {
         ? `<div class="log-row-res">${historyResultText(h)}</div>
            <button type="button" class="log-again" data-log-again="${h.id}">もう1回</button>`
         : `<button type="button" class="log-again" data-table-edit="${h.id}">結果を入れる</button>`}
-      <button type="button" class="review-item-del" data-log-del="${h.id}" data-log-del-slug="${h.slug}" title="消す">×</button>
+      <button type="button" class="review-item-del ${pendingDelete === h.id ? "confirm" : ""}"
+              data-log-del="${h.id}" data-log-del-slug="${h.slug}"
+              title="消す">${pendingDelete === h.id ? "消す？" : "×"}</button>
     </div>
   `;
 }
@@ -5333,6 +5353,21 @@ function todayRecommend() {
   const picks = use.slice(0, 3);
   picks.forEach(x => todaySeen.add(x.slug));
   return picks;
+}
+
+// 「今日やる！」は入り切り。もう一度押したら誤タップとみなして取り消す。
+async function toggleTodayTable(slug, me) {
+  const sess = sessionsCache.find(x => x.date === todayStr());
+  const mine = sess ? getSessionTables(sess.id).filter(h => h.slug === slug) : [];
+  const undoable = mine.filter(h => !historyHasResult(h));
+  if (undoable.length) {
+    const h = undoable[undoable.length - 1];
+    await deleteHistory(h.slug, h.id);
+    return "removed";
+  }
+  if (mine.length) return "hasResult";   // 結果が入っているものは消さない
+  const ok = await ensureTodayTable(slug, me);
+  return ok ? "added" : null;
 }
 
 // 今日の会を用意して、そこに卓を1つ足す（結果は後から入れる）
@@ -6050,11 +6085,20 @@ document.getElementById("membersView").addEventListener("click", async e => {
 
   const del = e.target.closest("[data-log-del]");
   if (del) {
-    if (!confirm("この卓を消しますか？")) return;
+    // 1回目は確認、2回目で消す。ダイアログに頼らないので端末を選ばない。
+    if (pendingDelete !== del.dataset.logDel) {
+      pendingDelete = del.dataset.logDel;
+      rerenderMembers();
+      clearTimeout(pendingDelete._t);
+      pendingDelete._t = setTimeout(() => { pendingDelete = ""; rerenderMembers(); }, 4000);
+      return;
+    }
+    pendingDelete = "";
     del.disabled = true;
     await deleteHistory(del.dataset.logDelSlug, del.dataset.logDel);
     if (editingId === del.dataset.logDel) { editingId = ""; editDraft = null; }
     rerenderMembers();
+    toast("この卓を消しました");
     return;
   }
 });
@@ -6441,16 +6485,18 @@ function checkLevelSinceLastVisit() {
 }
 
 // EXPが増える操作を包んで、上がったその場で演出を出す
+// 中でやったことの戻り値はそのまま返す（呼び出し側が結果で分岐するため）
 async function withLevelUp(fn) {
   const name = getMyName();
   const before = name ? calcExp(name).level.level : null;
-  await fn();
-  if (!name) return;
+  const result = await fn();
+  if (!name) return result;
   const after = calcExp(name);
   if (before != null && after.level.level > before) {
     showLevelUp(after.level, after.level.level - before, false);
   }
   rememberLevel(name);
+  return result;
 }
 
 // そのゲーム何回目かの節目ボーナス。20回目以降は10回ごとに10ずつ増やす。
