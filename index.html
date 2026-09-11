@@ -2968,7 +2968,7 @@ try {
 // ── 自動更新 ───────────────────────────────
 // iPhoneはHTMLを長く握るので、新しい版が出ていたらURLを変えて読み直す。
 // （同じURLの再読み込みだとキャッシュが返ってきてしまうため）
-const APP_BUILD = "2026-09-11-2303";
+const APP_BUILD = "2026-09-11-2307";
 
 function markVersion(extra) {
   const el = document.getElementById("appVersion");
@@ -6908,7 +6908,7 @@ function sampleGamesForScores(scores, n, onlyUnplayed) {
   Object.entries(mechanicWeights(scores)).forEach(([m, w]) => { weight[m] = Math.max(0, (w - 0.5) * 2); });
   const range = timePreferenceText(scores).range;
   const me = getMyName();
-  return games.map(g => {
+  const scored = games.map(g => {
     const t = getGameTags(g);
     if (t.genreTags.includes("拡張")) return { g, s: 0 };  // 単体で遊べないので出さない
     if (onlyUnplayed && me && hasPlayed(slugOf(g), me)) return { g, s: 0 };
@@ -6919,9 +6919,13 @@ function sampleGamesForScores(scores, n, onlyUnplayed) {
     const tm = g.timeMax || g.timeMin;
     if (tm != null && tm >= range[0] && tm <= range[1]) s *= 1.15;   // 時間の好みに合えば少し加点
     return { g, s };
-  }).filter(x => x.s > 0)
-    .sort((a, b) => b.s - a.s || (averageScore(slugOf(b.g)) ?? 0) - (averageScore(slugOf(a.g)) ?? 0))
-    .slice(0, n);
+  }).filter(x => x.s > 0);
+  // 相性が十分に高いもの（最大値の6割以上）の中では、みんなの評価が高い順に出す
+  const maxS = Math.max(0, ...scored.map(x => x.s));
+  const strong = scored.filter(x => x.s >= maxS * 0.6);
+  const rest = scored.filter(x => x.s < maxS * 0.6);
+  const byRating = (a, b) => (averageScore(slugOf(b.g)) ?? -1) - (averageScore(slugOf(a.g)) ?? -1) || b.s - a.s;
+  return strong.sort(byRating).concat(rest.sort((a, b) => b.s - a.s)).slice(0, n);
 }
 let quizPickMode = "all";   // "all"=総合 / "new"=未経験
 function buildTypePicks(scores) {
