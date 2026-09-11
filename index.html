@@ -2698,7 +2698,7 @@ try {
 // ── 自動更新 ───────────────────────────────
 // iPhoneはHTMLを長く握るので、新しい版が出ていたらURLを変えて読み直す。
 // （同じURLの再読み込みだとキャッシュが返ってきてしまうため）
-const APP_BUILD = "2026-09-11-1321";
+const APP_BUILD = "2026-09-11-1331";
 
 function markVersion(extra) {
   const el = document.getElementById("appVersion");
@@ -3223,7 +3223,7 @@ function render() {
     const pitches = (r && r.sellingPoints) || [];
     const iLike = myName && getInterests(slug).some(i => i.name === myName);
     const histCount = getHistory(slug).length;
-    const todayCount = todaySess ? getSessionTables(todaySess.id).filter(h => h.slug === slug).length : 0;
+    const todayCount = getDayTables(todayStr()).filter(h => h.slug === slug).length;
     return `
     <div class="card">
       <a class="card-main" href="#game/${encodeURIComponent(slug)}">
@@ -3938,13 +3938,13 @@ function addRating(slug, name, taste, replay, memo) {
     return Promise.resolve();
   }
   const level = Math.round(((taste + replay) / 2) * 10) / 10;
-  // 書き換えは許可していないので、自分の古い評価を消してから入れ直す
+  // 書き換えは許可していないので入れ直す。先に足してから古いものを消す。
   const mine = getReviews(slug).filter(r => r.name === name);
-  const prior = Promise.all(mine.map(r => db.collection("ratings").doc(r.id).delete()));
-  return prior.then(() => db.collection("ratings").add({
+  return db.collection("ratings").add({
     slug, name, taste, replay, level, memo: memo || "",
     createdAt: firebase.firestore.FieldValue.serverTimestamp()
-  })).then(() => refetchOne("ratings")).catch(err => writeFailed(err, "評価の保存"));
+  }).then(() => Promise.all(mine.map(r => db.collection("ratings").doc(r.id).delete())))
+    .then(() => refetchOne("ratings")).catch(err => writeFailed(err, "評価の保存"));
 }
 
 function deleteRating(slug, id) {
@@ -4626,7 +4626,7 @@ function showDetail(g) {
   const iLike = getMyName() && getInterests(slug).some(i => i.name === getMyName());
   const interestCount = getInterests(slug).length;
   const todaySess = sessionsCache.find(x => x.date === todayStr());
-  const todayCount = todaySess ? getSessionTables(todaySess.id).filter(h => h.slug === slug).length : 0;
+  const todayCount = getDayTables(todayStr()).filter(h => h.slug === slug).length;
   dv.innerHTML = `
     <button type="button" class="detail-back" data-back>← 戻る</button>
     <div class="hero">
@@ -5158,22 +5158,41 @@ function currentLogDate() {
 }
 
 function sessionOf(date) {
-  return sessionsCache.find(x => x.date === date) || null;
+  // 同じ日に複数あれば、メンバーの多いものを代表にする
+  const list = sessionsCache.filter(x => x.date === date);
+  if (!list.length) return null;
+  return list.slice().sort((a, b) => (b.members || []).length - (a.members || []).length)[0];
+}
+
+// その日に遊んだ卓。セッションへの紐づけが無い古い記録も日付で拾う。
+function getDayTables(date) {
+  const out = [];
+  Object.keys(historyCache).forEach(slug => {
+    (historyCache[slug] || []).forEach(h => { if (h.date === date) out.push(h); });
+  });
+  return out.sort((a, b) => (a.createdAt?.seconds || 0) - (b.createdAt?.seconds || 0));
+}
+
+// 記録のある日付すべて（戦績とセッションの両方から）
+function allRecordDates() {
+  const set = new Set(sessionsCache.map(x => x.date).filter(Boolean));
+  Object.values(historyCache).flat().forEach(h => { if (h.date) set.add(h.date); });
+  return [...set].sort((a, b) => b.localeCompare(a));
 }
 
 function buildLogView() {
   const date = currentLogDate();
   const sess = sessionOf(date);
+  const tables = getDayTables(date);
   const isToday = date === todayStr();
   return `
     <button type="button" class="detail-back" data-back>← 戻る</button>
     <h1 class="detail-title">ゲーム記録</h1>
-    <div class="detail-underline"></div>
     <div class="review-card">
       <div class="review-header">
         <div class="review-title">${date}${isToday ? "<span class=\"log-today-badge\">今日</span>" : ""}</div>
       </div>
-      ${sess ? buildLogSession(sess) : buildLogEmpty(date)}
+      ${(sess || tables.length) ? buildLogSession(sess, date, tables) : buildLogEmpty(date)}
     </div>
     ${buildSessionLog()}
   `;
@@ -5200,17 +5219,19 @@ function buildLogEmpty(date) {
   `;
 }
 
-function buildLogSession(sess) {
-  const tables = getSessionTables(sess.id);
+function buildLogSession(sess, date, tables) {
   const waiting = tables.filter(h => !historyHasResult(h)).length;
+  // セッションが無い日（古い記録だけの日）は、卓に出てくる人をメンバーとみなす
+  const members = sess ? (sess.members || []) : [...new Set(tables.flatMap(historyParticipants))];
+  const fake = sess || { id: "", date, members };
   return `
-    <div class="rec-status">${(sess.members || []).join("・")}（${(sess.members || []).length}人）</div>
+    <div class="rec-status">${members.join("・")}（${members.length}人）</div>
     <button type="button" class="picker-toggle" data-toggle-section="log-members">
       ${logMembersOpen ? "メンバーの変更をとじる" : "▸ 途中から来た人・帰った人がいる"}
     </button>
     <div data-section="log-members" style="display:${logMembersOpen ? "block" : "none"};">
-      ${pickerGrid(allLogNames(sess), "sessmem",
-        n => (sess.members || []).includes(n),
+      ${pickerGrid(allLogNames(fake), "sessmem",
+        n => members.includes(n),
         n => `data-sess-member="${n}"`)}
       <form class="review-form" data-log-newmember>
         <div class="review-form-row">
@@ -5227,11 +5248,35 @@ function buildLogSession(sess) {
       遊んだゲーム（${tables.length}卓）${waiting ? `<span class="log-waiting-badge">結果待ち ${waiting}</span>` : ""}
     </div>
     ${tables.length
-      ? tables.map((h, i) => buildTableRow(h, i, sess, tables)).join("")
-      : `<div class="review-count">まだ1卓もありません。ゲームのページで「🎲 今日やる！」を押してください。</div>`}
+      ? tables.map((h, i) => buildTableRow(h, i, fake, tables)).join("")
+      : `<div class="review-count">まだ1卓もありません。ゲームのページで「🎲 今日やる！」を押すか、下から検索して足してください。</div>`}
 
     ${buildDayPeople(tables)}
+
+    <div class="lv-section-title" style="color:var(--text-sub);margin:18px 0 6px;">ゲームを検索して足す</div>
+    <div class="review-form-row">
+      <input type="text" id="logSearch" placeholder="ゲーム名で検索"
+             value="${(logDraft.query || "").replace(/"/g, "&quot;")}"
+             autocomplete="off" autocorrect="off" autocapitalize="off">
+    </div>
+    <div id="logHits">${buildLogHits(date)}</div>
   `;
+}
+
+function buildLogHits(date) {
+  const q = (logDraft.query || "").trim();
+  if (!q) return "";
+  const k = normalizeSearch(q);
+  const hits = games.filter(g =>
+    normalizeSearch(g.jp).includes(k) || normalizeSearch(g.en || "").includes(k)
+  ).slice(0, 10);
+  if (!hits.length) return `<div class="review-count" style="margin-top:8px;">見つかりませんでした</div>`;
+  const done = {};
+  getDayTables(date).forEach(h => { done[h.slug] = (done[h.slug] || 0) + 1; });
+  return `<div class="log-hits">${hits.map(g => {
+    const n = done[slugOf(g)] || 0;
+    return `<button type="button" class="log-hit" data-log-add="${slugOf(g)}">${g.jp}${n ? `<i>この日${n}回</i>` : ""}</button>`;
+  }).join("")}</div>`;
 }
 
 function showLogView() {
@@ -5409,14 +5454,14 @@ function pickerGrid(list, key, isOn, attr) {
 function allLogNames(sess) {
   const set = new Set(getAllKnownNames());
   (sess.members || []).forEach(n => set.add(n));
-  getSessionTables(sess.id).forEach(h => historyParticipants(h).forEach(n => set.add(n)));
+  getDayTables(sess.date).forEach(h => historyParticipants(h).forEach(n => set.add(n)));
   return [...set];
 }
 
 // 過去の会を日付順に。何を遊んだ日か一覧で分かるようにする。
 function buildSessionLog() {
   const cur = currentLogDate();
-  const list = sessionsCache.filter(x => x.date !== cur);
+  const list = allRecordDates().filter(d => d !== cur).map(d => ({ date: d, id: (sessionOf(d) || {}).id || "" }));
   if (!list.length) {
     return cur !== todayStr()
       ? `<div class="review-card"><button type="button" class="section-toggle-btn" data-log-today>今日に戻る</button></div>`
@@ -5430,14 +5475,15 @@ function buildSessionLog() {
         ${cur !== todayStr() ? `<button type="button" class="link-btn" data-log-today>今日に戻る</button>` : ""}
       </div>
       ${shown.map(x => {
-        const tables = getSessionTables(x.id);
-        const titles = tables.map(h => {
+        const tables = getDayTables(x.date);
+        const titles = [...new Set(tables.map(h => {
           const g = games.find(y => slugOf(y) === h.slug);
           return g ? g.jp : h.slug;
-        });
+        }))];
+        const people = new Set(tables.flatMap(historyParticipants));
         return `
-          <button type="button" class="log-day" data-log-open="${x.id}">
-            <div class="log-day-date">${x.date}<i>${(x.members || []).length}人</i></div>
+          <button type="button" class="log-day" data-log-open-date="${x.date}">
+            <div class="log-day-date">${x.date}<i>${tables.length}卓・${people.size}人</i></div>
             <div class="log-day-games">${titles.length ? titles.join("・") : "まだ記録なし"}</div>
           </button>`;
       }).join("")}
@@ -5901,7 +5947,7 @@ function todayRecommend() {
 // 「今日やる！」は入り切り。もう一度押したら誤タップとみなして取り消す。
 async function toggleTodayTable(slug, me) {
   const sess = sessionsCache.find(x => x.date === todayStr());
-  const mine = sess ? getSessionTables(sess.id).filter(h => h.slug === slug) : [];
+  const mine = getDayTables(todayStr()).filter(h => h.slug === slug);
   const undoable = mine.filter(h => !historyHasResult(h));
   if (undoable.length) {
     const h = undoable[undoable.length - 1];
@@ -6447,6 +6493,17 @@ function rerenderMembers() {
   mv.innerHTML = buildMembersView();
 }
 
+function updateLogHits(el) {
+  logDraft.query = el.value;
+  const box = document.getElementById("logHits");
+  if (box) box.innerHTML = buildLogHits(currentLogDate());
+}
+["input", "compositionend", "change", "keyup"].forEach(ev => {
+  document.getElementById("logView").addEventListener(ev, e => {
+    if (e.target.id === "logSearch") updateLogHits(e.target);
+  });
+});
+
 document.getElementById("logView").addEventListener("submit", async e => {
   const form = e.target.closest("[data-log-newmember]");
   if (!form) return;
@@ -6495,10 +6552,9 @@ document.getElementById("logView").addEventListener("click", async e => {
     return;
   }
 
-  const open = e.target.closest("[data-log-open]");
+  const open = e.target.closest("[data-log-open-date]");
   if (open) {
-    const sess = getSession(open.dataset.logOpen);
-    logDate = sess ? sess.date : todayStr();
+    logDate = open.dataset.logOpenDate;
     editingId = ""; editDraft = null;
     logMembersOpen = false;
     rerenderLog();
@@ -6516,16 +6572,36 @@ document.getElementById("logView").addEventListener("click", async e => {
 
   if (e.target.closest("[data-log-more]")) { logShown += 5; rerenderLog(); return; }
 
+  const add = e.target.closest("[data-log-add]");
+  if (add) {
+    const me = ensureMyName();
+    if (!me) return;
+    add.disabled = true;
+    const date = currentLogDate();
+    let sess = sessionOf(date);
+    if (!sess) {
+      const members = [...new Set([me, ...getDayTables(date).flatMap(historyParticipants)])];
+      const id = await createSession({ date, members, createdBy: me });
+      if (!id) return;
+      sess = getSession(id) || { id, date, members };
+    }
+    logDraft.query = "";
+    await addTableToSession(sess, add.dataset.logAdd, (sess.members || [me]).slice(), me);
+    rerenderLog();
+    toast("この日の記録に足しました");
+    return;
+  }
+
   // 記録から、そのゲームの評価画面へ飛ぶ
   const rate = e.target.closest("[data-log-rate]");
   if (rate) { goToDetailSection(rate.dataset.logRate, "rating"); return; }
 
   const again = e.target.closest("[data-log-again]");
   if (again) {
-    const prev = getSessionTables((sessionOf(currentLogDate()) || {}).id).find(h => h.id === again.dataset.logAgain);
-    const sess = sessionOf(currentLogDate());
+    const prev = getDayTables(currentLogDate()).find(h => h.id === again.dataset.logAgain);
     const me = ensureMyName();
-    if (!prev || !sess || !me) return;
+    if (!prev || !me) return;
+    const sess = sessionOf(currentLogDate()) || { id: "", date: currentLogDate(), members: historyParticipants(prev) };
     again.disabled = true;
     await addTableToSession(sess, prev.slug, historyParticipants(prev), me);
     rerenderLog();
@@ -6561,7 +6637,7 @@ document.getElementById("logView").addEventListener("click", async e => {
   // 結果を入れる（前回のやり方を引き継いでおく）
   const ed = e.target.closest("[data-table-edit]");
   if (ed) {
-    const h = getSessionTables((sessionOf(currentLogDate()) || {}).id).find(x => x.id === ed.dataset.tableEdit);
+    const h = getDayTables(currentLogDate()).find(x => x.id === ed.dataset.tableEdit);
     if (!h) return;
     const sess0 = sessionOf(currentLogDate());
     // 結果待ちの卓は仮のメンバーしか入っていないので、その日のメンバーを初期値にする。
@@ -6627,18 +6703,17 @@ document.getElementById("logView").addEventListener("click", async e => {
   if (save && editDraft) {
     const missing = tableMissing(editDraft);
     if (missing) { toast(missing); return; }
-    const h = getSessionTables((sessionOf(currentLogDate()) || {}).id).find(x => x.id === save.dataset.tableSave);
-    const sess = sessionOf(currentLogDate());
+    const h = getDayTables(currentLogDate()).find(x => x.id === save.dataset.tableSave);
+    const sess = sessionOf(currentLogDate()) || { id: "", date: currentLogDate(), members: [] };
     if (!h || !sess) { toast("記録先が見つかりませんでした。画面を開き直してください"); return; }
     const me = ensureMyName();
     if (!me) return;
     save.disabled = true;
     save.textContent = "記録中…";
     const t = editDraft;
-    // historyは書き換えできない決まりなので、消して入れ直す
-    await deleteHistory(h.slug, h.id);
+    // historyは書き換えできない決まりなので入れ直す。先に足してから消す（途中で失敗しても消えないように）
     await withLevelUp(() => addHistory({
-      slug: h.slug, name: h.name || me, date: sess.date, sessionId: sess.id,
+      slug: h.slug, name: h.name || me, date: sess.date, sessionId: sess.id || "",
       mode: t.mode,
       winners: t.mode === "coop" ? [] : t.winners.slice(),
       losers: t.mode === "coop" ? [] : t.members.filter(n => !t.winners.includes(n)),
@@ -6646,6 +6721,7 @@ document.getElementById("logView").addEventListener("click", async e => {
       coopResult: t.mode === "coop" ? t.coopResult : "",
       guests: "", memo: ""
     }));
+    await deleteHistory(h.slug, h.id);
     editingId = ""; editDraft = null;
     rerenderLog();
     if (myRating(h.slug) == null) toast("記録しました。「評価する」からそのゲームの評価に進めます");
@@ -6677,7 +6753,7 @@ document.getElementById("logView").addEventListener("click", async e => {
 async function addTableToSession(sess, slug, members, me) {
   const people = members && members.length ? members.slice() : [me];
   return addHistory({
-    slug, name: me, date: sess.date, sessionId: sess.id,
+    slug, name: me, date: sess.date, sessionId: sess.id || "",
     mode: "", winners: [], losers: [], players: people,
     coopResult: "", guests: "", memo: ""
   });
