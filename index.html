@@ -2471,7 +2471,7 @@
   .shelf { padding: 10px 6px 0; background: #fff; border-radius: 10px; }
   .shelf-row { position: relative; display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; padding: 0 4px 16px; margin-bottom: 12px; align-items: end; }
   .shelf-box { display: block; aspect-ratio: 4 / 3; position: relative; z-index: 1; background: #fff; }
-  .shelf-box img { width: 100%; height: 100%; object-fit: contain; display: block; background: #fff; }
+  .shelf-box img { width: 100%; height: 100%; object-fit: contain; object-position: 50% 100%; display: block; background: #fff; }
   .shelf-box.empty { background: #fff; }
   .shelf-board {
     position: absolute; left: -6px; right: -6px; bottom: 0; height: 12px; border-radius: 3px;
@@ -2945,7 +2945,7 @@ try {
 // ── 自動更新 ───────────────────────────────
 // iPhoneはHTMLを長く握るので、新しい版が出ていたらURLを変えて読み直す。
 // （同じURLの再読み込みだとキャッシュが返ってきてしまうため）
-const APP_BUILD = "2026-09-11-2207";
+const APP_BUILD = "2026-09-11-2217";
 
 function markVersion(extra) {
   const el = document.getElementById("appVersion");
@@ -6891,6 +6891,7 @@ document.getElementById("playerView").addEventListener("click", async e => {
       const pv = document.getElementById("playerView");
       const y = window.scrollY;
       pv.innerHTML = buildPlayerPage(currentPlayerName);
+      refineShelfImages(pv);
       window.scrollTo(0, y);
       return;
     }
@@ -6909,6 +6910,7 @@ document.getElementById("playerView").addEventListener("click", async e => {
       if (currentPlayerName) {
         const pv = document.getElementById("playerView");
         pv.innerHTML = buildPlayerPage(currentPlayerName);
+      refineShelfImages(pv);
         const sec = pv.querySelector(`[data-section="p-${key}"]`);
         if (sec) {
           sec.style.display = "";
@@ -7915,6 +7917,48 @@ function shelfGames(name) {
 function coverSrc(slug) {
   return coverOverride[slug] || `data/covers/${slug}.jpg`;
 }
+// 表紙の白い余白を切り落として、箱そのものの画像にする（棚に置いたとき浮いて見えないように）
+// 同一オリジンの data/covers か data: URL だけが対象。読めなければ元のURLをそのまま返す
+const trimmedCoverCache = {};
+function trimmedCover(slug) {
+  if (trimmedCoverCache[slug]) return trimmedCoverCache[slug];
+  const src = coverSrc(slug);
+  trimmedCoverCache[slug] = new Promise(resolve => {
+    const im = new Image();
+    im.onload = () => {
+      try {
+        const w = im.naturalWidth, h = im.naturalHeight;
+        const c = document.createElement("canvas"); c.width = w; c.height = h;
+        const ctx = c.getContext("2d", { willReadFrequently: true });
+        ctx.drawImage(im, 0, 0);
+        const d = ctx.getImageData(0, 0, w, h).data;
+        const white = i => d[i] > 238 && d[i + 1] > 238 && d[i + 2] > 238;
+        let top = h, bottom = -1, left = w, right = -1;
+        for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+          if (!white((y * w + x) * 4)) { if (y < top) top = y; if (y > bottom) bottom = y; if (x < left) left = x; if (x > right) right = x; }
+        }
+        if (bottom < 0 || (right - left) < w * 0.3 || (bottom - top) < h * 0.3) { resolve(src); return; }
+        const m = 2;
+        left = Math.max(0, left - m); top = Math.max(0, top - m); right = Math.min(w - 1, right + m); bottom = Math.min(h - 1, bottom + m);
+        const cw = right - left + 1, ch = bottom - top + 1;
+        if (cw >= w - 6 && ch >= h - 6) { resolve(src); return; }
+        const o = document.createElement("canvas"); o.width = cw; o.height = ch;
+        o.getContext("2d").drawImage(c, left, top, cw, ch, 0, 0, cw, ch);
+        resolve(o.toDataURL("image/jpeg", 0.9));
+      } catch (e) { resolve(src); }
+    };
+    im.onerror = () => resolve(src);
+    im.src = src;
+  });
+  return trimmedCoverCache[slug];
+}
+// 棚に並んだ表紙を、余白を切ったものに差し替える（描画後に非同期で）
+function refineShelfImages(root) {
+  (root || document).querySelectorAll(".shelf-box img[data-slug]").forEach(img => {
+    trimmedCover(img.dataset.slug).then(url => { if (img.isConnected && url !== img.src) img.src = url; });
+  });
+}
+
 function buildShelf(name) {
   const list = shelfGames(name);
   if (!list.length) {
@@ -7927,7 +7971,7 @@ function buildShelf(name) {
     for (let c = 0; c < SHELF_COLS; c++) {
       const x = list[r * SHELF_COLS + c];
       html += x
-        ? `<a class="shelf-box" href="#game/${encodeURIComponent(x.slug)}" title="${x.g.jp}"><img src="${coverSrc(x.slug)}" alt="${x.g.jp}" loading="lazy" onerror="this.src='${coverFallback(x.g, "card")}'"></a>`
+        ? `<a class="shelf-box" href="#game/${encodeURIComponent(x.slug)}" title="${x.g.jp}"><img src="${coverSrc(x.slug)}" data-slug="${x.slug}" alt="${x.g.jp}" onerror="this.src='${coverFallback(x.g, "card")}'"></a>`
         : `<span class="shelf-box empty"></span>`;
     }
     html += `<div class="shelf-board"></div></div>`;
@@ -7959,7 +8003,7 @@ async function exportShelfImage(name) {
   ctx.fillStyle = "#5c7a90"; ctx.font = "26px -apple-system, 'Hiragino Sans', sans-serif";
   ctx.fillText(`うちのボードゲーム棚 ・ 評価が高い順`, pad, 118);
   const load = src => new Promise(res => { const im = new Image(); im.onload = () => res(im); im.onerror = () => res(null); im.src = src; });
-  const imgs = await Promise.all(list.map(x => load(coverSrc(x.slug))));
+  const imgs = await Promise.all(list.map(x => trimmedCover(x.slug).then(load)));
   for (let r = 0; r < rows; r++) {
     const top = titleH + r * rowH;
     // 棚板（手前の面と側面）
@@ -7971,8 +8015,9 @@ async function exportShelfImage(name) {
       const im = imgs[r * SHELF_COLS + c];
       const bx = pad + c * (boxW + gap);
       if (im) {
+        // 箱の底を棚板に乗せる（下揃え）
         const s = Math.min(boxW / im.width, boxH / im.height), dw = im.width * s, dh = im.height * s;
-        ctx.drawImage(im, bx + (boxW - dw) / 2, top + 20 + (boxH - dh) / 2, dw, dh);
+        ctx.drawImage(im, bx + (boxW - dw) / 2, top + 20 + (boxH - dh), dw, dh);
       }
     }
   }
@@ -8207,6 +8252,7 @@ function showPlayerPage(name) {
   const pv = document.getElementById("playerView");
   pv.style.display = "block";
   pv.innerHTML = buildPlayerPage(name);
+  refineShelfImages(pv);
   window.scrollTo(0, 0);
 }
 
@@ -8216,6 +8262,7 @@ document.getElementById("playerView").addEventListener("change", e => {
     if (currentPlayerName) {
       const pv = document.getElementById("playerView");
       pv.innerHTML = buildPlayerPage(currentPlayerName);
+      refineShelfImages(pv);
       const sec = pv.querySelector('[data-section="p-recent"]');
       if (sec) sec.scrollIntoView({ behavior: "smooth", block: "start" });
     }
@@ -8225,6 +8272,7 @@ document.getElementById("playerView").addEventListener("change", e => {
   playerPageSort = e.target.value;
   if (!currentPlayerName) return;
   document.getElementById("playerView").innerHTML = buildPlayerPage(currentPlayerName);
+  refineShelfImages(document.getElementById("playerView"));
 });
 
 function router() {
