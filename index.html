@@ -845,6 +845,32 @@
     padding: 2px 8px;
   }
   .log-row-btns { display: flex; flex-direction: column; gap: 4px; flex-shrink: 0; }
+  .log-memo {
+    display: block;
+    font-style: normal;
+    font-size: 12px;
+    color: var(--text);
+    background: var(--bg);
+    border-left: 3px solid var(--border);
+    padding: 4px 8px;
+    margin-top: 5px;
+    border-radius: 0 6px 6px 0;
+    white-space: pre-wrap;
+  }
+  /* 記録ページの検索欄。地味で見つけにくかったので枠をはっきりさせる */
+  .log-search {
+    width: 100%;
+    box-sizing: border-box;
+    border: 2px solid var(--accent);
+    background: var(--card-bg);
+    color: var(--text);
+    border-radius: 12px;
+    padding: 12px 14px;
+    font-size: 15px;
+  }
+  .log-search::placeholder { color: var(--text-sub); }
+  .log-search:focus { outline: none; box-shadow: 0 0 0 3px var(--accent-soft); }
+  .log-day.picked { background: var(--accent-soft); border-radius: 8px; }
   .log-again.primary {
     background: var(--accent);
     border-color: var(--accent);
@@ -2698,7 +2724,7 @@ try {
 // ── 自動更新 ───────────────────────────────
 // iPhoneはHTMLを長く握るので、新しい版が出ていたらURLを変えて読み直す。
 // （同じURLの再読み込みだとキャッシュが返ってきてしまうため）
-const APP_BUILD = "2026-09-11-1331";
+const APP_BUILD = "2026-09-11-1351";
 
 function markVersion(extra) {
   const el = document.getElementById("appVersion");
@@ -3012,6 +3038,7 @@ Promise.all([
   router();
   initGuide();
   checkForUpdate();
+  cleanupEmptySessions();
 });
 
 document.getElementById("search").addEventListener("input", e => {
@@ -3923,25 +3950,30 @@ function ratingTaste(r) {
 function ratingReplay(r) {
   return r.replay != null ? r.replay : r.level;
 }
+function ratingRecommend(r) {
+  return r.recommend != null ? r.recommend : r.level;
+}
+// 入っている軸だけで平均を取る（古い評価は level 1本のまま）
 function ratingAvg(r) {
-  const t = ratingTaste(r), v = ratingReplay(r);
-  if (t == null && v == null) return r.level;
-  if (t == null) return v;
-  if (v == null) return t;
-  return Math.round(((t + v) / 2) * 10) / 10;
+  const axes = [r.taste, r.replay, r.recommend].filter(v => v != null);
+  if (!axes.length) return r.level;
+  return Math.round((axes.reduce((a, b) => a + b, 0) / axes.length) * 10) / 10;
+}
+function ratingHasAxes(r) {
+  return r.taste != null || r.replay != null || r.recommend != null;
 }
 
-function addRating(slug, name, taste, replay, memo) {
+function addRating(slug, name, taste, replay, memo, recommend) {
   localStorage.setItem(MY_NAME_KEY, name);
   if (!firebaseReady) {
     alert("Firebaseが未設定のため、まだ「評価」は使えません。");
     return Promise.resolve();
   }
-  const level = Math.round(((taste + replay) / 2) * 10) / 10;
+  const level = Math.round(((taste + replay + recommend) / 3) * 10) / 10;
   // 書き換えは許可していないので入れ直す。先に足してから古いものを消す。
   const mine = getReviews(slug).filter(r => r.name === name);
   return db.collection("ratings").add({
-    slug, name, taste, replay, level, memo: memo || "",
+    slug, name, taste, replay, recommend, level, memo: memo || "",
     createdAt: firebase.firestore.FieldValue.serverTimestamp()
   }).then(() => Promise.all(mine.map(r => db.collection("ratings").doc(r.id).delete())))
     .then(() => refetchOne("ratings")).catch(err => writeFailed(err, "評価の保存"));
@@ -4100,8 +4132,8 @@ function buildOtherMembersPicker() {
 }
 
 function buildRatingItem(r, slug) {
-  const t = ratingTaste(r), v = ratingReplay(r), a = ratingAvg(r);
-  const both = r.taste != null && r.replay != null;
+  const t = ratingTaste(r), v = ratingReplay(r), o = ratingRecommend(r), a = ratingAvg(r);
+  const both = ratingHasAxes(r);
   return `
     <div class="review-item">
       <div class="review-item-top">
@@ -4114,6 +4146,7 @@ function buildRatingItem(r, slug) {
         ${both ? `
           <span class="rating-axis">好み<b style="color:${ratingColor(t)}">${t}</b></span>
           <span class="rating-axis">リプレイ性<b style="color:${ratingColor(v)}">${v}</b></span>
+          ${r.recommend != null ? `<span class="rating-axis">おすすめ度<b style="color:${ratingColor(o)}">${o}</b></span>` : ""}
         ` : ""}
         <span class="rating-axis avg">平均<b style="color:${ratingColor(a)}">${a}</b></span>
       </div>
@@ -4222,12 +4255,14 @@ function buildRatingSection(g) {
 // 好み・リプレイ性はスライダーで入れる。目盛りの意味を必ず添える。
 const TASTE_WORDS  = { 10: "最高", 9: "とても好き", 8: "好き", 7: "やや好き", 6: "ちょっと good", 5: "普通", 4: "やや苦手", 3: "苦手", 2: "かなり苦手", 1: "大嫌い" };
 const REPLAY_WORDS = { 10: "いつでも遊びたい", 9: "また誘いたい", 8: "また遊びたい", 7: "たまになら", 6: "誘われたら", 5: "普通", 4: "気が向けば", 3: "あまり気が進まない", 2: "できれば遠慮したい", 1: "二度と遊ばない" };
+const RECOMMEND_WORDS = { 10: "全員にすすめたい", 9: "かなりおすすめ", 8: "おすすめ", 7: "人を選ぶがおすすめ", 6: "まあまあ", 5: "普通", 4: "あまりすすめない", 3: "すすめにくい", 2: "すすめない", 1: "止めたほうがいい" };
 
 function buildRatingForm(slug) {
   const me = getMyName();
   const mine = me ? getReviews(slug).find(r => r.name === me) : null;
   const t = mine ? (ratingTaste(mine) || 5) : 5;
   const v = mine ? (ratingReplay(mine) || 5) : 5;
+  const o = mine ? (ratingRecommend(mine) || 5) : 5;
   const slider = (name, label, value, words) => `
     <div class="rating-slider-block">
       <div class="rating-slider-head">
@@ -4248,10 +4283,11 @@ function buildRatingForm(slug) {
         ${buildSubmitterLine()}
         ${slider("taste", "好み", t, TASTE_WORDS)}
         ${slider("replay", "リプレイ性", v, REPLAY_WORDS)}
-        <div class="rating-avg-preview">平均 <b data-rating-avg>${Math.round(((t + v) / 2) * 10) / 10}</b></div>
+        ${slider("recommend", "おすすめ度", o, RECOMMEND_WORDS)}
+        <div class="rating-avg-preview">平均 <b data-rating-avg>${Math.round(((t + v + o) / 3) * 10) / 10}</b></div>
         <div class="review-form-field">
-          <label>感想（任意）</label>
-          <textarea name="memo" rows="2" maxlength="300" placeholder="遊んでみて思ったこと">${mine && mine.memo ? mine.memo : ""}</textarea>
+          <label>感想・おすすめポイント（任意）</label>
+          <textarea name="memo" rows="3" maxlength="400" placeholder="どこが良かったか、どんな人に合うか、気をつけること など">${mine && mine.memo ? mine.memo : ""}</textarea>
         </div>
         <button type="submit">${mine ? "評価を直す" : "評価を送る"}</button>
       </form>
@@ -4802,11 +4838,12 @@ document.getElementById("detailView").addEventListener("submit", async e => {
     if (!name) return;
     const taste = parseInt(ratingForm.elements.taste.value, 10);
     const replay = parseInt(ratingForm.elements.replay.value, 10);
+    const recommend = parseInt(ratingForm.elements.recommend.value, 10);
     const memo = (ratingForm.elements.memo.value || "").trim();
     const submitBtn = ratingForm.querySelector("button[type=submit]");
     submitBtn.disabled = true;
     submitBtn.textContent = "送信中…";
-    await withLevelUp(() => addRating(slug, name, taste, replay, memo));
+    await withLevelUp(() => addRating(slug, name, taste, replay, memo, recommend));
     ratingFormOpen = false;
     const g = games.find(x => slugOf(x) === slug);
     if (g) showDetail(g);
@@ -5004,7 +5041,7 @@ document.getElementById("detailView").addEventListener("click", async e => {
   const openLog = e.target.closest("[data-open-log]");
   if (openLog) {
     logDate = openLog.dataset.openLog || "";
-    editingId = ""; editDraft = null; logMembersOpen = false;
+    editingId = ""; editDraft = null; logMembersOpen = "";
     location.hash = "#log";
     return;
   }
@@ -5104,7 +5141,7 @@ function showListView() {
 // 記録中の卓（保存するまでは画面の中だけで持つ）
 let logDraft = { sessionId: "", members: [], date: "", query: "", tables: [] };
 let logShown = 5;
-let logMembersOpen = false;
+let logMembersOpen = "";   // 開いている日付（空なら閉じている）
 let expandedPickers = new Set();
 
 function buildMembersView() {
@@ -5180,21 +5217,32 @@ function allRecordDates() {
   return [...set].sort((a, b) => b.localeCompare(a));
 }
 
+// 今日は常に一番上。ほかの日を選んだら、その下に並べて出す（今日が消えない）。
+let logQuery = {};          // 日付 -> 検索語
+
 function buildLogView() {
-  const date = currentLogDate();
-  const sess = sessionOf(date);
-  const tables = getDayTables(date);
-  const isToday = date === todayStr();
+  const today = todayStr();
+  const picked = logDate && logDate !== today ? logDate : "";
   return `
     <button type="button" class="detail-back" data-back>← 戻る</button>
     <h1 class="detail-title">ゲーム記録</h1>
-    <div class="review-card">
+    ${buildDayBlock(today, true)}
+    ${picked ? buildDayBlock(picked, false) : ""}
+    ${buildSessionLog()}
+  `;
+}
+
+function buildDayBlock(date, isToday) {
+  const sess = sessionOf(date);
+  const tables = getDayTables(date);
+  return `
+    <div class="review-card" data-log-date="${date}" id="day-${date}">
       <div class="review-header">
         <div class="review-title">${date}${isToday ? "<span class=\"log-today-badge\">今日</span>" : ""}</div>
+        ${!isToday ? `<button type="button" class="link-btn" data-log-unpick>とじる</button>` : ""}
       </div>
       ${(sess || tables.length) ? buildLogSession(sess, date, tables) : buildLogEmpty(date)}
     </div>
-    ${buildSessionLog()}
   `;
 }
 
@@ -5203,7 +5251,7 @@ function buildLogEmpty(date) {
   const picked = logDraft.members;
   return `
     <div class="review-count" style="margin-bottom:12px;">
-      まだ記録がありません。ゲームのページで <b>「🎲 今日やる！」</b> を押すと、ここに並びます。<br>
+      まだ記録がありません。ゲームのページで <b>「🎲 今日やる！」</b> を押すか、下から検索して足してください。<br>
       先にメンバーを決めておくこともできます。
     </div>
     ${pickerGrid(names, "start", n => picked.includes(n), n => `data-log-member="${n}"`)}
@@ -5216,6 +5264,17 @@ function buildLogEmpty(date) {
     <button type="button" class="detail-cta detail-cta-primary" data-log-start style="margin-top:12px;">
       ${picked.length ? `${picked.length}人で始める` : "メンバーを選んで始める"}
     </button>
+    ${buildLogSearch(date)}
+  `;
+}
+
+function buildLogSearch(date) {
+  return `
+    <div class="lv-section-title" style="color:var(--text-sub);margin:18px 0 6px;">ゲームを検索して足す</div>
+    <input type="text" class="log-search" data-log-search="${date}" placeholder="🔍 ゲーム名を入力（ひらがなでもOK）"
+           value="${(logQuery[date] || "").replace(/"/g, "&quot;")}"
+           autocomplete="off" autocorrect="off" autocapitalize="off">
+    <div data-log-hits="${date}">${buildLogHits(date)}</div>
   `;
 }
 
@@ -5224,13 +5283,14 @@ function buildLogSession(sess, date, tables) {
   // セッションが無い日（古い記録だけの日）は、卓に出てくる人をメンバーとみなす
   const members = sess ? (sess.members || []) : [...new Set(tables.flatMap(historyParticipants))];
   const fake = sess || { id: "", date, members };
+  const memOpen = logMembersOpen === date;
   return `
     <div class="rec-status">${members.join("・")}（${members.length}人）</div>
-    <button type="button" class="picker-toggle" data-toggle-section="log-members">
-      ${logMembersOpen ? "メンバーの変更をとじる" : "▸ 途中から来た人・帰った人がいる"}
+    <button type="button" class="picker-toggle" data-log-members-toggle="${date}">
+      ${memOpen ? "メンバーの変更をとじる" : "▸ 途中から来た人・帰った人がいる"}
     </button>
-    <div data-section="log-members" style="display:${logMembersOpen ? "block" : "none"};">
-      ${pickerGrid(allLogNames(fake), "sessmem",
+    <div style="display:${memOpen ? "block" : "none"};">
+      ${pickerGrid(allLogNames(fake), "sessmem" + date,
         n => members.includes(n),
         n => `data-sess-member="${n}"`)}
       <form class="review-form" data-log-newmember>
@@ -5252,19 +5312,12 @@ function buildLogSession(sess, date, tables) {
       : `<div class="review-count">まだ1卓もありません。ゲームのページで「🎲 今日やる！」を押すか、下から検索して足してください。</div>`}
 
     ${buildDayPeople(tables)}
-
-    <div class="lv-section-title" style="color:var(--text-sub);margin:18px 0 6px;">ゲームを検索して足す</div>
-    <div class="review-form-row">
-      <input type="text" id="logSearch" placeholder="ゲーム名で検索"
-             value="${(logDraft.query || "").replace(/"/g, "&quot;")}"
-             autocomplete="off" autocorrect="off" autocapitalize="off">
-    </div>
-    <div id="logHits">${buildLogHits(date)}</div>
+    ${buildLogSearch(date)}
   `;
 }
 
 function buildLogHits(date) {
-  const q = (logDraft.query || "").trim();
+  const q = (logQuery[date] || "").trim();
   if (!q) return "";
   const k = normalizeSearch(q);
   const hits = games.filter(g =>
@@ -5275,7 +5328,7 @@ function buildLogHits(date) {
   getDayTables(date).forEach(h => { done[h.slug] = (done[h.slug] || 0) + 1; });
   return `<div class="log-hits">${hits.map(g => {
     const n = done[slugOf(g)] || 0;
-    return `<button type="button" class="log-hit" data-log-add="${slugOf(g)}">${g.jp}${n ? `<i>この日${n}回</i>` : ""}</button>`;
+    return `<button type="button" class="log-hit" data-log-add="${slugOf(g)}" data-log-add-date="${date}">${g.jp}${n ? `<i>この日${n}回</i>` : ""}</button>`;
   }).join("")}</div>`;
 }
 
@@ -5343,6 +5396,7 @@ function buildTableRow(h, i, sess, tables) {
     <div class="log-row ${done ? "" : "waiting"}">
       <div class="log-row-name">${name}
         <i>${historyParticipants(h).join("・")}</i>
+        ${h.memo ? `<em class="log-memo">${h.memo}</em>` : ""}
       </div>
       ${done
         ? `<div class="log-row-res">${historyResultText(h)}</div>`
@@ -5400,6 +5454,10 @@ function buildTableEditor(h, name, sess) {
           <label>${winnerLabel}</label>
           ${pickerGrid(t.members, "w", n => t.winners.includes(n), n => `data-table-winner="${n}"`)}
         </div>`}
+      <div class="review-form-field">
+        <label>感想（任意）</label>
+        <textarea name="memo" rows="2" maxlength="300" data-table-memo placeholder="盛り上がった場面、次にやりたいこと など">${t.memo || ""}</textarea>
+      </div>
       <button type="button" class="detail-cta detail-cta-primary ${tableReady(t) ? "" : "not-ready"}"
         data-table-save="${h.id}">${tableSaveLabel(t)}</button>
     </div>
@@ -5458,38 +5516,40 @@ function allLogNames(sess) {
   return [...set];
 }
 
-// 過去の会を日付順に。何を遊んだ日か一覧で分かるようにする。
+// ほかの日：直近3日を出し、それより前は月を選ぶ。卓が無い日は出さない。
+let logMonthPick = "";
+
 function buildSessionLog() {
-  const cur = currentLogDate();
-  const list = allRecordDates().filter(d => d !== cur).map(d => ({ date: d, id: (sessionOf(d) || {}).id || "" }));
-  if (!list.length) {
-    return cur !== todayStr()
-      ? `<div class="review-card"><button type="button" class="section-toggle-btn" data-log-today>今日に戻る</button></div>`
-      : "";
-  }
-  const shown = list.slice(0, logShown);
+  const today = todayStr();
+  const dates = allRecordDates().filter(d => d !== today && getDayTables(d).length);
+  if (!dates.length) return "";
+  const latest = dates.slice(0, 3);
+  const months = [...new Set(dates.map(d => d.slice(0, 7)))].sort((a, b) => b.localeCompare(a));
+  const shown = logMonthPick ? dates.filter(d => d.startsWith(logMonthPick)) : latest;
+  const fmtMonth = m => `${Number(m.slice(0, 4))}年${Number(m.slice(5, 7))}月`;
   return `
     <div class="review-card">
-      <div class="review-header">
-        <div class="review-title">ほかの日の記録（${list.length}日）</div>
-        ${cur !== todayStr() ? `<button type="button" class="link-btn" data-log-today>今日に戻る</button>` : ""}
+      <div class="review-header"><div class="review-title">ほかの日の記録</div></div>
+      <div class="review-form-field" style="margin-bottom:10px;">
+        <select class="sort-select" data-log-month style="width:100%;">
+          <option value="">直近3日</option>
+          ${months.map(m => `<option value="${m}" ${logMonthPick === m ? "selected" : ""}>${fmtMonth(m)}（${dates.filter(d => d.startsWith(m)).length}日）</option>`).join("")}
+        </select>
       </div>
-      ${shown.map(x => {
-        const tables = getDayTables(x.date);
+      ${shown.map(d => {
+        const tables = getDayTables(d);
         const titles = [...new Set(tables.map(h => {
           const g = games.find(y => slugOf(y) === h.slug);
           return g ? g.jp : h.slug;
         }))];
         const people = new Set(tables.flatMap(historyParticipants));
+        const picked = d === logDate;
         return `
-          <button type="button" class="log-day" data-log-open-date="${x.date}">
-            <div class="log-day-date">${x.date}<i>${tables.length}卓・${people.size}人</i></div>
-            <div class="log-day-games">${titles.length ? titles.join("・") : "まだ記録なし"}</div>
+          <button type="button" class="log-day ${picked ? "picked" : ""}" data-log-open-date="${d}">
+            <div class="log-day-date">${d}<i>${tables.length}卓・${people.size}人</i>${picked ? '<span class="log-today-badge" style="background:var(--text-sub);">表示中</span>' : ""}</div>
+            <div class="log-day-games">${titles.join("・")}</div>
           </button>`;
       }).join("")}
-      ${list.length > logShown
-        ? `<button type="button" class="section-toggle-btn" data-log-more style="margin-top:8px;">もっと見る（残り${list.length - logShown}日）</button>`
-        : ""}
     </div>
   `;
 }
@@ -5977,7 +6037,7 @@ function openTodayLog() {
   logDate = "";                 // 常に今日から見せる
   editingId = ""; editDraft = null;
   const sess = sessionOf(todayStr());
-  logMembersOpen = !!sess && (sess.members || []).length < 2;
+  logMembersOpen = (sess && (sess.members || []).length < 2) ? todayStr() : "";
   location.hash = "#log";
 }
 
@@ -6037,7 +6097,7 @@ function openLightbox(src) {
 document.getElementById("detailView").addEventListener("input", e => {
   if (!e.target.classList.contains("rating-slider")) return;
   const form = e.target.closest("form");
-  const words = e.target.name === "taste" ? TASTE_WORDS : REPLAY_WORDS;
+  const words = e.target.name === "taste" ? TASTE_WORDS : e.target.name === "replay" ? REPLAY_WORDS : RECOMMEND_WORDS;
   const v = parseInt(e.target.value, 10);
   const out = form.querySelector(`[data-val-for="${e.target.name}"]`);
   if (out) out.innerHTML = `<b style="color:${ratingColor(v)}">${v}</b>${words[v] || ""}`;
@@ -6045,9 +6105,20 @@ document.getElementById("detailView").addEventListener("input", e => {
   if (avg) {
     const t = parseInt(form.elements.taste.value, 10);
     const r = parseInt(form.elements.replay.value, 10);
-    avg.textContent = Math.round(((t + r) / 2) * 10) / 10;
+    const o = parseInt(form.elements.recommend.value, 10);
+    avg.textContent = Math.round(((t + r + o) / 3) * 10) / 10;
   }
 });
+
+// 卓が無いまま日付をまたいだ会は残す意味が無いので、起動時に片付ける
+function cleanupEmptySessions() {
+  if (!firebaseReady) return Promise.resolve();
+  const today = todayStr();
+  const empty = sessionsCache.filter(x => x.date && x.date < today && !getDayTables(x.date).length);
+  if (!empty.length) return Promise.resolve();
+  return Promise.all(empty.map(x => db.collection("sessions").doc(x.id).delete().catch(() => {})))
+    .then(() => fetchSessions().then(c => { sessionsCache = c; }));
+}
 
 function hideAllViews() {
   ["controls", "listView", "detailView", "playerView", "membersView", "recommendView", "quizView", "todayView", "logView"]
@@ -6494,14 +6565,21 @@ function rerenderMembers() {
 }
 
 function updateLogHits(el) {
-  logDraft.query = el.value;
-  const box = document.getElementById("logHits");
-  if (box) box.innerHTML = buildLogHits(currentLogDate());
+  const date = el.dataset.logSearch;
+  logQuery[date] = el.value;
+  const box = document.querySelector(`[data-log-hits="${date}"]`);
+  if (box) box.innerHTML = buildLogHits(date);
 }
 ["input", "compositionend", "change", "keyup"].forEach(ev => {
   document.getElementById("logView").addEventListener(ev, e => {
-    if (e.target.id === "logSearch") updateLogHits(e.target);
+    if (e.target.matches("[data-log-search]")) updateLogHits(e.target);
   });
+});
+document.getElementById("logView").addEventListener("change", e => {
+  if (e.target.matches("[data-log-month]")) { logMonthPick = e.target.value; rerenderLog(); }
+});
+document.getElementById("logView").addEventListener("input", e => {
+  if (e.target.matches("[data-table-memo]") && editDraft) editDraft.memo = e.target.value;
 });
 
 document.getElementById("logView").addEventListener("submit", async e => {
@@ -6512,7 +6590,7 @@ document.getElementById("logView").addEventListener("submit", async e => {
   if (!who) return;
   form.elements.who.value = "";
   await registerNameOnServer(who);
-  const sess = sessionOf(currentLogDate());
+  const sess = sessionOf(dateOfEvent(e));
   if (sess) {
     // すでに始まっていれば、その会のメンバーに足す
     const list = (sess.members || []).slice();
@@ -6524,6 +6602,12 @@ document.getElementById("logView").addEventListener("submit", async e => {
   }
   rerenderLog();
 });
+
+// クリックされた要素が、どの日のブロックの中にあるか
+function dateOfEvent(e) {
+  const box = e.target.closest("[data-log-date]");
+  return box ? box.dataset.logDate : todayStr();
+}
 
 document.getElementById("logView").addEventListener("click", async e => {
   const mem = e.target.closest("[data-log-member]");
@@ -6543,11 +6627,11 @@ document.getElementById("logView").addEventListener("click", async e => {
     start.disabled = true;
     start.textContent = "作成中…";
     const id = await createSession({
-      date: currentLogDate(),
+      date: dateOfEvent(e),
       members: logDraft.members.slice(),
       createdBy: me
     });
-    if (id) logMembersOpen = false;
+    if (id) logMembersOpen = "";
     rerenderLog();   // 失敗したときも元のボタンに戻す
     return;
   }
@@ -6556,28 +6640,33 @@ document.getElementById("logView").addEventListener("click", async e => {
   if (open) {
     logDate = open.dataset.logOpenDate;
     editingId = ""; editDraft = null;
-    logMembersOpen = false;
     rerenderLog();
-    window.scrollTo(0, 0);
+    const el = document.getElementById("day-" + logDate);
+    if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
     return;
   }
 
-  if (e.target.closest("[data-log-today]")) {
+  if (e.target.closest("[data-log-unpick]")) {
     logDate = "";
     editingId = ""; editDraft = null;
     rerenderLog();
-    window.scrollTo(0, 0);
     return;
   }
 
-  if (e.target.closest("[data-log-more]")) { logShown += 5; rerenderLog(); return; }
+  const mt = e.target.closest("[data-log-members-toggle]");
+  if (mt) {
+    const d = mt.dataset.logMembersToggle;
+    logMembersOpen = logMembersOpen === d ? "" : d;
+    rerenderLog();
+    return;
+  }
 
   const add = e.target.closest("[data-log-add]");
   if (add) {
     const me = ensureMyName();
     if (!me) return;
     add.disabled = true;
-    const date = currentLogDate();
+    const date = dateOfEvent(e);
     let sess = sessionOf(date);
     if (!sess) {
       const members = [...new Set([me, ...getDayTables(date).flatMap(historyParticipants)])];
@@ -6585,7 +6674,7 @@ document.getElementById("logView").addEventListener("click", async e => {
       if (!id) return;
       sess = getSession(id) || { id, date, members };
     }
-    logDraft.query = "";
+    logQuery[date] = "";
     await addTableToSession(sess, add.dataset.logAdd, (sess.members || [me]).slice(), me);
     rerenderLog();
     toast("この日の記録に足しました");
@@ -6598,25 +6687,19 @@ document.getElementById("logView").addEventListener("click", async e => {
 
   const again = e.target.closest("[data-log-again]");
   if (again) {
-    const prev = getDayTables(currentLogDate()).find(h => h.id === again.dataset.logAgain);
+    const prev = getDayTables(dateOfEvent(e)).find(h => h.id === again.dataset.logAgain);
     const me = ensureMyName();
     if (!prev || !me) return;
-    const sess = sessionOf(currentLogDate()) || { id: "", date: currentLogDate(), members: historyParticipants(prev) };
+    const sess = sessionOf(dateOfEvent(e)) || { id: "", date: dateOfEvent(e), members: historyParticipants(prev) };
     again.disabled = true;
     await addTableToSession(sess, prev.slug, historyParticipants(prev), me);
     rerenderLog();
     return;
   }
 
-  if (e.target.closest('[data-toggle-section="log-members"]')) {
-    logMembersOpen = !logMembersOpen;
-    rerenderLog();
-    return;
-  }
-
   const sm = e.target.closest("[data-sess-member]");
   if (sm) {
-    const sess = sessionOf(currentLogDate());
+    const sess = sessionOf(dateOfEvent(e));
     if (!sess) return;
     const n = sm.dataset.sessMember;
     const list = (sess.members || []).slice();
@@ -6637,9 +6720,9 @@ document.getElementById("logView").addEventListener("click", async e => {
   // 結果を入れる（前回のやり方を引き継いでおく）
   const ed = e.target.closest("[data-table-edit]");
   if (ed) {
-    const h = getDayTables(currentLogDate()).find(x => x.id === ed.dataset.tableEdit);
+    const h = getDayTables(dateOfEvent(e)).find(x => x.id === ed.dataset.tableEdit);
     if (!h) return;
-    const sess0 = sessionOf(currentLogDate());
+    const sess0 = sessionOf(dateOfEvent(e));
     // 結果待ちの卓は仮のメンバーしか入っていないので、その日のメンバーを初期値にする。
     // すでに結果が入っている卓は、実際にいた人をそのまま出す。
     const base = historyHasResult(h)
@@ -6650,7 +6733,8 @@ document.getElementById("logView").addEventListener("click", async e => {
       members: base,
       mode: h.mode || lastModeFor(h.slug),
       winners: (h.winners || []).slice(),
-      coopResult: h.coopResult || ""
+      coopResult: h.coopResult || "",
+      memo: h.memo || ""
     };
     expandedPickers.clear();
     rerenderLog();
@@ -6703,8 +6787,8 @@ document.getElementById("logView").addEventListener("click", async e => {
   if (save && editDraft) {
     const missing = tableMissing(editDraft);
     if (missing) { toast(missing); return; }
-    const h = getDayTables(currentLogDate()).find(x => x.id === save.dataset.tableSave);
-    const sess = sessionOf(currentLogDate()) || { id: "", date: currentLogDate(), members: [] };
+    const h = getDayTables(dateOfEvent(e)).find(x => x.id === save.dataset.tableSave);
+    const sess = sessionOf(dateOfEvent(e)) || { id: "", date: dateOfEvent(e), members: [] };
     if (!h || !sess) { toast("記録先が見つかりませんでした。画面を開き直してください"); return; }
     const me = ensureMyName();
     if (!me) return;
@@ -6719,7 +6803,7 @@ document.getElementById("logView").addEventListener("click", async e => {
       losers: t.mode === "coop" ? [] : t.members.filter(n => !t.winners.includes(n)),
       players: t.members.slice(),
       coopResult: t.mode === "coop" ? t.coopResult : "",
-      guests: "", memo: ""
+      guests: "", memo: (t.memo || "").trim()
     }));
     await deleteHistory(h.slug, h.id);
     editingId = ""; editDraft = null;
@@ -7409,6 +7493,7 @@ function buildBestRated(name) {
         <div class="rating-axes">
           ${x.r.taste != null ? `<span class="rating-axis">好み<b style="color:${ratingColor(ratingTaste(x.r))}">${ratingTaste(x.r)}</b></span>` : ""}
           ${x.r.replay != null ? `<span class="rating-axis">リプレイ性<b style="color:${ratingColor(ratingReplay(x.r))}">${ratingReplay(x.r)}</b></span>` : ""}
+          ${x.r.recommend != null ? `<span class="rating-axis">おすすめ度<b style="color:${ratingColor(ratingRecommend(x.r))}">${ratingRecommend(x.r)}</b></span>` : ""}
           <span class="rating-axis avg">平均<b style="color:${ratingColor(ratingAvg(x.r))}">${ratingAvg(x.r)}</b></span>
         </div>
       </div>
