@@ -1178,9 +1178,10 @@
   .hero-title { grid-area: title; }
   .hero-img { grid-area: img; }
   .hero-body { grid-area: body; }
+  /* さがすのカードと同じ 4:3 の枠。正方形だと写真の上下に余白ができて小さく見える */
   .hero-img {
-    width: 124px;
-    height: 124px;
+    width: 132px;
+    height: 99px;
     object-fit: contain;
     border-radius: 10px;
     background: #f1f2f5;
@@ -2925,7 +2926,7 @@ try {
 // ── 自動更新 ───────────────────────────────
 // iPhoneはHTMLを長く握るので、新しい版が出ていたらURLを変えて読み直す。
 // （同じURLの再読み込みだとキャッシュが返ってきてしまうため）
-const APP_BUILD = "2026-09-11-2015";
+const APP_BUILD = "2026-09-11-2018";
 
 function markVersion(extra) {
   const el = document.getElementById("appVersion");
