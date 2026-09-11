@@ -556,8 +556,8 @@
   .photo-strip { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 6px; }
   .photo-thumb { position: relative; flex-shrink: 0; }
   .photo-thumb img {
-    width: 108px;
-    height: 108px;
+    width: 124px;
+    height: 93px;
     object-fit: cover;
     border-radius: 10px;
     border: 1px solid var(--border);
@@ -2730,7 +2730,7 @@ try {
 // ── 自動更新 ───────────────────────────────
 // iPhoneはHTMLを長く握るので、新しい版が出ていたらURLを変えて読み直す。
 // （同じURLの再読み込みだとキャッシュが返ってきてしまうため）
-const APP_BUILD = "2026-09-11-1415";
+const APP_BUILD = "2026-09-11-1426";
 
 function markVersion(extra) {
   const el = document.getElementById("appVersion");
@@ -4479,6 +4479,39 @@ function deletePhoto(slug, id) {
   }).catch(err => writeFailed(err, "写真の削除"));
 }
 
+// ゲームの写真欄。ボドゲーマのギャラリー（消せない）＋自分たちで足した写真（消せる）。
+function buildGamePhotos(g) {
+  const slug = slugOf(g);
+  const web = (galleryData[slug] || []).map((f, i) => gameImg2(g, "card", i));
+  const mine = getPhotos(slug, "game");
+  return `
+    <div class="review-card">
+      <div class="review-header">
+        <div class="review-title">写真${web.length + mine.length ? `<span class="log-nth">${web.length + mine.length}枚</span>` : ""}</div>
+      </div>
+      ${(web.length || mine.length) ? `<div class="photo-strip">
+        ${web.map((u, i) => `
+          <div class="photo-thumb">
+            <img src="${u}" alt="${g.jp}の写真" data-photo-src="${gameImg2(g, "detail", i)}" loading="lazy">
+          </div>`).join("")}
+        ${mine.map(p => `
+          <div class="photo-thumb">
+            <img src="${p.data}" alt="${g.jp}の写真" data-photo-view="${p.id}" data-photo-slug="${slug}">
+            <button type="button" class="photo-del ${pendingPhotoDelete === p.id ? "confirm" : ""}"
+                    data-photo-del="${p.id}" data-photo-slug="${slug}">${pendingPhotoDelete === p.id ? "消す？" : "×"}</button>
+          </div>`).join("")}
+      </div>` : `<div class="review-count">まだ写真がありません。</div>`}
+      <label class="photo-add">
+        <input type="file" accept="image/*" data-photo-add="game" data-photo-slug="${slug}" hidden>
+        📷 写真を追加
+      </label>
+      <div class="review-count" style="margin-top:8px;">
+        ボドゲーマから取り込んだ写真は消せません。自分たちで足した写真は × から消せます。
+      </div>
+    </div>
+  `;
+}
+
 // 写真の並びと追加ボタン。どの場所のものかは kind で分ける。
 function buildPhotoBlock(slug, kind, label) {
   const list = getPhotos(slug, kind);
@@ -4715,6 +4748,7 @@ function showDetail(g) {
       <button type="button" class="detail-act" data-jump-open="quickref">📕<i>ルール早見表</i></button>
       <button type="button" class="detail-act" data-go-log>📝<i>記録を見る</i></button>
     </div>
+    ${buildGamePhotos(g)}
     ${buildClassGrid(g)}
     ${buildTagsAndPitch(g)}
     ${buildWorldviewSection(g)}
