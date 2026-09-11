@@ -719,7 +719,6 @@
   /* メンバー行：みんな行より一回り小さく、感想はその下に小さめの文字で */
   .rating-summary tr.member th { font-size: 12.5px; white-space: nowrap; }
   .rating-summary tr.member th a { color: var(--navy); text-decoration: none; border-bottom: 1px dotted var(--text-sub); }
-  .rating-summary tr.member th .fix { font-size: 11px; margin-left: 6px; padding: 0; }
   .rating-summary tr.member td { font-size: 15px; padding: 6px 2px; }
   .rating-summary tr.member td.total { font-size: 16px; background: none; }
   .rating-summary tr.member td.na { font-size: 12px; }
@@ -2926,7 +2925,7 @@ try {
 // ── 自動更新 ───────────────────────────────
 // iPhoneはHTMLを長く握るので、新しい版が出ていたらURLを変えて読み直す。
 // （同じURLの再読み込みだとキャッシュが返ってきてしまうため）
-const APP_BUILD = "2026-09-11-2009";
+const APP_BUILD = "2026-09-11-2015";
 
 function markVersion(extra) {
   const el = document.getElementById("appVersion");
@@ -2995,6 +2994,20 @@ const HISTORY_CACHE_KEY = "bg_history_cache_v1";
 const SESSIONS_CACHE_KEY = "bg_sessions_cache_v1";
 const INTERESTS_CACHE_KEY = "bg_interests_cache_v1";
 const MY_NAME_KEY = "bg_myname";
+// 名前は全角6文字（半角12文字）まで。評価表などで名前が2行に折れないようにするための上限。
+const NAME_MAX_WIDTH = 6;
+function nameWidth(str) {
+  return [...str].reduce((w, ch) => w + (/[ -~｡-ﾟ]/.test(ch) ? 0.5 : 1), 0);
+}
+function normalizeName(raw) {
+  const name = (raw || "").trim().replace(/\s+/g, " ");
+  if (!name) return null;
+  if (nameWidth(name) > NAME_MAX_WIDTH) {
+    alert(`名前は全角${NAME_MAX_WIDTH}文字（半角${NAME_MAX_WIDTH * 2}文字）までにしてください`);
+    return null;
+  }
+  return name;
+}
 const REC_MEMBERS_KEY = "bg_rec_members";
 const LAST_LEVEL_KEY = "bg_last_level";
 
@@ -4265,9 +4278,8 @@ function renderUserBadge() {
 async function goToMyPage() {
   let name = getMyName();
   if (!name) {
-    const next = prompt("マイページを作るには名前が必要です。\n表示名を入力してください");
-    if (!next || !next.trim()) return;
-    name = next.trim();
+    name = normalizeName(prompt(`マイページを作るには名前が必要です。\n表示名を入力してください（全角${NAME_MAX_WIDTH}文字まで）`));
+    if (!name) return;
     localStorage.setItem(MY_NAME_KEY, name);
     await registerNameOnServer(name);
     renderUserBadge();
@@ -4277,12 +4289,12 @@ async function goToMyPage() {
 
 async function changeMyName() {
   const cur = getMyName();
-  const next = prompt("表示名を変更", cur || "");
-  if (!next || !next.trim()) return;
-  localStorage.setItem(MY_NAME_KEY, next.trim());
-  await registerNameOnServer(next.trim());
+  const next = normalizeName(prompt(`表示名を変更（全角${NAME_MAX_WIDTH}文字まで）`, cur || ""));
+  if (!next) return;
+  localStorage.setItem(MY_NAME_KEY, next);
+  await registerNameOnServer(next);
   renderUserBadge();
-  location.hash = `#player/${encodeURIComponent(next.trim())}`;
+  location.hash = `#player/${encodeURIComponent(next)}`;
 }
 
 document.querySelector('[data-nav="mypage"]').addEventListener("click", goToMyPage);
@@ -4457,7 +4469,7 @@ function buildRatingSummary(slug) {
     const mine = r.name === me;
     return `
       <tr class="member ${mine ? "mine" : ""} ${extra ? "extra" : ""}">
-        <th><a href="#player/${encodeURIComponent(r.name)}">${r.name}</a>${mine ? `<button type="button" class="link-btn fix" data-edit-rating="${r.id}" data-edit-slug="${slug}">直す</button>` : ""}</th>
+        <th><a href="#player/${encodeURIComponent(r.name)}">${r.name}</a></th>
         ${ra == null ? `<td class="na total">—</td>` : `<td class="total" style="color:${ratingColor(ra)}">${ra}</td>`}
         ${cell(rt)}${cell(rv)}${cell(ro)}
       </tr>
@@ -5044,9 +5056,8 @@ function applyPendingDetailSection() {
 function ensureMyName() {
   let name = getMyName();
   if (name) return name;
-  const next = prompt("表示名を入力してください");
-  if (!next || !next.trim()) return null;
-  name = next.trim();
+  name = normalizeName(prompt(`表示名を入力してください（全角${NAME_MAX_WIDTH}文字まで）`));
+  if (!name) return null;
   localStorage.setItem(MY_NAME_KEY, name);
   renderUserBadge();
   registerNameOnServer(name);   // 完了を待たなくてよい（この後の保存でも名前は残るため）
@@ -5234,9 +5245,10 @@ document.getElementById("detailView").addEventListener("click", e => {
   const btn = e.target.closest("[data-change-submitter]");
   if (!btn) return;
   const current = getMyName();
-  const next = prompt("表示名を変更", current);
-  if (next && next.trim()) {
-    localStorage.setItem(MY_NAME_KEY, next.trim());
+  const next = normalizeName(prompt(`表示名を変更（全角${NAME_MAX_WIDTH}文字まで）`, current));
+  if (next) {
+    localStorage.setItem(MY_NAME_KEY, next);
+    registerNameOnServer(next);
     renderUserBadge();
     const m = location.hash.match(/^#game\/(.+)$/);
     if (m) {
@@ -5548,7 +5560,7 @@ function buildLogEmpty(date) {
     ${pickerGrid(names, "start", n => picked.includes(n), n => `data-log-member="${n}"`)}
     <form class="review-form" data-log-newmember style="margin-top:6px;">
       <div class="review-form-row">
-        <input name="who" type="text" placeholder="いない人はここに名前を入れて追加" maxlength="20">
+        <input name="who" type="text" placeholder="いない人はここに名前を入れて追加（全角6文字まで）" maxlength="12">
         <button type="submit">追加</button>
       </div>
     </form>
@@ -5586,7 +5598,7 @@ function buildLogSession(sess, date, tables) {
         n => `data-sess-member="${n}"`)}
       <form class="review-form" data-log-newmember>
         <div class="review-form-row">
-          <input name="who" type="text" placeholder="はじめての人はここに名前を入れる" maxlength="20">
+          <input name="who" type="text" placeholder="はじめての人はここに名前を入れる（全角6文字まで）" maxlength="12">
           <button type="submit">追加</button>
         </div>
       </form>
@@ -6877,7 +6889,7 @@ document.getElementById("logView").addEventListener("submit", async e => {
   const form = e.target.closest("[data-log-newmember]");
   if (!form) return;
   e.preventDefault();
-  const who = form.elements.who.value.trim();
+  const who = normalizeName(form.elements.who.value);
   if (!who) return;
   form.elements.who.value = "";
   await registerNameOnServer(who);
