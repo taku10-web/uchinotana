@@ -740,6 +740,8 @@
   .rating-summary:not(.open) tr.extra { display: none; }
   .rating-summary tr.more td { border-top: 1px solid var(--border); text-align: left; padding: 6px 0 4px; font-size: 12px; }
   .rating-summary tr.more .link-btn { font-size: 12px; padding: 0; }
+  .rating-summary td.memo-only { text-align: left; font-size: 11.5px; padding-left: 6px; }
+  .rating-summary tr.memo td i.memo-date { display: block; font-style: normal; font-size: 10.5px; color: var(--text-sub); opacity: .8; margin-top: 2px; }
   .rating-summary tr.memo td {
     border-top: none;
     text-align: left;
@@ -1794,6 +1796,9 @@
   .card-sec .card-about { margin: 0; }
   .card-genres { gap: 5px; margin-top: 1px; }
   .card-memo.one { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .card-memo.folded { display: none; }
+  .card-memos.open .card-memo.folded { display: block; white-space: normal; }
+  .card-memos.open .card-memo.two { -webkit-line-clamp: unset; }
   .card-memo.two {
     display: -webkit-box;
     -webkit-line-clamp: 2;
@@ -2968,7 +2973,7 @@ try {
 // ── 自動更新 ───────────────────────────────
 // iPhoneはHTMLを長く握るので、新しい版が出ていたらURLを変えて読み直す。
 // （同じURLの再読み込みだとキャッシュが返ってきてしまうため）
-const APP_BUILD = "2026-09-11-2307";
+const APP_BUILD = "2026-09-11-2323";
 
 function markVersion(extra) {
   const el = document.getElementById("appVersion");
@@ -3566,8 +3571,8 @@ function render() {
     const { genreTags } = getGameTags(g);
     const r = rulesData[slug];
     const worldview = (r && r.worldview) || "";
-    // 評価が高い人の感想を2つまで。2つなら1行ずつ、1つなら2行まで
-    const memos = topMemos(slug, 2);
+    // 感想は評価が高い人のものを先頭に。2人以上いれば1人目だけ見せて残りは畳む
+    const memos = gameMemos(slug);
     const iLike = myName && getInterests(slug).some(i => i.name === myName);
     const wanters = getWanters(slug);
     const histCount = getHistory(slug).length;
@@ -3595,8 +3600,9 @@ function render() {
           ${worldview.length > 46 ? `<button type="button" class="card-more-about" data-toggle-about="${slug}">${expandedCards.has(slug) ? "たたむ" : "つづきを読む"}</button>` : ""}
         </div></div>` : ""}
         ${wanters.length ? `<div class="card-sec"><span class="card-sec-label">遊びたい人</span><div class="card-sec-body card-wanters">${wanters.map(w => `<b>${w.name}</b>`).join("")}</div></div>` : ""}
-        ${memos.length ? `<div class="card-sec"><span class="card-sec-label">みんなの感想</span><div class="card-sec-body">
-          ${memos.map(m => `<div class="card-memo ${memos.length === 1 ? "two" : "one"}"><i>${m.name}</i>「${m.memo}」</div>`).join("")}
+        ${memos.length ? `<div class="card-sec"><span class="card-sec-label">みんなの感想</span><div class="card-sec-body card-memos">
+          ${memos.map((m, i) => `<div class="card-memo ${i === 0 ? "two" : "one folded"}"><i>${m.name}</i>「${m.memo}」</div>`).join("")}
+          ${memos.length > 1 ? `<button type="button" class="card-more-about" data-toggle-memos="1">ほか${memos.length - 1}件の感想</button>` : ""}
         </div></div>` : ""}
       </a>
     </div>
@@ -3828,6 +3834,14 @@ document.getElementById("cardList").addEventListener("click", async e => {
   const cls = e.target.closest("[data-class-filter]");
   if (cls) { e.preventDefault(); goToClassFilter(cls.dataset.classFilter, cls.dataset.value); return; }
 
+  const moreMemos = e.target.closest("[data-toggle-memos]");
+  if (moreMemos) {
+    e.preventDefault();
+    const box = moreMemos.closest(".card-memos");
+    const open = box.classList.toggle("open");
+    moreMemos.textContent = open ? "たたむ" : `ほか${box.querySelectorAll(".card-memo.folded").length}件の感想`;
+    return;
+  }
   const moreAbout = e.target.closest("[data-toggle-about]");
   if (moreAbout) {
     e.preventDefault();
@@ -4284,10 +4298,20 @@ function ratingAvg(r) {
   return Math.round((axes.reduce((a, b) => a + b, 0) / axes.length) * 10) / 10;
 }
 // 感想付きの評価を、評価が高い人から順に n 件
+// そのゲームの感想を全部まとめる。評価に付けた感想と、戦績を入れたときのメモの両方を「感想」として扱う
+// 並びは評価が高い人から。戦績メモだけの人（評価なし）は評価つきの後ろ
+function gameMemos(slug) {
+  const list = [];
+  getReviews(slug).forEach(r => { if (r.memo) list.push({ name: r.name, memo: r.memo, score: ratingAvg(r), at: r.createdAt?.seconds || 0, id: r.id, from: "rating" }); });
+  getHistory(slug).forEach(h => {
+    if (!h.memo || !h.name) return;
+    const r = getReviews(slug).find(x => x.name === h.name);
+    list.push({ name: h.name, memo: h.memo, score: r ? ratingAvg(r) : null, at: h.createdAt?.seconds || 0, id: h.id, from: "history", date: h.date || "" });
+  });
+  return list.sort((a, b) => (b.score ?? -1) - (a.score ?? -1) || b.at - a.at);
+}
 function topMemos(slug, n = 2) {
-  return getReviews(slug).filter(r => r.memo)
-    .sort((a, b) => (ratingAvg(b) ?? -1) - (ratingAvg(a) ?? -1) || (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0))
-    .slice(0, n);
+  return gameMemos(slug).slice(0, n);
 }
 function ratingHasAxes(r) {
   return r.taste != null || r.replay != null || r.recommend != null;
@@ -4562,20 +4586,35 @@ function buildRatingSummary(slug) {
   const all = averageScore(slug);
   // メンバーごとの行は評価が高い順。名前・総合・好み・リプレイ性・おすすめ度を1行に、感想はその下に小さく
   // 並び：みんな行は常時。次に1行だけ（自分が評価済みなら自分、なければ一番評価が高い人）。残りは折りたたみ
-  const others = reviews.filter(r => r.name !== me).sort((a, b) => (ratingAvg(b) ?? -1) - (ratingAvg(a) ?? -1));
-  const mineR = reviews.find(r => r.name === me);
+  // 戦績のメモも感想として、その人の行の下に出す。評価はないがメモだけある人は「感想のみ」の行にする
+  const memosAll = gameMemos(slug);
+  const memoOnlyNames = [...new Set(memosAll.filter(m => !reviews.some(r => r.name === m.name)).map(m => m.name))];
+  const memoOnly = memoOnlyNames.map(name => ({ name, memoOnly: true }));
+  const others = reviews.filter(r => r.name !== me).sort((a, b) => (ratingAvg(b) ?? -1) - (ratingAvg(a) ?? -1))
+    .concat(memoOnly.filter(x => x.name !== me));
+  const mineR = reviews.find(r => r.name === me) || memoOnly.find(x => x.name === me);
   const shown = mineR ? [mineR] : others.slice(0, 1);
   const hidden = mineR ? others : others.slice(1);
+  const memoRows = (name, extra) => memosAll.filter(m => m.name === name)
+    .map(m => `<tr class="memo ${extra ? "extra" : ""}"><td colspan="5">${m.memo}${m.from === "history" && m.date ? `<i class="memo-date">${m.date} の記録より</i>` : ""}</td></tr>`).join("");
   const memberRows = (list, extra) => list.map(r => {
-    const rt = axisValue(r, "taste"), rv = axisValue(r, "replay"), ro = axisValue(r, "recommend"), ra = ratingAvg(r);
     const mine = r.name === me;
+    if (r.memoOnly) {
+      return `
+      <tr class="member ${mine ? "mine" : ""} ${extra ? "extra" : ""}">
+        <th><a href="#player/${encodeURIComponent(r.name)}">${r.name}</a></th>
+        <td colspan="4" class="na memo-only">感想のみ</td>
+      </tr>
+      ${memoRows(r.name, extra)}`;
+    }
+    const rt = axisValue(r, "taste"), rv = axisValue(r, "replay"), ro = axisValue(r, "recommend"), ra = ratingAvg(r);
     return `
       <tr class="member ${mine ? "mine" : ""} ${extra ? "extra" : ""}">
         <th><a href="#player/${encodeURIComponent(r.name)}">${r.name}</a></th>
         ${ra == null ? `<td class="na total">—</td>` : `<td class="total" style="color:${ratingColor(ra)}">${ra}</td>`}
         ${cell(rt)}${cell(rv)}${cell(ro)}
       </tr>
-      ${r.memo ? `<tr class="memo ${extra ? "extra" : ""}"><td colspan="5">${r.memo}</td></tr>` : ""}`;
+      ${memoRows(r.name, extra)}`;
   }).join("");
   return `
     <table class="rating-summary">
@@ -4666,7 +4705,6 @@ function buildHistoryItem(h, slug) {
           ${p.length ? `<div class="review-item-members">👥 ${p.join("・")}</div>` : ""}
         `;
       })()}
-      ${h.memo ? `<div class="review-item-memo">${h.memo}</div>` : ""}
     </div>
   `;
 }
