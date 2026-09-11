@@ -942,6 +942,10 @@
   .member-card-exp { font-size: 11.5px; color: #a8d3e8; margin-top: 8px; }
 
   /* ゲーム記録 */
+  .followup { background: var(--accent-soft); border: 1px solid var(--accent); border-radius: 12px; padding: 12px 14px; margin-bottom: 12px; }
+  .followup-body { font-size: 13.5px; line-height: 1.6; margin-bottom: 10px; }
+  .followup-acts { display: flex; align-items: center; gap: 14px; }
+  .followup-acts .detail-cta { flex: 1; }
   .log-row {
     display: flex;
     align-items: center;
@@ -2973,7 +2977,7 @@ try {
 // ── 自動更新 ───────────────────────────────
 // iPhoneはHTMLを長く握るので、新しい版が出ていたらURLを変えて読み直す。
 // （同じURLの再読み込みだとキャッシュが返ってきてしまうため）
-const APP_BUILD = "2026-09-11-2323";
+const APP_BUILD = "2026-09-12-0025";
 
 function markVersion(extra) {
   const el = document.getElementById("appVersion");
@@ -4669,7 +4673,7 @@ function buildRatingForm(slug) {
         <div class="rating-avg-preview">平均 <b data-rating-avg>${Math.round(((t + v + o) / 3) * 10) / 10}</b></div>
         <div class="review-form-field">
           <label>感想・おすすめポイント（任意）</label>
-          <textarea name="memo" rows="3" maxlength="400" placeholder="どこが良かったか、どんな人に合うか、気をつけること など">${mine && mine.memo ? mine.memo : ""}</textarea>
+          <textarea name="memo" rows="3" maxlength="400" placeholder="どこが良かったか、どんな人に合うか、気をつけること など">${mine && mine.memo ? mine.memo : ratingMemoPrefill}</textarea>
         </div>
         <button type="submit">${mine ? "評価を直す" : "評価を送る"}</button>
       </form>
@@ -4677,6 +4681,7 @@ function buildRatingForm(slug) {
 }
 
 let ratingFormOpen = false;
+let ratingMemoPrefill = "";   // 記録のメモから評価に進んだとき、感想欄に引き継ぐ
 
 function buildHistoryItem(h, slug) {
   return `
@@ -5143,7 +5148,7 @@ document.getElementById("headEdit").addEventListener("click", () => {
 });
 
 function showDetail(g) {
-  if (slugOf(g) !== lastDetailSlug) { detailEditOpen = false; pendingPhotoDelete = ""; lastDetailSlug = slugOf(g); }
+  if (slugOf(g) !== lastDetailSlug) { detailEditOpen = false; pendingPhotoDelete = ""; lastDetailSlug = slugOf(g); if (pendingDetailSection !== "rating") { ratingMemoPrefill = ""; ratingFormOpen = false; } }
   document.getElementById("controls").style.display = "none";
   document.getElementById("listView").style.display = "none";
   document.getElementById("playerView").style.display = "none";
@@ -5244,8 +5249,9 @@ function applyPendingDetailSection() {
       const body = document.querySelector('[data-section="history"]');
       if (body && body.style.display === "none") head && head.click();
     }
-    const anchor = document.getElementById(target === "history" ? "detailRecord" : "detailRecord");
-    if (anchor) anchor.scrollIntoView({ behavior: "smooth", block: "start" });
+    const form = target === "rating" ? document.querySelector("[data-rating-slug]") : null;
+    const anchor = form || document.getElementById("detailRecord");
+    if (anchor) anchor.scrollIntoView({ behavior: "smooth", block: form ? "center" : "start" });
   }, 60);
 }
 
@@ -5349,7 +5355,7 @@ document.getElementById("detailView").addEventListener("submit", async e => {
     submitBtn.disabled = true;
     submitBtn.textContent = "送信中…";
     await withLevelUp(() => addRating(slug, name, taste, replay, memo, recommend));
-    ratingFormOpen = false;
+    ratingFormOpen = false; ratingMemoPrefill = "";
     const g = games.find(x => slugOf(x) === slug);
     if (g) showDetail(g);
     toast("評価を保存しました。あとから直せます");
@@ -5770,6 +5776,25 @@ function buildLogView() {
   `;
 }
 
+// 結果を記録した直後に出す「次は評価」の案内。{slug, date}。閉じるか別の日を開くまで出しておく
+let logFollowUp = null;
+function buildLogFollowUp(date) {
+  if (!logFollowUp || logFollowUp.date !== date) return "";
+  const g = games.find(x => slugOf(x) === logFollowUp.slug);
+  if (!g) return "";
+  const mine = myRating(logFollowUp.slug);
+  const body = mine == null
+    ? `<b>${g.jp}</b> を記録しました。遊んだ直後の印象が一番正確です。<b>評価と感想</b>も残しませんか？`
+    : `<b>${g.jp}</b> を記録しました。あなたの評価は <b>総合 ${mine}</b>。今回遊んで印象が変わったなら、評価を見直しておきましょう。`;
+  return `
+    <div class="followup">
+      <div class="followup-body">${body}</div>
+      <div class="followup-acts">
+        <button type="button" class="detail-cta detail-cta-primary" data-followup-rate="${logFollowUp.slug}" style="margin:0;">${mine == null ? "評価する" : "評価を直す"}</button>
+        <button type="button" class="link-btn" data-followup-close>あとで</button>
+      </div>
+    </div>`;
+}
 function buildDayBlock(date, isToday) {
   const sess = sessionOf(date);
   const tables = getDayTables(date);
@@ -5779,6 +5804,7 @@ function buildDayBlock(date, isToday) {
         <div class="review-title">${date}${isToday ? "<span class=\"log-today-badge\">今日</span>" : ""}</div>
         ${!isToday ? `<button type="button" class="link-btn" data-log-unpick>とじる</button>` : ""}
       </div>
+      ${buildLogFollowUp(date)}
       ${(sess || tables.length) ? buildLogSession(sess, date, tables) : buildLogEmpty(date)}
     </div>
   `;
@@ -7468,12 +7494,22 @@ document.getElementById("logView").addEventListener("click", async e => {
     }));
     await deleteHistory(h.slug, h.id);
     editingId = ""; editDraft = null;
+    logFollowUp = { slug: h.slug, date: sess.date, memo: (t.memo || "").trim() };
     rerenderLog();
-    if (myRating(h.slug) == null) toast("記録しました。「評価する」からそのゲームの評価に進めます");
-    else toast("記録しました");
+    toast("記録しました");
     return;
   }
 
+  const fuRate = e.target.closest("[data-followup-rate]");
+  if (fuRate) {
+    const slug = fuRate.dataset.followupRate;
+    ratingMemoPrefill = (logFollowUp && logFollowUp.memo) || "";
+    logFollowUp = null;
+    ratingFormOpen = true;
+    goToDetailSection(slug, "rating");
+    return;
+  }
+  if (e.target.closest("[data-followup-close]")) { logFollowUp = null; rerenderLog(); return; }
   const del = e.target.closest("[data-log-del]");
   if (del) {
     // 1回目は確認、2回目で消す。ダイアログに頼らないので端末を選ばない。
