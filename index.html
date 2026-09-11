@@ -106,6 +106,19 @@
     font-size: 14px;
     color: #c9dfec;
   }
+  header.detail-mode .count { display: none; }
+  .head-edit {
+    align-self: center;
+    border: 1px solid rgba(255,255,255,0.55);
+    background: rgba(255,255,255,0.1);
+    color: #fff;
+    border-radius: 999px;
+    padding: 5px 13px;
+    font-size: 12.5px;
+    font-weight: 700;
+    cursor: pointer;
+  }
+  .head-edit.on { background: #fff; color: var(--navy); border-color: #fff; }
   .user-badge {
     margin-top: 8px;
     font-size: 13px;
@@ -1102,18 +1115,24 @@
   .hero-class > span { display: block; font-size: 10.5px; font-weight: 700; color: var(--text-sub); margin-bottom: 3px; }
   .hero-class .tag-row { gap: 4px; }
   .tag-chip.mini { font-size: 11px; padding: 3px 8px; }
-  .detail-act-row.four { grid-template-columns: repeat(4, 1fr); }
+  /* 文字数に合わせて列幅を配分（早見表は短いので狭く、遊んでみたいは広く） */
+  .detail-act-row.four { grid-template-columns: 1.05fr 0.95fr 0.8fr 1.2fr; }
   .detail-act.rated { background: var(--accent); border-color: var(--accent); color: #fff; }
   .detail-act.rated i { color: #dff0fb; }
   .detail-act-row.plain .detail-act {
-    font-size: 13.5px;
+    font-size: 13px;
     font-weight: 700;
-    padding: 12px 2px;
+    letter-spacing: -0.02em;
+    padding: 12px 1px;
     line-height: 1.2;
     white-space: nowrap;
   }
   .detail-act-row.plain .detail-act-today { color: var(--accent); }
   .detail-act-row.plain .detail-act-today.on-today { color: #fff; }
+  .detail-act-row.plain .detail-act.done {
+    display: flex; align-items: center; justify-content: center;
+    background: var(--bg); color: var(--text-sub); border-color: var(--border); cursor: default;
+  }
   .want-btn {
     border: 1px solid var(--accent);
     background: var(--card-bg);
@@ -2751,6 +2770,7 @@
 <header>
   <h1>うちのボードゲーム棚</h1>
   <div class="count"><span id="totalCount">-</span>件</div>
+  <button type="button" class="head-edit" id="headEdit" hidden>編集</button>
 </header>
 
 <nav class="tab-bar" id="tabBar">
@@ -2917,7 +2937,7 @@ try {
 // ── 自動更新 ───────────────────────────────
 // iPhoneはHTMLを長く握るので、新しい版が出ていたらURLを変えて読み直す。
 // （同じURLの再読み込みだとキャッシュが返ってきてしまうため）
-const APP_BUILD = "2026-09-11-1911";
+const APP_BUILD = "2026-09-11-1918";
 
 function markVersion(extra) {
   const el = document.getElementById("appVersion");
@@ -4923,6 +4943,20 @@ function buildInterestSection(g) {
 }
 
 let lastDetailSlug = "";
+// ヘッダー右の「編集」ボタン。詳細ページのときだけ出す（件数と入れ替え）。
+function setHeaderEdit(show) {
+  const btn = document.getElementById("headEdit");
+  btn.hidden = !show;
+  btn.classList.toggle("on", show && detailEditOpen);
+  btn.textContent = show && detailEditOpen ? "閉じる" : "編集";
+  document.querySelector("header").classList.toggle("detail-mode", show);
+}
+document.getElementById("headEdit").addEventListener("click", () => {
+  detailEditOpen = !detailEditOpen;
+  const g = currentDetailGame();
+  if (g) showDetail(g);
+});
+
 function showDetail(g) {
   if (slugOf(g) !== lastDetailSlug) { detailEditOpen = false; pendingPhotoDelete = ""; lastDetailSlug = slugOf(g); }
   document.getElementById("controls").style.display = "none";
@@ -4935,6 +4969,7 @@ function showDetail(g) {
   document.getElementById("quizView").style.display = "none";
   const dv = document.getElementById("detailView");
   dv.style.display = "block";
+  setHeaderEdit(true);
 
   const slug = slugOf(g);
   const avg = averageScore(slug);
@@ -4949,16 +4984,12 @@ function showDetail(g) {
     <div class="hero">
       <div class="hero-title-row">
         <h1 class="detail-title hero-title ${titleSizeClass(g.jp)}">${g.jp}</h1>
-        <button type="button" class="hero-edit ${detailEditOpen ? "on" : ""}" data-detail-edit>${detailEditOpen ? "閉じる" : "編集"}</button>
       </div>
       <img class="hero-img" src="${gameImg(g, "detail")}" alt="${g.jp}" data-photo-src="${gameImg(g, "detail")}" onerror="this.style.visibility='hidden'">
       <div class="hero-body">
         <div class="hero-specs">
           <span>${g.playersRaw || "人数不明"}</span>
           <span>${g.timeRaw || "時間不明"}</span>
-          ${played
-            ? `<span class="want-btn done">遊んだ</span>`
-            : `<button type="button" class="want-btn ${iLike ? "on" : ""}" data-toggle-interest="${slug}">${iLike ? "✓ 遊んでみたい" : "遊んでみたい"}</button>`}
         </div>
         ${(() => {
           const t = getGameTags(g);
@@ -4976,7 +5007,9 @@ function showDetail(g) {
       <button type="button" class="detail-act detail-act-today ${todayCount ? "on-today" : ""}" data-played="${slug}">今日やる！</button>
       <button type="button" class="detail-act ${mine != null ? "rated" : ""}" data-jump="detailRecord">${mine != null ? "評価済み" : "評価する"}</button>
       <button type="button" class="detail-act" data-jump-open="quickref">早見表</button>
-      <button type="button" class="detail-act" data-jump-open="history">過去戦績</button>
+      ${played
+        ? `<span class="detail-act done">遊んだ</span>`
+        : `<button type="button" class="detail-act want ${iLike ? "rated" : ""}" data-toggle-interest="${slug}">遊んでみたい</button>`}
     </div>
     ${buildWorldviewSection(g)}
     <div id="detailRecord"></div>
@@ -8021,6 +8054,7 @@ document.getElementById("playerView").addEventListener("change", e => {
 });
 
 function router() {
+  setHeaderEdit(false);
   const gameMatch = location.hash.match(/^#game\/(.+)$/);
   if (gameMatch) {
     const slug = decodeURIComponent(gameMatch[1]);
