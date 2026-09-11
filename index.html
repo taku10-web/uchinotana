@@ -2461,15 +2461,12 @@
     font-size: 13.5px;
     color: var(--text-sub);
   }
-  /* MYボドゲ棚：3列の表紙を棚板の上に並べる */
-  .shelf { padding: 6px 4px 0; }
-  .shelf-row { position: relative; display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; padding: 0 4px 14px; margin-bottom: 14px; }
-  .shelf-box {
-    display: block; aspect-ratio: 4 / 3; border-radius: 8px; overflow: hidden;
-    background: #f1f2f5; box-shadow: 0 6px 12px rgba(20,40,60,0.22); position: relative; z-index: 1;
-  }
-  .shelf-box img { width: 100%; height: 100%; object-fit: contain; display: block; }
-  .shelf-box.empty { background: rgba(255,255,255,0.35); box-shadow: none; border: 1px dashed var(--border); }
+  /* MYボドゲ棚：白い壁に表紙を並べ、下に棚板。画像の白い余白と壁を同じ白にして境目を消す */
+  .shelf { padding: 10px 6px 0; background: #fff; border-radius: 10px; }
+  .shelf-row { position: relative; display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; padding: 0 4px 16px; margin-bottom: 12px; align-items: end; }
+  .shelf-box { display: block; aspect-ratio: 4 / 3; position: relative; z-index: 1; background: #fff; }
+  .shelf-box img { width: 100%; height: 100%; object-fit: contain; display: block; background: #fff; }
+  .shelf-box.empty { background: #fff; }
   .shelf-board {
     position: absolute; left: -6px; right: -6px; bottom: 0; height: 12px; border-radius: 3px;
     background: linear-gradient(#c49768, #a87a4c); box-shadow: 0 4px 0 #7d5530, 0 8px 10px rgba(0,0,0,0.15);
@@ -2942,7 +2939,7 @@ try {
 // ── 自動更新 ───────────────────────────────
 // iPhoneはHTMLを長く握るので、新しい版が出ていたらURLを変えて読み直す。
 // （同じURLの再読み込みだとキャッシュが返ってきてしまうため）
-const APP_BUILD = "2026-09-11-2048";
+const APP_BUILD = "2026-09-11-2109";
 
 function markVersion(extra) {
   const el = document.getElementById("appVersion");
@@ -7858,9 +7855,8 @@ async function exportShelfImage(name) {
   const H = titleH + rows * rowH + pad;
   const cv = document.createElement("canvas"); cv.width = W; cv.height = H;
   const ctx = cv.getContext("2d");
-  // 壁
-  const wall = ctx.createLinearGradient(0, 0, 0, H); wall.addColorStop(0, "#eef6fb"); wall.addColorStop(1, "#d9eaf4");
-  ctx.fillStyle = wall; ctx.fillRect(0, 0, W, H);
+  // 壁は画像の余白と同じ白にして、箱だけが棚に乗って見えるようにする
+  ctx.fillStyle = "#ffffff"; ctx.fillRect(0, 0, W, H);
   // タイトル
   ctx.fillStyle = "#1f3a52"; ctx.font = "bold 52px -apple-system, 'Hiragino Sans', sans-serif"; ctx.textBaseline = "middle";
   ctx.fillText(`${name}のボドゲ棚`, pad, 70);
@@ -7878,16 +7874,10 @@ async function exportShelfImage(name) {
       const x = list[r * SHELF_COLS + c]; if (!x) continue;
       const im = imgs[r * SHELF_COLS + c];
       const bx = pad + c * (boxW + gap);
-      // 影
-      ctx.save(); ctx.shadowColor = "rgba(0,0,0,0.25)"; ctx.shadowBlur = 18; ctx.shadowOffsetY = 8;
-      ctx.fillStyle = "#fff"; roundRect(ctx, bx, top + 20, boxW, boxH, 14); ctx.fill(); ctx.restore();
-      ctx.save(); roundRect(ctx, bx, top + 20, boxW, boxH, 14); ctx.clip();
-      ctx.fillStyle = "#f1f2f5"; ctx.fillRect(bx, top + 20, boxW, boxH);
       if (im) {
         const s = Math.min(boxW / im.width, boxH / im.height), dw = im.width * s, dh = im.height * s;
         ctx.drawImage(im, bx + (boxW - dw) / 2, top + 20 + (boxH - dh) / 2, dw, dh);
       }
-      ctx.restore();
     }
   }
   let url;
@@ -7905,12 +7895,6 @@ async function exportShelfImage(name) {
     <div class="lightbox-hint">画像の外をタップで閉じる</div>`;
   el.classList.add("on");
 }
-function roundRect(ctx, x, y, w, h, r) {
-  ctx.beginPath();
-  ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r);
-  ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath();
-}
-
 // 称号はタップで獲得条件を出す。数が多いので、付けているものを先頭に並べる。
 // 名前のすぐ下に出す、選んだ称号3つ＋編集ボタン
 function buildTitleStrip(name, isMe, shownTitles, earnedCount) {
