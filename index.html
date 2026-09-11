@@ -2804,7 +2804,7 @@ try {
 // ── 自動更新 ───────────────────────────────
 // iPhoneはHTMLを長く握るので、新しい版が出ていたらURLを変えて読み直す。
 // （同じURLの再読み込みだとキャッシュが返ってきてしまうため）
-const APP_BUILD = "2026-09-11-1514";
+const APP_BUILD = "2026-09-11-1647";
 
 function markVersion(extra) {
   const el = document.getElementById("appVersion");
@@ -4230,7 +4230,7 @@ function buildRatingItem(r, slug) {
   return `
     <div class="review-item">
       <div class="review-item-top">
-        <span class="review-item-name"><a href="#player/${encodeURIComponent(r.name)}">${r.name}</a></span>
+        <span class="review-item-name"><a href="#player/${encodeURIComponent(r.name)}">${r.name}</a>${r.name === getMyName() ? '<span class="log-nth">自分</span>' : ""}</span>
         ${r.name === getMyName()
           ? `<button class="link-btn" data-edit-rating="${r.id}" data-edit-slug="${slug}">直す</button>`
           : ""}
@@ -4321,9 +4321,6 @@ function buildRatingSection(g) {
   const slug = slugOf(g);
   const reviews = getReviews(slug);
   const avg = averageScore(slug);
-  // 人数が増えると縦に伸びるので、4件以上はたたむ
-  const FOLD_FROM = 4;
-  const folded = reviews.length >= FOLD_FROM;
   return `
     <div class="review-card">
       <div class="review-header">
@@ -4332,13 +4329,19 @@ function buildRatingSection(g) {
       </div>
       <div class="review-count">${reviews.length}件の評価${reviews.length ? "" : "（まだ評価がありません）"}${!firebaseReady ? " ・ ⚠️ Firebase未設定" : ""}</div>
       ${buildRatingSummary(slug)}
-      ${reviews.length && !folded ? `
-      <div class="review-list">${reviews.map(r => buildRatingItem(r, slug)).join("")}</div>` : ""}
-      ${folded ? `
-      <button type="button" class="section-toggle-btn" data-toggle-section="rating-list">みんなの評価を見る（${reviews.length}件）</button>
-      <div class="review-list" data-section="rating-list" style="display:none;">
-        ${reviews.map(r => buildRatingItem(r, slug)).join("")}
-      </div>` : ""}
+      ${(() => {
+        const me = getMyName();
+        const mineR = me ? reviews.find(r => r.name === me) : null;
+        const others = reviews.filter(r => !mineR || r.id !== mineR.id);
+        return `
+          ${mineR ? `<div class="review-list">${buildRatingItem(mineR, slug)}</div>` : ""}
+          ${others.length ? `
+            <button type="button" class="section-toggle-btn" data-toggle-section="rating-list">ほかのメンバーの評価を見る（${others.length}人）</button>
+            <div class="review-list" data-section="rating-list" style="display:none;">
+              ${others.map(r => buildRatingItem(r, slug)).join("")}
+            </div>` : ""}
+        `;
+      })()}
       ${buildRatingForm(slug)}
     </div>
   `;
@@ -4927,12 +4930,16 @@ function showDetail(g) {
         ${iLike ? "🌟" : "☆"}<i>興味あり</i><b>${interestCount || "—"}</b></button>
       <button type="button" class="detail-act detail-act-today ${todayCount ? "on-today" : ""}" data-played="${slug}">
         🎲<i>今日やる！</i><b>${todayCount || "—"}</b></button>
-      <button type="button" class="detail-act" data-jump="detailRecord">
-        ⭐<i>MY評価</i><b>${mine != null ? mine : "—"}</b></button>
+      <button type="button" class="detail-act ${mine != null ? "on" : ""}" data-jump="detailRecord">
+        ⭐<i>${mine != null ? "評価済み" : "評価する"}</i><b>${mine != null ? mine : "—"}</b></button>
       <button type="button" class="detail-act" data-jump-open="history">
         📖<i>過去戦績</i><b>${getHistory(slug).length || "—"}</b></button>
       <button type="button" class="detail-act" data-jump-open="quickref">📕<i>ルール早見表</i></button>
-      <button type="button" class="detail-act" data-go-log>📝<i>記録を見る</i></button>
+      <button type="button" class="detail-act" data-jump-open="photos">📷<i>写真</i><b>${(() => {
+        const files = (galleryData[slug] || []).filter(f => !new Set((imagePrefs[slug] || {}).hidden || []).has(f));
+        const n = files.length + getPhotos(slug, "game").length;
+        return n || "—";
+      })()}</b></button>
     </div>
     ${(() => {
       const files = (galleryData[slug] || []).filter(f => !new Set((imagePrefs[slug] || {}).hidden || []).has(f));
@@ -5238,19 +5245,15 @@ document.getElementById("detailView").addEventListener("click", async e => {
     if (!name) return;
     played.disabled = true;
     const r = await withLevelUp(() => toggleTodayTable(played.dataset.played, name));
-    if (r === "added") toast("今日の記録に追加しました。結果は「記録を見る」から入れられます");
-    else if (r === "removed") toast("今日の記録から取り消しました");
-    else if (r === "hasResult") toast("もう結果が入っています。もう1卓やるなら記録画面の「もう1回」から");
     const g = currentDetailGame();
     if (g) showDetail(g);
     render();   // 一覧に戻ったときも色が合うようにする
+    if (r === "added") { toast("今日の記録に追加しました"); openTodayLog(); }
+    else if (r === "removed") toast("今日の記録から取り消しました");
+    else if (r === "hasResult") toast("もう結果が入っています。もう1卓やるなら記録画面の「もう1回」から");
     return;
   }
 
-  if (e.target.closest("[data-go-log]")) {
-    openTodayLog();
-    return;
-  }
   if (e.target.closest("[data-tag-edit-toggle]")) {
     tagEditMode = !tagEditMode;
     const g = currentDetailGame();
