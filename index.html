@@ -904,7 +904,10 @@
     justify-content: space-between;
     gap: 10px;
   }
-  .member-card-name { font-size: 18px; font-weight: 700; }
+  .member-card-name { font-size: 18px; font-weight: 700; display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; min-width: 0; }
+  .member-card-type { font-size: 12px; font-weight: 600; color: #dff0fb; background: rgba(255,255,255,0.14); border-radius: 999px; padding: 2px 9px; white-space: nowrap; }
+  .member-card-stats { display: grid; grid-template-columns: 1fr 1fr 1.3fr; gap: 6px; margin-top: 9px; font-size: 11.5px; color: #c9dfec; white-space: nowrap; }
+  .member-card-stats b { font-size: 16px; color: #fff; margin: 0 2px 0 4px; }
   .member-card-lv { font-size: 12px; opacity: .85; }
   .member-card-lv b { font-size: 19px; margin-left: 2px; }
   .member-card-rank { font-size: 13px; color: #c9dfec; margin-top: 2px; }
@@ -2945,7 +2948,7 @@ try {
 // ── 自動更新 ───────────────────────────────
 // iPhoneはHTMLを長く握るので、新しい版が出ていたらURLを変えて読み直す。
 // （同じURLの再読み込みだとキャッシュが返ってきてしまうため）
-const APP_BUILD = "2026-09-11-2217";
+const APP_BUILD = "2026-09-11-2225";
 
 function markVersion(extra) {
   const el = document.getElementById("appVersion");
@@ -5555,16 +5558,23 @@ function buildMembersTab() {
       const shown = earned.filter(t => sel.has(t.id)).slice(0, 3);
       const p = getProfile(n);
       const f = p && FAMILIES[p.type];
+      const st = getPlayStats(n);
+      const want = getWantToPlay(n).length;
       return `
         <a class="member-card" href="#player/${encodeURIComponent(n)}">
           <div class="member-card-top">
-            <span class="member-card-name">${n}</span>
+            <span class="member-card-name">${n}${f ? `<span class="member-card-type">${f.emoji} ${f.name}タイプ</span>` : ""}</span>
             <span class="member-card-lv">Lv<b>${level.level}</b></span>
           </div>
-          <div class="member-card-rank">${level.label}${f ? `　${f.emoji} ${f.name}タイプ` : ""}</div>
+          <div class="member-card-rank">${level.label}</div>
           <div class="member-card-titles">${shown.length
             ? shown.map(t => `<span class="member-title-chip">🏅 ${t.name}</span>`).join("")
             : `<span class="member-title-chip empty">称号なし</span>`}</div>
+          <div class="member-card-stats">
+            <span>遊んだ<b>${st.kinds}</b>本</span>
+            <span>評価<b>${st.ratings}</b>件</span>
+            <span>遊んでみたい<b>${want}</b>本</span>
+          </div>
           <div class="member-card-exp">通算 ${total.toLocaleString()} EXP</div>
         </a>`;
     }).join("")}
