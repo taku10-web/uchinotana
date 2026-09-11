@@ -564,6 +564,31 @@
     cursor: pointer;
     background: #f1f2f5;
   }
+  .photo-thumb { border: none; background: none; padding: 0; cursor: pointer; }
+  .photo-thumb.is-second img { outline: 3px solid var(--accent); outline-offset: -3px; }
+  .photo-badge {
+    position: absolute;
+    left: 6px; bottom: 6px;
+    background: var(--accent);
+    color: #fff;
+    font-size: 10px;
+    font-weight: 700;
+    border-radius: 999px;
+    padding: 2px 7px;
+  }
+  .photo-menu {
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+    background: var(--accent-soft);
+    border: 1px solid var(--accent);
+    border-radius: 12px;
+    padding: 12px;
+    margin-top: 12px;
+  }
+  .photo-menu img { width: 110px; height: 82px; object-fit: cover; border-radius: 8px; flex-shrink: 0; }
+  .photo-menu-btns { flex: 1; display: flex; flex-direction: column; gap: 6px; }
+  .photo-menu-btns .section-toggle-btn { margin: 0; }
   .photo-del {
     position: absolute;
     top: -6px;
@@ -2730,7 +2755,7 @@ try {
 // ── 自動更新 ───────────────────────────────
 // iPhoneはHTMLを長く握るので、新しい版が出ていたらURLを変えて読み直す。
 // （同じURLの再読み込みだとキャッシュが返ってきてしまうため）
-const APP_BUILD = "2026-09-11-1426";
+const APP_BUILD = "2026-09-11-1433";
 
 function markVersion(extra) {
   const el = document.getElementById("appVersion");
@@ -3268,7 +3293,7 @@ function render() {
       <a class="card-main" href="#game/${encodeURIComponent(slug)}">
         <div class="card-imgs">
           <img src="${gameImg(g, "card")}" alt="${g.jp}" loading="lazy" onerror="this.style.visibility='hidden'">
-          ${gameImg2(g, "card") ? `<img class="card-img2" src="${gameImg2(g, "card")}" alt="${g.jp}の中身" loading="lazy" onerror="this.style.display='none'">` : ""}
+          ${secondImage(g, "card") ? `<img class="card-img2" src="${secondImage(g, "card")}" alt="${g.jp}の中身" loading="lazy" onerror="this.style.display='none'">` : ""}
         </div>
         <div class="card-body">
           <div class="card-title-jp">${g.jp}</div>
@@ -3720,7 +3745,8 @@ function fetchAllReviews() {
     fetchCollectionCache("customtags", CUSTOMTAGS_CACHE_KEY).then(c => { customTagsCache = c; }),
     fetchCollectionCache("ruleedits", RULEEDITS_CACHE_KEY).then(c => { ruleEditsCache = c; }),
     fetchProfiles().then(c => { profilesCache = c; }),
-    fetchSessions().then(c => { sessionsCache = c; })
+    fetchSessions().then(c => { sessionsCache = c; }),
+    fetchImagePrefs().then(c => { imagePrefs = c; })
   ]);
 }
 
@@ -4407,6 +4433,66 @@ function getRuleEdit(slug) {
 const PHOTO_MAX_PX = 1400;
 const PHOTO_MAX_BYTES = 700000;
 let photoCache = {};          // slug -> [写真]
+// 一覧の2枚目にどれを使うか、ボドゲーマの写真のどれを隠すか。ゲームごとに1件。
+let imagePrefs = {};          // slug -> { hidden: [file], second: {type:"web", file} | {type:"thumb", data} }
+const IMAGEPREFS_CACHE_KEY = "bg_imageprefs_cache_v1";
+
+function fetchImagePrefs() {
+  if (!firebaseReady) {
+    try { return Promise.resolve(JSON.parse(localStorage.getItem(IMAGEPREFS_CACHE_KEY)) || {}); }
+    catch (e) { return Promise.resolve({}); }
+  }
+  return db.collection("imageprefs").get().then(snap => {
+    const out = {};
+    snap.forEach(d => { const v = d.data(); if (v.slug) out[v.slug] = Object.assign({ id: d.id }, v); });
+    localStorage.setItem(IMAGEPREFS_CACHE_KEY, JSON.stringify(out));
+    return out;
+  }).catch(err => {
+    console.error("imageprefs取得エラー", err);
+    try { return JSON.parse(localStorage.getItem(IMAGEPREFS_CACHE_KEY)) || {}; } catch (e) { return {}; }
+  });
+}
+
+function saveImagePref(slug, patch) {
+  if (!firebaseReady) { alert("Firebaseが未設定のため、保存できません。"); return Promise.resolve(); }
+  const cur = imagePrefs[slug] || {};
+  const next = { slug, hidden: cur.hidden || [], second: cur.second || null };
+  Object.assign(next, patch);
+  const ref = cur.id ? db.collection("imageprefs").doc(cur.id) : db.collection("imageprefs").doc(slug);
+  return ref.set(next).then(() => {
+    imagePrefs[slug] = Object.assign({ id: cur.id || slug }, next);
+    localStorage.setItem(IMAGEPREFS_CACHE_KEY, JSON.stringify(imagePrefs));
+  }).catch(err => writeFailed(err, "写真の設定"));
+}
+
+// 一覧の2枚目に使う写真のURL（設定 > 隠していないギャラリーの先頭）
+function secondImage(g, kind) {
+  const slug = slugOf(g);
+  const pref = imagePrefs[slug] || {};
+  if (pref.second && pref.second.type === "thumb" && pref.second.data) return pref.second.data;
+  const hidden = new Set(pref.hidden || []);
+  const files = (galleryData[slug] || []).filter(f => !hidden.has(f));
+  const spec = IMG_SIZES[kind] || IMG_SIZES.card;
+  const mk = f => "https://image-bodoge.cdn-hoobby.net/small_light(" + spec + ")/" + f;
+  if (pref.second && pref.second.type === "web" && pref.second.file && !hidden.has(pref.second.file)) return mk(pref.second.file);
+  return files.length ? mk(files[0]) : "";
+}
+
+// 一覧に置ける大きさの小さい画像を作る
+function makeThumb(dataUrl) {
+  return new Promise(resolve => {
+    const img = new Image();
+    img.onload = () => {
+      const scale = Math.min(1, 320 / Math.max(img.naturalWidth, img.naturalHeight));
+      const c = document.createElement("canvas");
+      c.width = Math.round(img.naturalWidth * scale); c.height = Math.round(img.naturalHeight * scale);
+      c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
+      resolve(c.toDataURL("image/jpeg", 0.7));
+    };
+    img.onerror = () => resolve("");
+    img.src = dataUrl;
+  });
+}
 let photoLoading = {};
 
 function getPhotos(slug, kind) {
@@ -4482,31 +4568,63 @@ function deletePhoto(slug, id) {
 // ゲームの写真欄。ボドゲーマのギャラリー（消せない）＋自分たちで足した写真（消せる）。
 function buildGamePhotos(g) {
   const slug = slugOf(g);
-  const web = (galleryData[slug] || []).map((f, i) => gameImg2(g, "card", i));
+  const pref = imagePrefs[slug] || {};
+  const hidden = new Set(pref.hidden || []);
+  const files = galleryData[slug] || [];
   const mine = getPhotos(slug, "game");
+  const secondUrl = secondImage(g, "card");
+  const isSecondWeb = f => pref.second && pref.second.type === "web" && pref.second.file === f
+    || (!pref.second && files.filter(x => !hidden.has(x))[0] === f);
+  const isSecondMine = p => pref.second && pref.second.type === "thumb" && pref.second.photoId === p.id;
+  const total = files.filter(f => !hidden.has(f)).length + mine.length;
   return `
     <div class="review-card">
       <div class="review-header">
-        <div class="review-title">写真${web.length + mine.length ? `<span class="log-nth">${web.length + mine.length}枚</span>` : ""}</div>
+        <div class="review-title">写真${total ? `<span class="log-nth">${total}枚</span>` : ""}</div>
       </div>
-      ${(web.length || mine.length) ? `<div class="photo-strip">
-        ${web.map((u, i) => `
-          <div class="photo-thumb">
-            <img src="${u}" alt="${g.jp}の写真" data-photo-src="${gameImg2(g, "detail", i)}" loading="lazy">
-          </div>`).join("")}
+      ${total ? `<div class="photo-strip">
+        ${files.filter(f => !hidden.has(f)).map((f, i) => `
+          <button type="button" class="photo-thumb ${isSecondWeb(f) ? "is-second" : ""}" data-photo-menu="web:${f}">
+            <img src="https://image-bodoge.cdn-hoobby.net/small_light(${IMG_SIZES.card})/${f}" alt="${g.jp}の写真" loading="lazy">
+            ${isSecondWeb(f) ? `<span class="photo-badge">一覧の2枚目</span>` : ""}
+          </button>`).join("")}
         ${mine.map(p => `
-          <div class="photo-thumb">
-            <img src="${p.data}" alt="${g.jp}の写真" data-photo-view="${p.id}" data-photo-slug="${slug}">
-            <button type="button" class="photo-del ${pendingPhotoDelete === p.id ? "confirm" : ""}"
-                    data-photo-del="${p.id}" data-photo-slug="${slug}">${pendingPhotoDelete === p.id ? "消す？" : "×"}</button>
-          </div>`).join("")}
+          <button type="button" class="photo-thumb ${isSecondMine(p) ? "is-second" : ""}" data-photo-menu="mine:${p.id}">
+            <img src="${p.data}" alt="${g.jp}の写真">
+            ${isSecondMine(p) ? `<span class="photo-badge">一覧の2枚目</span>` : ""}
+          </button>`).join("")}
       </div>` : `<div class="review-count">まだ写真がありません。</div>`}
+      ${hidden.size ? `<button type="button" class="link-btn" data-photo-unhide-all style="margin-top:6px;">隠した写真を戻す（${hidden.size}枚）</button>` : ""}
       <label class="photo-add">
         <input type="file" accept="image/*" data-photo-add="game" data-photo-slug="${slug}" hidden>
         📷 写真を追加
       </label>
       <div class="review-count" style="margin-top:8px;">
-        ボドゲーマから取り込んだ写真は消せません。自分たちで足した写真は × から消せます。
+        写真をタップすると、一覧の2枚目にしたり、隠したり、原寸で見たりできます。
+      </div>
+      ${photoMenuFor ? buildPhotoMenu(g, photoMenuFor) : ""}
+    </div>
+  `;
+}
+
+let photoMenuFor = "";   // "web:<file>" or "mine:<id>"
+
+function buildPhotoMenu(g, key) {
+  const [type, id] = [key.slice(0, key.indexOf(":")), key.slice(key.indexOf(":") + 1)];
+  const slug = slugOf(g);
+  const isMine = type === "mine";
+  const p = isMine ? getPhotos(slug, "game").find(x => x.id === id) : null;
+  const full = isMine ? (p ? p.data : "") : "https://image-bodoge.cdn-hoobby.net/small_light(" + IMG_SIZES.detail + ")/" + id;
+  return `
+    <div class="photo-menu">
+      <img src="${isMine ? (p ? p.data : "") : "https://image-bodoge.cdn-hoobby.net/small_light(" + IMG_SIZES.card + ")/" + id}" alt="">
+      <div class="photo-menu-btns">
+        <button type="button" class="section-toggle-btn section-toggle-btn-primary" data-photo-set-second="${key}">一覧の2枚目にする</button>
+        ${isMine
+          ? `<button type="button" class="section-toggle-btn" data-photo-remove="${id}">この写真を消す</button>`
+          : `<button type="button" class="section-toggle-btn" data-photo-hide="${id}">この写真を隠す</button>`}
+        <button type="button" class="section-toggle-btn" data-photo-full="${full.replace(/"/g, "&quot;")}">原寸で見る</button>
+        <button type="button" class="link-btn" data-photo-menu-close>とじる</button>
       </div>
     </div>
   `;
@@ -5109,6 +5227,83 @@ document.getElementById("detailView").addEventListener("click", async e => {
     ruleEditKind = ruleEditKind === k ? "" : k;
     const g = currentDetailGame();
     if (g) showDetail(g);
+    return;
+  }
+
+  const pm = e.target.closest("[data-photo-menu]");
+  if (pm) {
+    photoMenuFor = photoMenuFor === pm.dataset.photoMenu ? "" : pm.dataset.photoMenu;
+    const g = currentDetailGame();
+    if (g) showDetail(g);
+    const menu = document.querySelector(".photo-menu");
+    if (menu) menu.scrollIntoView({ behavior: "smooth", block: "center" });
+    return;
+  }
+  if (e.target.closest("[data-photo-menu-close]")) {
+    photoMenuFor = "";
+    const g = currentDetailGame(); if (g) showDetail(g);
+    return;
+  }
+  const full = e.target.closest("[data-photo-full]");
+  if (full) { openLightbox(full.dataset.photoFull); return; }
+
+  const setSecond = e.target.closest("[data-photo-set-second]");
+  if (setSecond) {
+    const g = currentDetailGame(); if (!g) return;
+    const key = setSecond.dataset.photoSetSecond;
+    const type = key.slice(0, key.indexOf(":")), id = key.slice(key.indexOf(":") + 1);
+    setSecond.disabled = true; setSecond.textContent = "設定中…";
+    if (type === "web") {
+      await saveImagePref(slugOf(g), { second: { type: "web", file: id } });
+    } else {
+      const p = getPhotos(slugOf(g), "game").find(x => x.id === id);
+      const thumb = p ? await makeThumb(p.data) : "";
+      if (!thumb) { toast("この写真は使えませんでした"); return; }
+      await saveImagePref(slugOf(g), { second: { type: "thumb", data: thumb, photoId: id } });
+    }
+    photoMenuFor = "";
+    showDetail(g); render();
+    toast("一覧の2枚目に設定しました");
+    return;
+  }
+
+  const hide = e.target.closest("[data-photo-hide]");
+  if (hide) {
+    const g = currentDetailGame(); if (!g) return;
+    const cur = imagePrefs[slugOf(g)] || {};
+    const hidden = [...new Set([...(cur.hidden || []), hide.dataset.photoHide])];
+    const patch = { hidden };
+    if (cur.second && cur.second.type === "web" && cur.second.file === hide.dataset.photoHide) patch.second = null;
+    await saveImagePref(slugOf(g), patch);
+    photoMenuFor = "";
+    showDetail(g); render();
+    toast("隠しました。「隠した写真を戻す」で戻せます");
+    return;
+  }
+
+  if (e.target.closest("[data-photo-unhide-all]")) {
+    const g = currentDetailGame(); if (!g) return;
+    await saveImagePref(slugOf(g), { hidden: [] });
+    showDetail(g); render();
+    return;
+  }
+
+  const removeMine = e.target.closest("[data-photo-remove]");
+  if (removeMine) {
+    const g = currentDetailGame(); if (!g) return;
+    const id = removeMine.dataset.photoRemove;
+    if (pendingPhotoDelete !== id) {
+      pendingPhotoDelete = id; removeMine.textContent = "もう一度押すと消えます";
+      setTimeout(() => { if (pendingPhotoDelete === id) { pendingPhotoDelete = ""; const g1 = currentDetailGame(); if (g1) showDetail(g1); } }, 4000);
+      return;
+    }
+    pendingPhotoDelete = "";
+    const cur = imagePrefs[slugOf(g)] || {};
+    if (cur.second && cur.second.photoId === id) await saveImagePref(slugOf(g), { second: null });
+    await deletePhoto(slugOf(g), id);
+    photoMenuFor = "";
+    showDetail(g); render();
+    toast("写真を消しました");
     return;
   }
 
