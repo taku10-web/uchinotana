@@ -2945,7 +2945,7 @@ try {
 // ── 自動更新 ───────────────────────────────
 // iPhoneはHTMLを長く握るので、新しい版が出ていたらURLを変えて読み直す。
 // （同じURLの再読み込みだとキャッシュが返ってきてしまうため）
-const APP_BUILD = "2026-09-11-2153";
+const APP_BUILD = "2026-09-11-2200";
 
 function markVersion(extra) {
   const el = document.getElementById("appVersion");
@@ -3253,8 +3253,10 @@ Promise.all([
   fetch("data/rules.json", NO_CACHE).then(r => r.ok ? r.json() : {}).catch(() => ({})),
   fetch("data/genres.json", NO_CACHE).then(r => r.ok ? r.json() : {}).catch(() => ({})),
   fetch("data/mechanics.json", NO_CACHE).then(r => r.ok ? r.json() : {}).catch(() => ({})),
-  fetchAllReviews()
-]).then(([gamesData, rules, genres, mechanics]) => {
+  fetchAllReviews(),
+  fetch("data/cover_pick.json", NO_CACHE).then(r => r.ok ? r.json() : {}).catch(() => ({}))
+]).then(([gamesData, rules, genres, mechanics, _r, coverPick]) => {
+  coverPickData = coverPick || {};
   games = gamesData;
   rulesData = rules;
   genresData = genres;
@@ -3507,7 +3509,7 @@ function render() {
       <a class="card-main" href="#game/${encodeURIComponent(slug)}">
         <div class="card-title-jp">${g.jp}</div>
         <div class="card-row">
-          <img src="${gameImg(g, "card")}" alt="${g.jp}" loading="lazy" onerror="this.style.visibility='hidden'">
+          <img src="${gameImg(g, "card")}" alt="${g.jp}" loading="lazy" data-fb="${coverFallback(g, "card")}" onerror="if(this.dataset.fb){this.src=this.dataset.fb;this.dataset.fb='';}else{this.style.visibility='hidden';}">
           <div class="card-body">
             <div class="spec-row">
               ${specHtml(g.playersRaw)}
@@ -3542,12 +3544,28 @@ const IMG_SIZES = {
   mini:   "dw=auto,dh=140,cw=188,ch=140,da=l,ds=s,q=80,cc=FFFFFF"
 };
 
+// 表紙の優先順位：アプリで差し替えた写真 → サイト内の箱写真(data/covers) → ボドゲーマの画像
+// "large" は拡大表示用。ボドゲーマ由来の箱写真なら同じ写真の大きい版をCDNから取る
+let coverPickData = {};       // data/cover_pick.json  slug -> ボドゲーマの画像ファイル名 or "manual"
 function gameImg(g, kind) {
-  const ov = g && coverOverride[slugOf(g)];
-  if (ov) return ov;   // 差し替えた箱写真があれば、一覧・詳細・棚すべてそれを使う
-  const url = (g && g.img) || "";
+  if (!g) return "";
+  const slug = slugOf(g);
+  const ov = coverOverride[slug];
+  if (ov) return ov;
+  const url = g.img || "";
+  if (kind === "large") {
+    const pick = coverPickData[slug];
+    if (pick === "manual") return `data/covers/${slug}.jpg`;
+    const spec = IMG_SIZES.detail;
+    const big = url.replace(/small_light\([^)]*\)/, "small_light(" + spec + ")");
+    return pick ? big.replace(/[^/]+$/, pick) : big;
+  }
+  return `data/covers/${slug}.jpg`;
+}
+// ローカルの箱写真が無いときだけボドゲーマの画像に切り替える（新規追加直後など）
+function coverFallback(g, kind) {
   const spec = IMG_SIZES[kind] || IMG_SIZES.card;
-  return url.replace(/small_light\([^)]*\)/, "small_light(" + spec + ")");
+  return ((g && g.img) || "").replace(/small_light\([^)]*\)/, "small_light(" + spec + ")");
 }
 
 function slugOf(g) {
@@ -4878,7 +4896,7 @@ function buildEditPanel(g) {
 
       <div class="edit-sec-title">表紙（箱の写真）</div>
       <div class="cover-edit">
-        <img src="${coverSrc(slug)}" alt="表紙" onerror="this.src='${gameImg(g, "card")}'">
+        <img src="${coverSrc(slug)}" alt="表紙" onerror="this.src='${coverFallback(g, "card")}'">
         <div class="cover-edit-body">
           <div class="review-count">背景が白い「箱だけ」の写真だと棚がきれいに見えます。一覧・詳細・棚に反映されます。</div>
           <label class="photo-add">
@@ -5025,7 +5043,7 @@ function showDetail(g) {
       <div class="hero-title-row">
         <h1 class="detail-title hero-title ${titleSizeClass(g.jp)}">${g.jp}</h1>
       </div>
-      <img class="hero-img" src="${gameImg(g, "detail")}" alt="${g.jp}" data-photo-src="${gameImg(g, "detail")}" onerror="this.style.visibility='hidden'">
+      <img class="hero-img" src="${gameImg(g, "detail")}" alt="${g.jp}" data-photo-src="${gameImg(g, "large")}" data-fb="${coverFallback(g, "detail")}" onerror="if(this.dataset.fb){this.src=this.dataset.fb;this.dataset.photoSrc=this.dataset.fb;this.dataset.fb='';}else{this.style.visibility='hidden';}">
       <div class="hero-body">
         <div class="hero-specs">
           <span>${g.playersRaw || "人数不明"}</span>
@@ -6146,7 +6164,7 @@ function buildRecommendView() {
   const row = (e, i) => `
     <a class="rec-item" href="#game/${encodeURIComponent(e.slug)}">
       <div class="rec-rank">${i + 1}</div>
-      <img src="${gameImg(e.g, "mini")}" alt="${e.g.jp}" onerror="this.style.visibility='hidden'">
+      <img src="${gameImg(e.g, "mini")}" alt="${e.g.jp}" data-fb="${coverFallback(e.g, "mini")}" onerror="if(this.dataset.fb){this.src=this.dataset.fb;this.dataset.fb='';}else{this.style.visibility='hidden';}">
       <div class="rec-body">
         <div class="rec-title">${e.g.jp}</div>
         <div class="rec-spec">${e.g.playersRaw || "人数不明"} ・ ${e.g.timeRaw || "時間不明"}</div>
@@ -6266,7 +6284,7 @@ function buildTodayResult() {
       ${picks.map((e, i) => `
         <a class="rec-item" href="#game/${encodeURIComponent(e.slug)}">
           <div class="rec-rank">${i + 1}</div>
-          <img src="${gameImg(e.g, "mini")}" alt="${e.g.jp}" onerror="this.style.visibility='hidden'">
+          <img src="${gameImg(e.g, "mini")}" alt="${e.g.jp}" data-fb="${coverFallback(e.g, "mini")}" onerror="if(this.dataset.fb){this.src=this.dataset.fb;this.dataset.fb='';}else{this.style.visibility='hidden';}">
           <div class="rec-body">
             <div class="rec-title">${e.g.jp}</div>
             <div class="rec-spec">${e.g.playersRaw || "人数不明"} ・ ${e.g.timeRaw || "時間不明"}</div>
@@ -6794,7 +6812,7 @@ function buildQuizView() {
       <div class="player-game-list">
         ${picks.map(p => `
           <a class="player-game-row" href="#game/${encodeURIComponent(slugOf(p.g))}">
-            <img src="${gameImg(p.g, "mini")}" alt="${p.g.jp}" onerror="this.style.visibility='hidden'">
+            <img src="${gameImg(p.g, "mini")}" alt="${p.g.jp}" data-fb="${coverFallback(p.g, "mini")}" onerror="if(this.dataset.fb){this.src=this.dataset.fb;this.dataset.fb='';}else{this.style.visibility='hidden';}">
             <div class="player-game-row-body">
               <div class="player-game-row-title">${p.g.jp}</div>
               <div class="player-game-row-level">${getGameTags(p.g).allMechanics.slice(0, 3).map(m => "#" + m).join(" ")}</div>
@@ -7909,7 +7927,7 @@ function buildShelf(name) {
     for (let c = 0; c < SHELF_COLS; c++) {
       const x = list[r * SHELF_COLS + c];
       html += x
-        ? `<a class="shelf-box" href="#game/${encodeURIComponent(x.slug)}" title="${x.g.jp}"><img src="${coverSrc(x.slug)}" alt="${x.g.jp}" loading="lazy" onerror="this.src='${gameImg(x.g, "card")}'"></a>`
+        ? `<a class="shelf-box" href="#game/${encodeURIComponent(x.slug)}" title="${x.g.jp}"><img src="${coverSrc(x.slug)}" alt="${x.g.jp}" loading="lazy" onerror="this.src='${coverFallback(x.g, "card")}'"></a>`
         : `<span class="shelf-box empty"></span>`;
     }
     html += `<div class="shelf-board"></div></div>`;
@@ -8074,7 +8092,7 @@ function buildPlayerPage(name) {
     if (!g) return "";
     return `
       <a class="player-game-row" href="#game/${encodeURIComponent(pi.slug)}">
-        <img src="${gameImg(g, "detail")}" alt="${g.jp}" onerror="this.style.visibility='hidden'">
+        <img src="${gameImg(g, "detail")}" alt="${g.jp}" data-fb="${coverFallback(g, "detail")}" onerror="if(this.dataset.fb){this.src=this.dataset.fb;this.dataset.fb='';}else{this.style.visibility='hidden';}">
         <div class="player-game-row-body">
           <div class="player-game-row-title">${g.jp}</div>
         </div>
@@ -8087,7 +8105,7 @@ function buildPlayerPage(name) {
     if (!g) return "";
     return `
       <a class="player-game-row" href="#game/${encodeURIComponent(pr.slug)}">
-        <img src="${gameImg(g, "detail")}" alt="${g.jp}" onerror="this.style.visibility='hidden'">
+        <img src="${gameImg(g, "detail")}" alt="${g.jp}" data-fb="${coverFallback(g, "detail")}" onerror="if(this.dataset.fb){this.src=this.dataset.fb;this.dataset.fb='';}else{this.style.visibility='hidden';}">
         <div class="player-game-row-body">
           <div class="player-game-row-title">${g.jp}</div>
           <div class="player-game-row-level">${ratingLabel(pr.level)}</div>
