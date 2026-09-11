@@ -740,7 +740,8 @@
   .rating-summary:not(.open) tr.extra { display: none; }
   .rating-summary tr.more td { border-top: 1px solid var(--border); text-align: left; padding: 6px 0 4px; font-size: 12px; }
   .rating-summary tr.more .link-btn { font-size: 12px; padding: 0; }
-  .rating-summary td.memo-only { text-align: left; font-size: 11.5px; padding-left: 6px; }
+  .rating-summary .unrated-badge { font-style: normal; font-size: 10px; font-weight: 700; color: var(--text-sub); background: var(--bg); border: 1px solid var(--border); border-radius: 999px; padding: 1px 6px; margin-left: 5px; vertical-align: middle; }
+  .rating-summary tr.unrated th a { color: var(--text-sub); }
   .rating-summary tr.memo td i.memo-date { display: block; font-style: normal; font-size: 10.5px; color: var(--text-sub); opacity: .8; margin-top: 2px; }
   .rating-summary tr.memo td {
     border-top: none;
@@ -2983,7 +2984,7 @@ try {
 // ── 自動更新 ───────────────────────────────
 // iPhoneはHTMLを長く握るので、新しい版が出ていたらURLを変えて読み直す。
 // （同じURLの再読み込みだとキャッシュが返ってきてしまうため）
-const APP_BUILD = "2026-09-12-0205";
+const APP_BUILD = "2026-09-12-0213";
 
 function markVersion(extra) {
   const el = document.getElementById("appVersion");
@@ -4643,10 +4644,11 @@ function buildRatingSummary(slug) {
   // 並び：みんな行は常時。次に1行だけ（自分が評価済みなら自分、なければ一番評価が高い人）。残りは折りたたみ
   // 戦績のメモも感想として、その人の行の下に出す。評価はないがメモだけある人は「感想のみ」の行にする
   const memosAll = gameMemos(slug);
-  const memoOnlyNames = [...new Set(memosAll.filter(m => !reviews.some(r => r.name === m.name)).map(m => m.name))];
-  const memoOnly = memoOnlyNames.map(name => ({ name, memoOnly: true }));
+  // 評価していないメンバーも「未評価」として行を出す（感想だけある人も含む）
+  const unratedNames = [...new Set([...getAllKnownNames(), ...memosAll.map(m => m.name)])].filter(n => !reviews.some(r => r.name === n));
+  const memoOnly = unratedNames.map(name => ({ name, memoOnly: true, hasMemo: memosAll.some(m => m.name === name) }));
   const others = reviews.filter(r => r.name !== me).sort((a, b) => (ratingAvg(b) ?? -1) - (ratingAvg(a) ?? -1))
-    .concat(memoOnly.filter(x => x.name !== me));
+    .concat(memoOnly.filter(x => x.name !== me).sort((a, b) => (b.hasMemo ? 1 : 0) - (a.hasMemo ? 1 : 0)));
   const mineR = reviews.find(r => r.name === me) || memoOnly.find(x => x.name === me);
   const shown = mineR ? [mineR] : others.slice(0, 1);
   const hidden = mineR ? others : others.slice(1);
@@ -4656,9 +4658,9 @@ function buildRatingSummary(slug) {
     const mine = r.name === me;
     if (r.memoOnly) {
       return `
-      <tr class="member ${mine ? "mine" : ""} ${extra ? "extra" : ""}">
-        <th><a href="#player/${encodeURIComponent(r.name)}">${r.name}</a></th>
-        <td colspan="4" class="na memo-only">感想のみ</td>
+      <tr class="member unrated ${mine ? "mine" : ""} ${extra ? "extra" : ""}">
+        <th><a href="#player/${encodeURIComponent(r.name)}">${r.name}</a><i class="unrated-badge">未評価</i></th>
+        <td class="na total">—</td><td class="na">—</td><td class="na">—</td><td class="na">—</td>
       </tr>
       ${memoRows(r.name, extra)}`;
     }
@@ -4682,7 +4684,7 @@ function buildRatingSummary(slug) {
         </tr>
         ${memberRows(shown, false)}
         ${hidden.length ? `
-          <tr class="more"><td colspan="5"><button type="button" class="link-btn" data-toggle-rating-more data-label="ほか${hidden.length}人の評価を見る">ほか${hidden.length}人の評価を見る</button></td></tr>
+          <tr class="more"><td colspan="5"><button type="button" class="link-btn" data-toggle-rating-more data-label="ほか${hidden.length}人を見る">ほか${hidden.length}人を見る</button></td></tr>
           ${memberRows(hidden, true)}` : ""}
       </tbody>
     </table>
