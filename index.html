@@ -1743,6 +1743,7 @@
   }
   .card-sec-body { font-size: 13px; line-height: 1.55; color: var(--text); }
   .card-sec .card-about { margin: 0; }
+  .card-genres { gap: 5px; margin-top: 1px; }
   .card-memo.one { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .card-memo.two {
     display: -webkit-box;
@@ -2923,7 +2924,7 @@ try {
 // ── 自動更新 ───────────────────────────────
 // iPhoneはHTMLを長く握るので、新しい版が出ていたらURLを変えて読み直す。
 // （同じURLの再読み込みだとキャッシュが返ってきてしまうため）
-const APP_BUILD = "2026-09-11-1936";
+const APP_BUILD = "2026-09-11-1941";
 
 function markVersion(extra) {
   const el = document.getElementById("appVersion");
@@ -3481,7 +3482,9 @@ function render() {
             ${ratingStrip(slug)}
           </div>
         </div>
-        ${genreTags.length ? `<div class="card-sec"><span class="card-sec-label">ジャンル</span><div class="card-sec-body">${genreTags.join("・")}</div></div>` : ""}
+        ${genreTags.length ? `<div class="card-sec"><span class="card-sec-label">ジャンル</span><div class="card-sec-body tag-row card-genres">
+          ${genreTags.map(t => `<button type="button" class="tag-chip mini" data-class-filter="genre" data-value="${t}">${t}</button>`).join("")}
+        </div></div>` : ""}
         ${worldview ? `<div class="card-sec"><span class="card-sec-label">どんなゲーム？</span><div class="card-sec-body">
           <p class="card-about ${expandedCards.has(slug) ? "open" : ""}">${worldview}</p>
           <button type="button" class="card-more-about" data-toggle-about="${slug}">${expandedCards.has(slug) ? "たたむ" : "つづきを読む"}</button>
@@ -3697,6 +3700,10 @@ document.getElementById("cardList").addEventListener("click", async e => {
   if (rate) { e.preventDefault(); goToDetailSection(rate.dataset.cardRate, "rating"); return; }
   const hist = e.target.closest("[data-card-history]");
   if (hist) { e.preventDefault(); goToDetailSection(hist.dataset.cardHistory, "history"); return; }
+
+  // ジャンルのチップを押したら、そのジャンルで絞り込む（カードのリンクは開かない）
+  const cls = e.target.closest("[data-class-filter]");
+  if (cls) { e.preventDefault(); goToClassFilter(cls.dataset.classFilter, cls.dataset.value); return; }
 
   const moreAbout = e.target.closest("[data-toggle-about]");
   if (moreAbout) {
