@@ -2755,7 +2755,7 @@ try {
 // ── 自動更新 ───────────────────────────────
 // iPhoneはHTMLを長く握るので、新しい版が出ていたらURLを変えて読み直す。
 // （同じURLの再読み込みだとキャッシュが返ってきてしまうため）
-const APP_BUILD = "2026-09-11-1433";
+const APP_BUILD = "2026-09-11-1448";
 
 function markVersion(extra) {
   const el = document.getElementById("appVersion");
@@ -4578,10 +4578,7 @@ function buildGamePhotos(g) {
   const isSecondMine = p => pref.second && pref.second.type === "thumb" && pref.second.photoId === p.id;
   const total = files.filter(f => !hidden.has(f)).length + mine.length;
   return `
-    <div class="review-card">
-      <div class="review-header">
-        <div class="review-title">写真${total ? `<span class="log-nth">${total}枚</span>` : ""}</div>
-      </div>
+    <div>
       ${total ? `<div class="photo-strip">
         ${files.filter(f => !hidden.has(f)).map((f, i) => `
           <button type="button" class="photo-thumb ${isSecondWeb(f) ? "is-second" : ""}" data-photo-menu="web:${f}">
@@ -4608,6 +4605,7 @@ function buildGamePhotos(g) {
 }
 
 let photoMenuFor = "";   // "web:<file>" or "mine:<id>"
+let photosOpen = false;  // 写真の折りたたみを開いているか（操作のたびに閉じないように覚える）
 
 function buildPhotoMenu(g, key) {
   const [type, id] = [key.slice(0, key.indexOf(":")), key.slice(key.indexOf(":") + 1)];
@@ -4819,7 +4817,9 @@ function buildInterestSection(g) {
   `;
 }
 
+let lastDetailSlug = "";
 function showDetail(g) {
+  if (slugOf(g) !== lastDetailSlug) { photosOpen = false; photoMenuFor = ""; lastDetailSlug = slugOf(g); }
   document.getElementById("controls").style.display = "none";
   document.getElementById("listView").style.display = "none";
   document.getElementById("playerView").style.display = "none";
@@ -4866,7 +4866,11 @@ function showDetail(g) {
       <button type="button" class="detail-act" data-jump-open="quickref">📕<i>ルール早見表</i></button>
       <button type="button" class="detail-act" data-go-log>📝<i>記録を見る</i></button>
     </div>
-    ${buildGamePhotos(g)}
+    ${(() => {
+      const files = (galleryData[slug] || []).filter(f => !new Set((imagePrefs[slug] || {}).hidden || []).has(f));
+      const n = files.length + getPhotos(slug, "game").length;
+      return collapsibleSection("photos", `📷 写真${n ? `（${n}枚）` : ""}`, buildGamePhotos(g), photosOpen || !!photoMenuFor);
+    })()}
     ${buildClassGrid(g)}
     ${buildTagsAndPitch(g)}
     ${buildWorldviewSection(g)}
@@ -5229,6 +5233,11 @@ document.getElementById("detailView").addEventListener("click", async e => {
     if (g) showDetail(g);
     return;
   }
+
+  if (e.target.closest('[data-toggle-section="photos"]')) {
+    photosOpen = !photosOpen;   // 実際の開閉は共通処理がやる。次に作り直すときのために覚えるだけ。
+  }
+  if (e.target.closest("[data-photo-add], [data-photo-menu], [data-photo-unhide-all]")) photosOpen = true;
 
   const pm = e.target.closest("[data-photo-menu]");
   if (pm) {
