@@ -651,6 +651,31 @@
     text-align: left;
   }
   .recent-day-head i { font-style: normal; font-weight: 500; color: var(--text-sub); margin-left: 8px; }
+  .rating-summary {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 8px 0 12px;
+    font-size: 13px;
+  }
+  .rating-summary th {
+    font-weight: 600;
+    color: var(--text-sub);
+    font-size: 11.5px;
+    text-align: center;
+    padding: 4px 2px;
+  }
+  .rating-summary tbody th { text-align: left; color: var(--text); font-size: 13px; }
+  .rating-summary tbody th i { font-style: normal; font-size: 10.5px; color: var(--text-sub); margin-left: 4px; }
+  .rating-summary td {
+    text-align: center;
+    font-size: 17px;
+    font-weight: 700;
+    padding: 7px 2px;
+    border-top: 1px solid var(--border);
+  }
+  .rating-summary td.total { font-size: 20px; background: var(--accent-soft); border-radius: 6px; }
+  .rating-summary td.na { color: var(--text-sub); font-weight: 400; font-size: 13px; }
+  .rating-summary tr.muted td.na { font-size: 11.5px; }
   .rating-axes { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 4px; }
   .rating-axis { font-size: 12.5px; color: var(--text-sub); }
   .rating-axis b { font-size: 15px; margin-left: 5px; }
@@ -2755,7 +2780,7 @@ try {
 // ── 自動更新 ───────────────────────────────
 // iPhoneはHTMLを長く握るので、新しい版が出ていたらURLを変えて読み直す。
 // （同じURLの再読み込みだとキャッシュが返ってきてしまうため）
-const APP_BUILD = "2026-09-11-1448";
+const APP_BUILD = "2026-09-11-1453";
 
 function markVersion(extra) {
   const el = document.getElementById("appVersion");
@@ -4290,6 +4315,7 @@ function buildRatingSection(g) {
         ${avg != null ? `<div class="review-avg">${avg}<span>/10</span></div>` : ""}
       </div>
       <div class="review-count">${reviews.length}件の評価${reviews.length ? "" : "（まだ評価がありません）"}${!firebaseReady ? " ・ ⚠️ Firebase未設定" : ""}</div>
+      ${buildRatingSummary(slug)}
       ${reviews.length && !folded ? `
       <div class="review-list">${reviews.map(r => buildRatingItem(r, slug)).join("")}</div>` : ""}
       ${folded ? `
@@ -4299,6 +4325,39 @@ function buildRatingSection(g) {
       </div>` : ""}
       ${buildRatingForm(slug)}
     </div>
+  `;
+}
+
+// 自分とみんなの評価を軸ごとに並べる。古い評価（1本だけ）は総合にしか入らない。
+function buildRatingSummary(slug) {
+  const reviews = getReviews(slug);
+  const me = getMyName();
+  const mine = me ? reviews.find(r => r.name === me) : null;
+  if (!reviews.length && !mine) return "";
+  const cell = v => v == null ? `<td class="na">—</td>` : `<td style="color:${ratingColor(v)}">${v}</td>`;
+  const axisN = key => reviews.filter(r => r[key] != null).length;
+  const rowMine = mine ? `
+    <tr>
+      <th>自分</th>
+      ${cell(mine.taste)}${cell(mine.replay)}${cell(mine.recommend)}
+      <td class="total" style="color:${ratingColor(ratingAvg(mine))}">${ratingAvg(mine)}</td>
+    </tr>` : `
+    <tr class="muted"><th>自分</th><td class="na">—</td><td class="na">—</td><td class="na">—</td><td class="na">未評価</td></tr>`;
+  const t = averageAxis(slug, "taste"), v = averageAxis(slug, "replay"), o = averageAxis(slug, "recommend");
+  const all = averageScore(slug);
+  const rowAll = reviews.length ? `
+    <tr>
+      <th>みんな<i>${reviews.length}人</i></th>
+      ${cell(t)}${cell(v)}${cell(o)}
+      <td class="total" style="color:${ratingColor(all)}">${all}</td>
+    </tr>` : "";
+  const legacy = reviews.filter(r => !ratingHasAxes(r)).length;
+  return `
+    <table class="rating-summary">
+      <thead><tr><th></th><th>好み</th><th>リプレイ性</th><th>おすすめ度</th><th>総合</th></tr></thead>
+      <tbody>${rowMine}${rowAll}</tbody>
+    </table>
+    ${legacy ? `<div class="review-count" style="margin-top:4px;">※ ${legacy}件は以前の1本評価なので、総合にだけ入っています。</div>` : ""}
   `;
 }
 
@@ -4849,8 +4908,8 @@ function showDetail(g) {
           <span>⏱ ${g.timeRaw || "時間不明"}</span>
         </div>
         <div class="hero-scores">
-          <span class="hero-score">自分<b style="color:${mine != null ? ratingColor(mine) : "inherit"}">${mine != null ? mine : "—"}</b></span>
-          <span class="hero-score">みんな<b>${avg != null ? avg : "—"}</b><i>${getReviews(slug).length ? `${getReviews(slug).length}人` : ""}</i></span>
+          <span class="hero-score">自分の総合<b style="color:${mine != null ? ratingColor(mine) : "inherit"}">${mine != null ? mine : "—"}</b></span>
+          <span class="hero-score">みんなの総合<b>${avg != null ? avg : "—"}</b><i>${getReviews(slug).length ? `${getReviews(slug).length}人` : ""}</i></span>
         </div>
       </div>
     </div>
