@@ -1103,8 +1103,19 @@
   .hero-class .tag-row { gap: 4px; }
   .tag-chip.mini { font-size: 11px; padding: 3px 8px; }
   .detail-act-row.four { grid-template-columns: repeat(4, 1fr); }
+  .detail-act.rated { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .detail-act.rated i { color: #dff0fb; }
   .detail-act-row.four .detail-act i { font-size: 10px; }
   .edit-panel { border-color: var(--accent); }
+  .edit-sec-title {
+    font-size: 12.5px;
+    font-weight: 700;
+    color: var(--accent);
+    border-bottom: 2px solid var(--accent-soft);
+    padding-bottom: 4px;
+    margin: 18px 0 10px;
+  }
+  .edit-photos { margin-top: 8px; }
   .hero-title { grid-area: title; }
   .hero-img { grid-area: img; }
   .hero-body { grid-area: body; }
@@ -1694,8 +1705,8 @@
   .card-main:active { opacity: 0.7; }
   .card img {
     width: 132px;
-    height: 132px;
-    object-fit: cover;
+    height: 99px;
+    object-fit: contain;
     border-radius: 10px;
     background: #f1f2f5;
     flex-shrink: 0;
@@ -2877,7 +2888,7 @@ try {
 // ── 自動更新 ───────────────────────────────
 // iPhoneはHTMLを長く握るので、新しい版が出ていたらURLを変えて読み直す。
 // （同じURLの再読み込みだとキャッシュが返ってきてしまうため）
-const APP_BUILD = "2026-09-11-1839";
+const APP_BUILD = "2026-09-11-1858";
 
 function markVersion(extra) {
   const el = document.getElementById("appVersion");
@@ -2917,7 +2928,6 @@ let games = [];
 let rulesData = {};
 let genresData = {};
 let mechanicsData = {};
-let galleryData = {};     // slug -> 表紙以外の写真ファイル名（ボドゲーマのギャラリー）
 let reviewsCache = {};
 let historyCache = {};
 let interestsCache = {};
@@ -2926,7 +2936,6 @@ let sessionsCache = [];
 let profilesCache = {};   // 名前 → 診断結果
 let customTagsCache = {}; // slug → 自分たちで足した/隠したタグ
 let ruleEditsCache = {};  // slug → 早見表の手直し
-let quickrefEditMode = false;
 let tagEditMode = false;
 let detailEditOpen = false;   // 詳細の「編集」パネル（ジャンル・メカニクス・タグをまとめて直す）
 let genreEditMode = false;
@@ -3173,13 +3182,11 @@ Promise.all([
   fetch("data/rules.json", NO_CACHE).then(r => r.ok ? r.json() : {}).catch(() => ({})),
   fetch("data/genres.json", NO_CACHE).then(r => r.ok ? r.json() : {}).catch(() => ({})),
   fetch("data/mechanics.json", NO_CACHE).then(r => r.ok ? r.json() : {}).catch(() => ({})),
-  fetch("data/gallery.json", NO_CACHE).then(r => r.ok ? r.json() : {}).catch(() => ({})),
   fetchAllReviews()
-]).then(([gamesData, rules, genres, mechanics, gallery]) => {
+]).then(([gamesData, rules, genres, mechanics]) => {
   games = gamesData;
   rulesData = rules;
   genresData = genres;
-  galleryData = gallery || {};
   mechanicsData = mechanics;
   document.getElementById("totalCount").textContent = games.length;
   renderUserBadge();
@@ -3425,7 +3432,7 @@ function render() {
       <a class="card-main" href="#game/${encodeURIComponent(slug)}">
         <div class="card-title-jp">${g.jp}</div>
         <div class="card-row">
-          <img src="${secondImage(g, "card") || gameImg(g, "card")}" alt="${g.jp}" loading="lazy" onerror="this.style.visibility='hidden'">
+          <img src="${gameImg(g, "card")}" alt="${g.jp}" loading="lazy" onerror="this.style.visibility='hidden'">
           <div class="card-body">
             <div class="spec-row">
               ${specHtml(g.playersRaw)}
@@ -3440,12 +3447,6 @@ function render() {
         ${worldview ? `<button type="button" class="card-more-about" data-toggle-about="${slug}">${expandedCards.has(slug) ? "たたむ" : "つづきを読む"}</button>` : ""}
         ${latestMemo ? `<div class="card-memo">「${latestMemo.memo}」<i>— ${latestMemo.name}</i></div>` : ""}
       </a>
-      <div class="card-actions">
-        <button type="button" class="card-act ${iLike ? "on" : ""}" data-card-interest="${slug}">${iLike ? "🌟 興味あり" : "☆ 興味あり"}</button>
-        <button type="button" class="card-act" data-card-rate="${slug}">${mine != null ? `⭐ 評価 ${mine}` : "⭐ 評価する"}</button>
-        <button type="button" class="card-act ${todayCount ? "on-today" : ""}" data-played="${slug}">🎲 今日やる</button>
-        <button type="button" class="card-act" data-card-history="${slug}">📖 戦績${histCount ? `（${histCount}）` : ""}</button>
-      </div>
     </div>
   `;
   }).join("");
@@ -3463,15 +3464,6 @@ function gameImg(g, kind) {
   const url = (g && g.img) || "";
   const spec = IMG_SIZES[kind] || IMG_SIZES.card;
   return url.replace(/small_light\([^)]*\)/, "small_light(" + spec + ")");
-}
-
-// 表紙以外の写真（中身やプレイ中の様子）。無いゲームもある。
-function gameImg2(g, kind, index) {
-  const files = galleryData[slugOf(g)] || [];
-  const f = files[index || 0];
-  if (!f) return "";
-  const spec = IMG_SIZES[kind] || IMG_SIZES.card;
-  return "https://image-bodoge.cdn-hoobby.net/small_light(" + spec + ")/" + f;
 }
 
 function slugOf(g) {
@@ -3869,8 +3861,7 @@ function fetchAllReviews() {
     fetchCollectionCache("customtags", CUSTOMTAGS_CACHE_KEY).then(c => { customTagsCache = c; }),
     fetchCollectionCache("ruleedits", RULEEDITS_CACHE_KEY).then(c => { ruleEditsCache = c; }),
     fetchProfiles().then(c => { profilesCache = c; }),
-    fetchSessions().then(c => { sessionsCache = c; }),
-    fetchImagePrefs().then(c => { imagePrefs = c; })
+    fetchSessions().then(c => { sessionsCache = c; })
   ]);
 }
 
@@ -4396,9 +4387,7 @@ function buildRatingSection(g) {
     <div class="review-card">
       <div class="review-header">
         <div class="review-title">みんなの評価</div>
-        ${avg != null ? `<div class="review-avg">${avg}<span>/10</span></div>` : ""}
       </div>
-      <div class="review-count">${reviews.length}件の評価${reviews.length ? "" : "（まだ評価がありません）"}${!firebaseReady ? " ・ ⚠️ Firebase未設定" : ""}</div>
       ${buildRatingSummary(slug)}
       ${(() => {
         const me = getMyName();
@@ -4578,68 +4567,7 @@ function getRuleEdit(slug) {
 const PHOTO_MAX_PX = 1400;
 const PHOTO_MAX_BYTES = 700000;
 let photoCache = {};          // slug -> [写真]
-// 一覧の2枚目にどれを使うか、ボドゲーマの写真のどれを隠すか。ゲームごとに1件。
-let imagePrefs = {};          // slug -> { hidden: [file], second: {type:"web", file} | {type:"thumb", data} }
-const IMAGEPREFS_CACHE_KEY = "bg_imageprefs_cache_v1";
-
-function fetchImagePrefs() {
-  if (!firebaseReady) {
-    try { return Promise.resolve(JSON.parse(localStorage.getItem(IMAGEPREFS_CACHE_KEY)) || {}); }
-    catch (e) { return Promise.resolve({}); }
-  }
-  return db.collection("imageprefs").get().then(snap => {
-    const out = {};
-    snap.forEach(d => { const v = d.data(); if (v.slug) out[v.slug] = Object.assign({ id: d.id }, v); });
-    localStorage.setItem(IMAGEPREFS_CACHE_KEY, JSON.stringify(out));
-    return out;
-  }).catch(err => {
-    console.error("imageprefs取得エラー", err);
-    try { return JSON.parse(localStorage.getItem(IMAGEPREFS_CACHE_KEY)) || {}; } catch (e) { return {}; }
-  });
-}
-
-function saveImagePref(slug, patch) {
-  if (!firebaseReady) { alert("Firebaseが未設定のため、保存できません。"); return Promise.resolve(); }
-  const cur = imagePrefs[slug] || {};
-  const next = { slug, hidden: cur.hidden || [], second: cur.second || null };
-  Object.assign(next, patch);
-  const ref = cur.id ? db.collection("imageprefs").doc(cur.id) : db.collection("imageprefs").doc(slug);
-  return ref.set(next).then(() => {
-    imagePrefs[slug] = Object.assign({ id: cur.id || slug }, next);
-    localStorage.setItem(IMAGEPREFS_CACHE_KEY, JSON.stringify(imagePrefs));
-  }).catch(err => writeFailed(err, "写真の設定"));
-}
-
-// 一覧の2枚目に使う写真のURL（設定 > 隠していないギャラリーの先頭）
-function secondImage(g, kind) {
-  const slug = slugOf(g);
-  const pref = imagePrefs[slug] || {};
-  if (pref.second && pref.second.type === "thumb" && pref.second.data) return pref.second.data;
-  const hidden = new Set(pref.hidden || []);
-  const files = (galleryData[slug] || []).filter(f => !hidden.has(f));
-  const spec = IMG_SIZES[kind] || IMG_SIZES.card;
-  const mk = f => "https://image-bodoge.cdn-hoobby.net/small_light(" + spec + ")/" + f;
-  if (pref.second && pref.second.type === "web" && pref.second.file && !hidden.has(pref.second.file)) return mk(pref.second.file);
-  return files.length ? mk(files[0]) : "";
-}
-
-// 一覧に置ける大きさの小さい画像を作る
-function makeThumb(dataUrl) {
-  return new Promise(resolve => {
-    const img = new Image();
-    img.onload = () => {
-      const scale = Math.min(1, 320 / Math.max(img.naturalWidth, img.naturalHeight));
-      const c = document.createElement("canvas");
-      c.width = Math.round(img.naturalWidth * scale); c.height = Math.round(img.naturalHeight * scale);
-      c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
-      resolve(c.toDataURL("image/jpeg", 0.7));
-    };
-    img.onerror = () => resolve("");
-    img.src = dataUrl;
-  });
-}
 let photoLoading = {};
-
 function getPhotos(slug, kind) {
   return (photoCache[slug] || []).filter(p => p.kind === kind);
 }
@@ -4710,69 +4638,6 @@ function deletePhoto(slug, id) {
   }).catch(err => writeFailed(err, "写真の削除"));
 }
 
-// ゲームの写真欄。ボドゲーマのギャラリー（消せない）＋自分たちで足した写真（消せる）。
-function buildGamePhotos(g) {
-  const slug = slugOf(g);
-  const pref = imagePrefs[slug] || {};
-  const hidden = new Set(pref.hidden || []);
-  const files = galleryData[slug] || [];
-  const mine = getPhotos(slug, "game");
-  const secondUrl = secondImage(g, "card");
-  const isSecondWeb = f => pref.second && pref.second.type === "web" && pref.second.file === f
-    || (!pref.second && files.filter(x => !hidden.has(x))[0] === f);
-  const isSecondMine = p => pref.second && pref.second.type === "thumb" && pref.second.photoId === p.id;
-  const total = files.filter(f => !hidden.has(f)).length + mine.length;
-  return `
-    <div>
-      ${total ? `<div class="photo-strip">
-        ${files.filter(f => !hidden.has(f)).map((f, i) => `
-          <button type="button" class="photo-thumb ${isSecondWeb(f) ? "is-second" : ""}" data-photo-menu="web:${f}">
-            <img src="https://image-bodoge.cdn-hoobby.net/small_light(${IMG_SIZES.card})/${f}" alt="${g.jp}の写真" loading="lazy">
-            ${isSecondWeb(f) ? `<span class="photo-badge">一覧の2枚目</span>` : ""}
-          </button>`).join("")}
-        ${mine.map(p => `
-          <button type="button" class="photo-thumb ${isSecondMine(p) ? "is-second" : ""}" data-photo-menu="mine:${p.id}">
-            <img src="${p.data}" alt="${g.jp}の写真">
-            ${isSecondMine(p) ? `<span class="photo-badge">一覧の2枚目</span>` : ""}
-          </button>`).join("")}
-      </div>` : `<div class="review-count">まだ写真がありません。</div>`}
-      ${hidden.size ? `<button type="button" class="link-btn" data-photo-unhide-all style="margin-top:6px;">隠した写真を戻す（${hidden.size}枚）</button>` : ""}
-      <label class="photo-add">
-        <input type="file" accept="image/*" data-photo-add="game" data-photo-slug="${slug}" hidden>
-        📷 写真を追加
-      </label>
-      <div class="review-count" style="margin-top:8px;">
-        写真をタップすると、一覧の2枚目にしたり、隠したり、原寸で見たりできます。
-      </div>
-      ${photoMenuFor ? buildPhotoMenu(g, photoMenuFor) : ""}
-    </div>
-  `;
-}
-
-let photoMenuFor = "";   // "web:<file>" or "mine:<id>"
-let photosOpen = false;  // 写真の折りたたみを開いているか（操作のたびに閉じないように覚える）
-
-function buildPhotoMenu(g, key) {
-  const [type, id] = [key.slice(0, key.indexOf(":")), key.slice(key.indexOf(":") + 1)];
-  const slug = slugOf(g);
-  const isMine = type === "mine";
-  const p = isMine ? getPhotos(slug, "game").find(x => x.id === id) : null;
-  const full = isMine ? (p ? p.data : "") : "https://image-bodoge.cdn-hoobby.net/small_light(" + IMG_SIZES.detail + ")/" + id;
-  return `
-    <div class="photo-menu">
-      <img src="${isMine ? (p ? p.data : "") : "https://image-bodoge.cdn-hoobby.net/small_light(" + IMG_SIZES.card + ")/" + id}" alt="">
-      <div class="photo-menu-btns">
-        <button type="button" class="section-toggle-btn section-toggle-btn-primary" data-photo-set-second="${key}">一覧の2枚目にする</button>
-        ${isMine
-          ? `<button type="button" class="section-toggle-btn" data-photo-remove="${id}">この写真を消す</button>`
-          : `<button type="button" class="section-toggle-btn" data-photo-hide="${id}">この写真を隠す</button>`}
-        <button type="button" class="section-toggle-btn" data-photo-full="${full.replace(/"/g, "&quot;")}">原寸で見る</button>
-        <button type="button" class="link-btn" data-photo-menu-close>とじる</button>
-      </div>
-    </div>
-  `;
-}
-
 // 写真の並びと追加ボタン。どの場所のものかは kind で分ける。
 function buildPhotoBlock(slug, kind, label) {
   const list = getPhotos(slug, kind);
@@ -4829,7 +4694,7 @@ function buildQuickRef(g) {
   const d = quickRefData(g);
   const hasAny = d.winCondition || d.rules.length || d.scoreTable || d.scoreFormula || d.scoreNote;
 
-  if (quickrefEditMode) {
+  if (false) {
     return `
       <form class="review-form quickref-form" data-quickref-slug="${slug}">
         <div class="review-form-field">
@@ -4853,11 +4718,11 @@ function buildQuickRef(g) {
 
   // 情報が無いゲームでも、直すボタンだけは出しておく
   if (!hasAny) {
-    return `<div class="review-count">まだ情報がありません。</div>
-      ${buildPhotoBlock(slug, "quickref", "早見表")}
-      <div class="tag-edit-bar" style="margin-top:10px;">
-        <button type="button" class="link-btn" data-quickref-edit>✏️ 早見表を書く</button>
-      </div>`;
+    const ph = getPhotos(slug, "quickref");
+    return `<div class="review-count">まだ情報がありません。右上の「編集」から書けます。</div>
+      ${ph.length ? `<div class="photo-strip" style="margin-top:10px;">
+        ${ph.map(p => `<div class="photo-thumb"><img src="${p.data}" alt="早見表" data-photo-view="${p.id}" data-photo-slug="${slug}"></div>`).join("")}
+      </div>` : ""}`;
   }
 
   let scoreHtml = "";
@@ -4881,11 +4746,79 @@ function buildQuickRef(g) {
       ${d.rules.length ? `
       <div class="quickref-sub">自分の手番でできること</div>
       <ul class="quickref-list">${d.rules.map(s => `<li>${s}</li>`).join("")}</ul>` : ""}
-      ${buildPhotoBlock(slug, "quickref", "早見表")}
-      <div class="tag-edit-bar" style="margin-top:12px;">
-        <button type="button" class="link-btn" data-quickref-edit>✏️ 早見表を直す</button>
-        ${d.edited ? `<span class="tag-edit-note" style="margin-left:6px;">（手直し済み）</span>` : ""}
-      </div>
+      ${(() => {
+        const ph = getPhotos(slug, "quickref");
+        return ph.length ? `<div class="photo-strip" style="margin-top:10px;">
+          ${ph.map(p => `<div class="photo-thumb"><img src="${p.data}" alt="早見表" data-photo-view="${p.id}" data-photo-slug="${slug}"></div>`).join("")}
+        </div>` : "";
+      })()}
+      ${d.edited ? `<div class="tag-edit-note" style="margin-top:8px;">（手直し済み）</div>` : ""}
+  `;
+}
+
+// 右上の「編集」で開く、このゲームの直せるもの全部
+function buildEditPanel(g) {
+  const slug = slugOf(g);
+  const d = quickRefData(g);
+  const photoEdit = (kind, label) => {
+    const list = getPhotos(slug, kind);
+    return `
+      <div class="edit-photos">
+        ${list.length ? `<div class="photo-strip">
+          ${list.map(p => `
+            <div class="photo-thumb">
+              <img src="${p.data}" alt="${label}" data-photo-view="${p.id}" data-photo-slug="${slug}">
+              <button type="button" class="photo-del ${pendingPhotoDelete === p.id ? "confirm" : ""}"
+                      data-photo-del="${p.id}" data-photo-slug="${slug}">${pendingPhotoDelete === p.id ? "消す？" : "×"}</button>
+            </div>`).join("")}
+        </div>` : ""}
+        <label class="photo-add">
+          <input type="file" accept="image/*" data-photo-add="${kind}" data-photo-slug="${slug}" hidden>
+          📷 ${label}の写真を追加${list.length ? `（${list.length}枚）` : ""}
+        </label>
+      </div>`;
+  };
+  return `
+    <div class="review-card edit-panel">
+      <div class="review-title" style="margin-bottom:4px;">このゲームを編集</div>
+      <div class="review-count" style="margin-bottom:10px;">変えたところは、みんなの画面にも反映されます。</div>
+
+      <div class="edit-sec-title">ジャンル・メカニクス・ハッシュタグ</div>
+      ${buildClassGrid(g)}
+      ${buildTagsAndPitch(g, true)}
+
+      <div class="edit-sec-title">準備</div>
+      <form class="review-form" data-rule-form="setup" data-slug="${slug}">
+        <textarea name="lines" rows="5" placeholder="1行に1項目">${d.setup.join("\n")}</textarea>
+        <button type="submit">準備を保存</button>
+      </form>
+      ${photoEdit("setup", "準備")}
+
+      <div class="edit-sec-title">ルール</div>
+      <form class="review-form" data-rule-form="rules" data-slug="${slug}">
+        <textarea name="lines" rows="6" placeholder="1行に1項目">${d.rules.join("\n")}</textarea>
+        <button type="submit">ルールを保存</button>
+      </form>
+
+      <div class="edit-sec-title">プレイ中の早見表</div>
+      <form class="review-form quickref-form" data-quickref-slug="${slug}">
+        <div class="review-form-field">
+          <label>勝利条件</label>
+          <textarea name="winCondition" rows="2" maxlength="300">${d.winCondition}</textarea>
+        </div>
+        <div class="review-form-field">
+          <label>得点の数え方（書くと元の表を置き換えます）</label>
+          <textarea name="scoreNote" rows="2" maxlength="400" placeholder="${d.scoreTable || d.scoreFormula ? "空欄のままなら元の内容を使います" : ""}">${d.scoreNote}</textarea>
+        </div>
+        <div class="review-form-field">
+          <label>自分の手番でできること（1行に1つ）</label>
+          <textarea name="rules" rows="5" maxlength="1200">${d.rules.join("\n")}</textarea>
+        </div>
+        <button type="submit">早見表を保存</button>
+        ${d.edited ? `<button type="button" class="section-toggle-btn" data-quickref-reset style="margin-top:8px;">元の内容に戻す</button>` : ""}
+      </form>
+      ${photoEdit("quickref", "早見表")}
+    </div>
   `;
 }
 
@@ -4929,30 +4862,19 @@ function buildSetupSection(g) {
 }
 
 function buildRuleBlock(slug, kind, label, lines) {
-  const editing = ruleEditKind === kind;
+  const photos = kind === "rules" ? [] : getPhotos(slug, kind);
   return `
     <div class="rule-block">
-      <div class="detail-section-title-sm">
-        ${label}
-        <button type="button" class="link-btn" data-rule-edit="${kind}">${editing ? "閉じる" : "直す"}</button>
-      </div>
-      ${editing ? `
-        <form class="review-form" data-rule-form="${kind}" data-slug="${slug}">
-          <div class="review-form-field">
-            <label>1行に1項目で書いてください</label>
-            <textarea name="lines" rows="7">${lines.join("\n")}</textarea>
-          </div>
-          <button type="submit">保存する</button>
-        </form>
-      ` : (lines.length
+      ${lines.length
         ? `<ol class="detail-list">${lines.map(x => `<li>${x}</li>`).join("")}</ol>`
-        : `<div class="review-count">まだ書かれていません。「直す」から足せます。</div>`)}
-      ${buildPhotoBlock(slug, kind, label)}
+        : `<div class="review-count">まだ書かれていません。右上の「編集」から足せます。</div>`}
+      ${photos.length ? `<div class="photo-strip">
+        ${photos.map(p => `<div class="photo-thumb"><img src="${p.data}" alt="${label}" data-photo-view="${p.id}" data-photo-slug="${slug}"></div>`).join("")}
+      </div>` : ""}
     </div>
   `;
 }
 
-let ruleEditKind = "";
 
 function buildInterestSection(g) {
   const slug = slugOf(g);
@@ -4971,7 +4893,7 @@ function buildInterestSection(g) {
 
 let lastDetailSlug = "";
 function showDetail(g) {
-  if (slugOf(g) !== lastDetailSlug) { photosOpen = false; photoMenuFor = ""; detailEditOpen = false; lastDetailSlug = slugOf(g); }
+  if (slugOf(g) !== lastDetailSlug) { detailEditOpen = false; pendingPhotoDelete = ""; lastDetailSlug = slugOf(g); }
   document.getElementById("controls").style.display = "none";
   document.getElementById("listView").style.display = "none";
   document.getElementById("playerView").style.display = "none";
@@ -4998,7 +4920,7 @@ function showDetail(g) {
         <button type="button" class="hero-star ${iLike ? "on" : ""}" data-toggle-interest="${slug}" title="興味あり">${iLike ? "🌟" : "☆"}</button>
         <button type="button" class="hero-edit ${detailEditOpen ? "on" : ""}" data-detail-edit>${detailEditOpen ? "閉じる" : "編集"}</button>
       </div>
-      <img class="hero-img" src="${gameImg(g, "detail")}" alt="${g.jp}" data-jump-open="photos" onerror="this.style.visibility='hidden'">
+      <img class="hero-img" src="${gameImg(g, "detail")}" alt="${g.jp}" data-photo-src="${gameImg(g, "detail")}" onerror="this.style.visibility='hidden'">
       <div class="hero-body">
         <div class="hero-specs">
           <span>👥 ${g.playersRaw || "人数不明"}</span>
@@ -5015,20 +4937,14 @@ function showDetail(g) {
         })()}
       </div>
     </div>
-    ${detailEditOpen ? `
-      <div class="review-card edit-panel">
-        <div class="review-title" style="margin-bottom:8px;">ジャンル・メカニクス・タグを直す</div>
-        ${buildClassGrid(g)}
-        ${buildTagsAndPitch(g, true)}
-      </div>` : ""}
+    ${detailEditOpen ? buildEditPanel(g) : ""}
     <div class="detail-act-row four">
       <button type="button" class="detail-act detail-act-today ${todayCount ? "on-today" : ""}" data-played="${slug}">
-        🎲<i>今日やる！</i><b>${todayCount || "—"}</b></button>
-      <button type="button" class="detail-act ${mine != null ? "on" : ""}" data-jump="detailRecord">
-        ⭐<i>${mine != null ? "評価済み" : "評価する"}</i><b>${mine != null ? mine : "—"}</b></button>
+        🎲<i>今日やる！</i></button>
+      <button type="button" class="detail-act ${mine != null ? "rated" : ""}" data-jump="detailRecord">
+        ⭐<i>${mine != null ? "評価済み" : "評価する"}</i></button>
       <button type="button" class="detail-act" data-jump-open="quickref">📕<i>早見表</i></button>
-      <button type="button" class="detail-act" data-jump-open="history">
-        📖<i>過去戦績</i><b>${getHistory(slug).length || "—"}</b></button>
+      <button type="button" class="detail-act" data-jump-open="history">📖<i>過去戦績</i></button>
     </div>
     ${buildWorldviewSection(g)}
     <div id="detailRecord"></div>
@@ -5040,20 +4956,15 @@ function showDetail(g) {
       const d = quickRefData(g);
       const hasS = d.setup.length || getPhotos(slug, "setup").length;
       const hasR = d.rules.length || getPhotos(slug, "rules").length;
-      return collapsibleSection("prep", "🧩 準備", buildRuleBlock(slug, "setup", "ゲームの準備", d.setup), !!hasS || ruleEditKind === "setup")
+      return collapsibleSection("prep", "🧩 準備", buildRuleBlock(slug, "setup", "ゲームの準備", d.setup), !!hasS)
         + collapsibleSection("rules", "📕 ルール", buildRuleBlock(slug, "rules", "ルール", d.rules) + `
           <div class="tag-edit-bar" style="margin-top:8px;">
             <a class="link-btn" href="${ruleVideoUrl(g)}" target="_blank" rel="noopener">▶ 動画で確認</a>
             <a class="link-btn" href="${g.url}" target="_blank" rel="noopener" style="margin-left:12px;">ボドゲーマで見る</a>
-          </div>`, !!hasR || ruleEditKind === "rules");
+          </div>`, !!hasR);
     })()}
-    ${collapsibleSection("quickref", "🎯 プレイ中の早見表", buildQuickRef(g), quickrefEditMode)}
+    ${collapsibleSection("quickref", "🎯 プレイ中の早見表", buildQuickRef(g), false)}
     ${collapsibleSection("history", `🏆 戦績（${getHistory(slugOf(g)).length}件）`, buildHistorySection(g), false)}
-    ${(() => {
-      const files = (galleryData[slug] || []).filter(f => !new Set((imagePrefs[slug] || {}).hidden || []).has(f));
-      const n = files.length + getPhotos(slug, "game").length;
-      return collapsibleSection("photos", `📷 写真${n ? `（${n}枚）` : ""}`, buildGamePhotos(g), photosOpen || !!photoMenuFor);
-    })()}
   `;
   applyPendingDetailSection();
   // 写真はそのゲームを開いたときだけ読む（全部を起動時に読むと重い）
@@ -5112,9 +5023,9 @@ document.getElementById("detailView").addEventListener("submit", async e => {
       setup: cur0.setup,
       rules: qrForm.elements.rules.value.split("\n").map(x => x.trim()).filter(Boolean)
     }, getMyName() || "");
-    quickrefEditMode = false;
     const g = games.find(x => slugOf(x) === slug);
     if (g) showDetail(g);
+    toast("早見表を保存しました");
     return;
   }
   const ruleForm = e.target.closest("[data-rule-form]");
@@ -5133,10 +5044,9 @@ document.getElementById("detailView").addEventListener("submit", async e => {
       setup: kind === "setup" ? lines : cur.setup,
       rules: kind === "rules" ? lines : cur.rules
     }, name);
-    ruleEditKind = "";
     const g = games.find(x => slugOf(x) === slug);
     if (g) showDetail(g);
-    toast("保存しました");
+    toast(kind === "setup" ? "準備を保存しました" : "ルールを保存しました");
     return;
   }
 
@@ -5305,27 +5215,20 @@ document.getElementById("detailView").addEventListener("click", async e => {
     goToTagSearch(tagBtn.dataset.tagSearch);
     return;
   }
-  if (e.target.closest("[data-quickref-edit]")) {
-    quickrefEditMode = true;
-    const g = currentDetailGame();
-    if (g) showDetail(g);
-    return;
-  }
-  if (e.target.closest("[data-quickref-cancel]")) {
-    quickrefEditMode = false;
-    const g = currentDetailGame();
-    if (g) showDetail(g);
-    return;
-  }
   const qrReset = e.target.closest("[data-quickref-reset]");
   if (qrReset) {
-    if (!confirm("手直しを消して、調べた元の内容に戻します。よろしいですか？")) return;
+    if (qrReset.dataset.armed !== "1") {
+      qrReset.dataset.armed = "1";
+      qrReset.textContent = "もう一度押すと、調べた元の内容に戻ります";
+      setTimeout(() => { qrReset.dataset.armed = ""; qrReset.textContent = "元の内容に戻す"; }, 4000);
+      return;
+    }
     const g = currentDetailGame();
     if (!g) return;
     qrReset.disabled = true;
     await resetRuleEdit(slugOf(g));
-    quickrefEditMode = false;
     showDetail(g);
+    toast("元の内容に戻しました");
     return;
   }
   // 遊んだ：詳細を書かずに1回分だけ記録する
@@ -5392,97 +5295,6 @@ document.getElementById("detailView").addEventListener("click", async e => {
     if (g) showDetail(g);
     return;
   }
-  const ruleEdit = e.target.closest("[data-rule-edit]");
-  if (ruleEdit) {
-    const k = ruleEdit.dataset.ruleEdit;
-    ruleEditKind = ruleEditKind === k ? "" : k;
-    const g = currentDetailGame();
-    if (g) showDetail(g);
-    return;
-  }
-
-  if (e.target.closest('[data-toggle-section="photos"]')) {
-    photosOpen = !photosOpen;   // 実際の開閉は共通処理がやる。次に作り直すときのために覚えるだけ。
-  }
-  if (e.target.closest("[data-photo-add], [data-photo-menu], [data-photo-unhide-all]")) photosOpen = true;
-
-  const pm = e.target.closest("[data-photo-menu]");
-  if (pm) {
-    photoMenuFor = photoMenuFor === pm.dataset.photoMenu ? "" : pm.dataset.photoMenu;
-    const g = currentDetailGame();
-    if (g) showDetail(g);
-    const menu = document.querySelector(".photo-menu");
-    if (menu) menu.scrollIntoView({ behavior: "smooth", block: "center" });
-    return;
-  }
-  if (e.target.closest("[data-photo-menu-close]")) {
-    photoMenuFor = "";
-    const g = currentDetailGame(); if (g) showDetail(g);
-    return;
-  }
-  const full = e.target.closest("[data-photo-full]");
-  if (full) { openLightbox(full.dataset.photoFull); return; }
-
-  const setSecond = e.target.closest("[data-photo-set-second]");
-  if (setSecond) {
-    const g = currentDetailGame(); if (!g) return;
-    const key = setSecond.dataset.photoSetSecond;
-    const type = key.slice(0, key.indexOf(":")), id = key.slice(key.indexOf(":") + 1);
-    setSecond.disabled = true; setSecond.textContent = "設定中…";
-    if (type === "web") {
-      await saveImagePref(slugOf(g), { second: { type: "web", file: id } });
-    } else {
-      const p = getPhotos(slugOf(g), "game").find(x => x.id === id);
-      const thumb = p ? await makeThumb(p.data) : "";
-      if (!thumb) { toast("この写真は使えませんでした"); return; }
-      await saveImagePref(slugOf(g), { second: { type: "thumb", data: thumb, photoId: id } });
-    }
-    photoMenuFor = "";
-    showDetail(g); render();
-    toast("一覧の2枚目に設定しました");
-    return;
-  }
-
-  const hide = e.target.closest("[data-photo-hide]");
-  if (hide) {
-    const g = currentDetailGame(); if (!g) return;
-    const cur = imagePrefs[slugOf(g)] || {};
-    const hidden = [...new Set([...(cur.hidden || []), hide.dataset.photoHide])];
-    const patch = { hidden };
-    if (cur.second && cur.second.type === "web" && cur.second.file === hide.dataset.photoHide) patch.second = null;
-    await saveImagePref(slugOf(g), patch);
-    photoMenuFor = "";
-    showDetail(g); render();
-    toast("隠しました。「隠した写真を戻す」で戻せます");
-    return;
-  }
-
-  if (e.target.closest("[data-photo-unhide-all]")) {
-    const g = currentDetailGame(); if (!g) return;
-    await saveImagePref(slugOf(g), { hidden: [] });
-    showDetail(g); render();
-    return;
-  }
-
-  const removeMine = e.target.closest("[data-photo-remove]");
-  if (removeMine) {
-    const g = currentDetailGame(); if (!g) return;
-    const id = removeMine.dataset.photoRemove;
-    if (pendingPhotoDelete !== id) {
-      pendingPhotoDelete = id; removeMine.textContent = "もう一度押すと消えます";
-      setTimeout(() => { if (pendingPhotoDelete === id) { pendingPhotoDelete = ""; const g1 = currentDetailGame(); if (g1) showDetail(g1); } }, 4000);
-      return;
-    }
-    pendingPhotoDelete = "";
-    const cur = imagePrefs[slugOf(g)] || {};
-    if (cur.second && cur.second.photoId === id) await saveImagePref(slugOf(g), { second: null });
-    await deletePhoto(slugOf(g), id);
-    photoMenuFor = "";
-    showDetail(g); render();
-    toast("写真を消しました");
-    return;
-  }
-
   const heroImg = e.target.closest("[data-photo-src]");
   if (heroImg) { openLightbox(heroImg.dataset.photoSrc); return; }
   const photoView = e.target.closest("[data-photo-view]");
