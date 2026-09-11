@@ -1219,7 +1219,7 @@
     height: 99px;
     object-fit: contain;
     border-radius: 10px;
-    background: #f1f2f5;
+    background: #fff;
     flex-shrink: 0;
     cursor: zoom-in;
   }
@@ -1800,8 +1800,9 @@
   .card-sec-body { font-size: 13px; line-height: 1.55; color: var(--text); }
   .card-sec .card-about { margin: 0; }
   .card-genres { gap: 5px; margin-top: 1px; }
-  .card-tags { gap: 5px; margin: 8px 0 0; max-height: 54px; overflow: hidden; }
-  .detail-tags { gap: 5px; margin: 10px 0 0; }
+  .card-tags { gap: 5px; margin: 0; max-height: 54px; overflow: hidden; }
+  .detail-tags-label { font-size: 10.5px; font-weight: 700; color: var(--text-sub); letter-spacing: .04em; margin: 12px 0 5px; padding-top: 10px; border-top: 1px solid var(--border); }
+  .detail-tags { gap: 5px; margin: 0; }
   .card-memo.one { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .card-memo.folded { display: none; }
   .card-memos.open .card-memo.folded { display: block; white-space: normal; }
@@ -1828,7 +1829,7 @@
     height: 99px;
     object-fit: contain;
     border-radius: 10px;
-    background: #f1f2f5;
+    background: #fff;
     flex-shrink: 0;
   }
   .card-body {
@@ -2504,7 +2505,7 @@
   }
   /* MYボドゲ棚：白い壁に表紙を並べ、下に棚板。画像の白い余白と壁を同じ白にして境目を消す */
   .shelf { padding: 10px 6px 0; background: #fff; border-radius: 10px; }
-  .shelf-row { position: relative; display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; padding: 0 4px 16px; margin-bottom: 12px; align-items: end; }
+  .shelf-row { position: relative; display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; padding: 0 4px 12px; margin-bottom: 12px; align-items: end; }
   .shelf-box { display: block; aspect-ratio: 4 / 3; position: relative; z-index: 1; background: #fff; }
   .shelf-box img { width: 100%; height: 100%; object-fit: contain; object-position: 50% 100%; display: block; background: #fff; }
   .shelf-box.empty { background: #fff; }
@@ -2980,7 +2981,7 @@ try {
 // ── 自動更新 ───────────────────────────────
 // iPhoneはHTMLを長く握るので、新しい版が出ていたらURLを変えて読み直す。
 // （同じURLの再読み込みだとキャッシュが返ってきてしまうため）
-const APP_BUILD = "2026-09-12-0108";
+const APP_BUILD = "2026-09-12-0131";
 
 function markVersion(extra) {
   const el = document.getElementById("appVersion");
@@ -3588,7 +3589,7 @@ function render() {
       <a class="card-main" href="#game/${encodeURIComponent(slug)}">
         <div class="card-title-jp">${g.jp}</div>
         <div class="card-row">
-          <img src="${gameImg(g, "card")}" alt="${g.jp}" loading="lazy" data-fb="${coverFallback(g, "card")}" onerror="if(this.dataset.fb){this.src=this.dataset.fb;this.dataset.fb='';}else{this.style.visibility='hidden';}">
+          <img src="${gameImg(g, "card")}" alt="${g.jp}" loading="lazy" data-slug="${slug}" data-fb="${coverFallback(g, "card")}" onerror="if(this.dataset.fb){this.src=this.dataset.fb;this.dataset.fb='';}else{this.style.visibility='hidden';}">
           <div class="card-body">
             <div class="spec-row">
               ${specHtml(g.playersRaw)}
@@ -3601,11 +3602,11 @@ function render() {
         ${genreTags.length ? `<div class="card-sec"><span class="card-sec-label">ジャンル</span><div class="card-sec-body tag-row card-genres">
           ${genreTags.map(t => `<button type="button" class="tag-chip mini" data-class-filter="genre" data-value="${t}">${t}</button>`).join("")}
         </div></div>` : ""}
-        ${(worldview || cardTags) ? `<div class="card-sec"><span class="card-sec-label">${worldview ? "どんなゲーム？" : "ハッシュタグ"}</span><div class="card-sec-body">
-          ${worldview ? `<p class="card-about ${expandedCards.has(slug) ? "open" : ""}">${worldview}</p>` : ""}
+        ${worldview ? `<div class="card-sec"><span class="card-sec-label">どんなゲーム？</span><div class="card-sec-body">
+          <p class="card-about ${expandedCards.has(slug) ? "open" : ""}">${worldview}</p>
           ${worldview.length > 46 ? `<button type="button" class="card-more-about" data-toggle-about="${slug}">${expandedCards.has(slug) ? "たたむ" : "つづきを読む"}</button>` : ""}
-          ${cardTags ? `<div class="tag-row card-tags" style="${worldview ? "" : "margin-top:0;"}">${cardTags}</div>` : ""}
         </div></div>` : ""}
+        ${cardTags ? `<div class="card-sec"><span class="card-sec-label">ゲームタグ</span><div class="card-sec-body"><div class="tag-row card-tags">${cardTags}</div></div></div>` : ""}
         ${wanters.length ? `<div class="card-sec"><span class="card-sec-label">遊びたい人</span><div class="card-sec-body card-wanters">${wanters.map(w => `<b>${w.name}</b>`).join("")}</div></div>` : ""}
         ${memos.length ? `<div class="card-sec"><span class="card-sec-label">みんなの感想</span><div class="card-sec-body card-memos">
           ${memos.map((m, i) => `<div class="card-memo ${i === 0 ? "two" : "one folded"}"><i>${m.name}</i>「${m.memo}」</div>`).join("")}
@@ -3615,6 +3616,7 @@ function render() {
     </div>
   `;
   }).join("");
+  refineCoverImages(list);
 }
 
 // ボドゲーマの画像はサイズと品質がURLに埋まっている。
@@ -5108,7 +5110,7 @@ function buildWorldviewSection(g) {
   if ((!r || !r.worldview) && !chips) return "";
   return `<div class="review-card"><div class="review-title" style="margin-bottom:6px;">どんなゲーム？</div>
     ${r && r.worldview ? `<p class="detail-worldview" style="margin:0;">${r.worldview}</p>` : ""}
-    ${chips ? `<div class="tag-row detail-tags">${chips}</div>` : ""}
+    ${chips ? `<div class="detail-tags-label">ゲームタグ</div><div class="tag-row detail-tags">${chips}</div>` : ""}
   </div>`;
 }
 
@@ -5212,7 +5214,7 @@ function showDetail(g) {
   dv.style.display = "block";
   setHeaderEdit(true);
   // 描画後にジャンル・メカニクスの行数を見て、3行以上なら2行で畳む
-  requestAnimationFrame(() => collapseTagRows(dv));
+  requestAnimationFrame(() => { collapseTagRows(dv); refineCoverImages(dv.querySelector(".hero")); });
 
   const slug = slugOf(g);
   const avg = averageScore(slug);
@@ -5228,7 +5230,7 @@ function showDetail(g) {
       <div class="hero-title-row">
         <h1 class="detail-title hero-title ${titleSizeClass(g.jp)}">${g.jp}</h1>
       </div>
-      <img class="hero-img" src="${gameImg(g, "detail")}" alt="${g.jp}" data-photo-src="${gameImg(g, "large")}" data-fb="${coverFallback(g, "detail")}" onerror="if(this.dataset.fb){this.src=this.dataset.fb;this.dataset.photoSrc=this.dataset.fb;this.dataset.fb='';}else{this.style.visibility='hidden';}">
+      <img class="hero-img" src="${gameImg(g, "detail")}" alt="${g.jp}" data-slug="${slug}" data-photo-src="${gameImg(g, "large")}" data-fb="${coverFallback(g, "detail")}" onerror="if(this.dataset.fb){this.src=this.dataset.fb;this.dataset.photoSrc=this.dataset.fb;this.dataset.fb='';}else{this.style.visibility='hidden';}">
       <div class="hero-body">
         <div class="hero-specs">
           <span>${g.playersRaw || "人数不明"}</span>
@@ -6705,7 +6707,13 @@ document.getElementById("detailView").addEventListener("change", async e => {
     if (!name) return;
     toast("写真を用意しています…");
     try {
-      const data = await shrinkImage(file, 800);
+      let data = await shrinkImage(file, 800);
+      // 白い余白は保存前に落としておく（棚や一覧で箱が小さく見えないように）
+      try {
+        const im = await new Promise((res, rej) => { const x = new Image(); x.onload = () => res(x); x.onerror = rej; x.src = data; });
+        const o = trimWhiteImage(im);
+        if (o) data = o.toDataURL("image/jpeg", 0.85);
+      } catch (e) { /* 失敗しても元の画像で続ける */ }
       const oldId = coverOverrideId[slug];
       const id = await addPhoto(slug, "cover", data, name);
       if (id) {
@@ -8278,6 +8286,26 @@ function coverSrc(slug) {
 // 表紙の白い余白を切り落として、箱そのものの画像にする（棚に置いたとき浮いて見えないように）
 // 同一オリジンの data/covers か data: URL だけが対象。読めなければ元のURLをそのまま返す
 const trimmedCoverCache = {};
+// 画像の白い縁を落として、箱の部分だけの canvas を返す。落とすものが無ければ null
+function trimWhiteImage(im) {
+  const w = im.naturalWidth || im.width, h = im.naturalHeight || im.height;
+  if (!w || !h) return null;
+  const c = document.createElement("canvas"); c.width = w; c.height = h;
+  const ctx = c.getContext("2d", { willReadFrequently: true });
+  ctx.drawImage(im, 0, 0, w, h);
+  const d = ctx.getImageData(0, 0, w, h).data;
+  const white = i => d[i] > 235 && d[i + 1] > 235 && d[i + 2] > 235;
+  let top = h, bottom = -1, left = w, right = -1;
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+    if (!white((y * w + x) * 4)) { if (y < top) top = y; if (y > bottom) bottom = y; if (x < left) left = x; if (x > right) right = x; }
+  }
+  if (bottom < 0 || (right - left) < w * 0.25 || (bottom - top) < h * 0.25) return null;
+  const cw = right - left + 1, ch = bottom - top + 1;
+  if (cw >= w - 2 && ch >= h - 2) return null;
+  const o = document.createElement("canvas"); o.width = cw; o.height = ch;
+  o.getContext("2d").drawImage(c, left, top, cw, ch, 0, 0, cw, ch);
+  return o;
+}
 function trimmedCover(slug) {
   if (trimmedCoverCache[slug]) return trimmedCoverCache[slug];
   const src = coverSrc(slug);
@@ -8285,37 +8313,29 @@ function trimmedCover(slug) {
     const im = new Image();
     im.onload = () => {
       try {
-        const w = im.naturalWidth, h = im.naturalHeight;
-        const c = document.createElement("canvas"); c.width = w; c.height = h;
-        const ctx = c.getContext("2d", { willReadFrequently: true });
-        ctx.drawImage(im, 0, 0);
-        const d = ctx.getImageData(0, 0, w, h).data;
-        const white = i => d[i] > 238 && d[i + 1] > 238 && d[i + 2] > 238;
-        let top = h, bottom = -1, left = w, right = -1;
-        for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
-          if (!white((y * w + x) * 4)) { if (y < top) top = y; if (y > bottom) bottom = y; if (x < left) left = x; if (x > right) right = x; }
-        }
-        if (bottom < 0 || (right - left) < w * 0.3 || (bottom - top) < h * 0.3) { resolve(src); return; }
-        const m = 2;
-        left = Math.max(0, left - m); top = Math.max(0, top - m); right = Math.min(w - 1, right + m); bottom = Math.min(h - 1, bottom + m);
-        const cw = right - left + 1, ch = bottom - top + 1;
-        if (cw >= w - 6 && ch >= h - 6) { resolve(src); return; }
-        const o = document.createElement("canvas"); o.width = cw; o.height = ch;
-        o.getContext("2d").drawImage(c, left, top, cw, ch, 0, 0, cw, ch);
-        resolve(o.toDataURL("image/jpeg", 0.9));
+        const o = trimWhiteImage(im);
+        resolve(o ? o.toDataURL("image/jpeg", 0.9) : src);
       } catch (e) { resolve(src); }
     };
-    im.onerror = () => resolve(src);
+    im.onerror = () => resolve(null);   // 読めない（ローカルに無い等）ときは差し替えない
     im.src = src;
   });
   return trimmedCoverCache[slug];
 }
-// 棚に並んだ表紙を、余白を切ったものに差し替える（描画後に非同期で）
-function refineShelfImages(root) {
-  (root || document).querySelectorAll(".shelf-box img[data-slug]").forEach(img => {
-    trimmedCover(img.dataset.slug).then(url => { if (img.isConnected && url !== img.src) img.src = url; });
-  });
+// 描画後に、表紙画像を余白を切ったものへ差し替える（棚・一覧・詳細）。同一オリジンの画像だけ対象
+function refineCoverImages(root) {
+  const imgs = [...(root || document).querySelectorAll("img[data-slug]")];
+  let i = 0;
+  const step = () => {
+    const batch = imgs.slice(i, i + 12); i += 12;
+    batch.forEach(img => {
+      trimmedCover(img.dataset.slug).then(url => { if (url && img.isConnected && url !== img.getAttribute("src")) img.src = url; });
+    });
+    if (i < imgs.length) setTimeout(step, 30);
+  };
+  step();
 }
+const refineShelfImages = refineCoverImages;
 
 function buildShelf(name) {
   const list = shelfGames(name);
@@ -8361,7 +8381,7 @@ async function exportShelfImage(name) {
   ctx.fillStyle = "#5c7a90"; ctx.font = "26px -apple-system, 'Hiragino Sans', sans-serif";
   ctx.fillText(`うちのボードゲーム棚 ・ 評価が高い順`, pad, 118);
   const load = src => new Promise(res => { const im = new Image(); im.onload = () => res(im); im.onerror = () => res(null); im.src = src; });
-  const imgs = await Promise.all(list.map(x => trimmedCover(x.slug).then(load)));
+  const imgs = await Promise.all(list.map(x => trimmedCover(x.slug).then(u => load(u || coverSrc(x.slug)))));
   for (let r = 0; r < rows; r++) {
     const top = titleH + r * rowH;
     // 棚板（手前の面と側面）
