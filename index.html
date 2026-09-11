@@ -723,6 +723,9 @@
   .rating-summary tr.member td { font-size: 15px; padding: 6px 2px; }
   .rating-summary tr.member td.total { font-size: 16px; background: none; }
   .rating-summary tr.member td.na { font-size: 12px; }
+  .rating-summary:not(.open) tr.extra { display: none; }
+  .rating-summary tr.more td { border-top: 1px solid var(--border); text-align: left; padding: 6px 0 4px; font-size: 12px; }
+  .rating-summary tr.more .link-btn { font-size: 12px; padding: 0; }
   .rating-summary tr.memo td {
     border-top: none;
     text-align: left;
@@ -2923,7 +2926,7 @@ try {
 // ── 自動更新 ───────────────────────────────
 // iPhoneはHTMLを長く握るので、新しい版が出ていたらURLを変えて読み直す。
 // （同じURLの再読み込みだとキャッシュが返ってきてしまうため）
-const APP_BUILD = "2026-09-11-2000";
+const APP_BUILD = "2026-09-11-2006";
 
 function markVersion(extra) {
   const el = document.getElementById("appVersion");
@@ -4444,17 +4447,21 @@ function buildRatingSummary(slug) {
   const t = averageAxis(slug, "taste"), v = averageAxis(slug, "replay"), o = averageAxis(slug, "recommend");
   const all = averageScore(slug);
   // メンバーごとの行は評価が高い順。名前・総合・好み・リプレイ性・おすすめ度を1行に、感想はその下に小さく
-  const sorted = reviews.slice().sort((a, b) => (ratingAvg(b) ?? -1) - (ratingAvg(a) ?? -1));
-  const memberRows = sorted.map(r => {
+  // 並び：自分 → ほかで一番評価が高い人 → 残りは折りたたみ
+  const others = reviews.filter(r => r.name !== me).sort((a, b) => (ratingAvg(b) ?? -1) - (ratingAvg(a) ?? -1));
+  const mineR = reviews.find(r => r.name === me);
+  const shown = [...(mineR ? [mineR] : []), ...others.slice(0, 1)];
+  const hidden = others.slice(1);
+  const memberRows = (list, extra) => list.map(r => {
     const rt = axisValue(r, "taste"), rv = axisValue(r, "replay"), ro = axisValue(r, "recommend"), ra = ratingAvg(r);
     const mine = r.name === me;
     return `
-      <tr class="member ${mine ? "mine" : ""}">
+      <tr class="member ${mine ? "mine" : ""} ${extra ? "extra" : ""}">
         <th><a href="#player/${encodeURIComponent(r.name)}">${r.name}</a>${mine ? `<button type="button" class="link-btn fix" data-edit-rating="${r.id}" data-edit-slug="${slug}">直す</button>` : ""}</th>
         ${ra == null ? `<td class="na total">—</td>` : `<td class="total" style="color:${ratingColor(ra)}">${ra}</td>`}
         ${cell(rt)}${cell(rv)}${cell(ro)}
       </tr>
-      ${r.memo ? `<tr class="memo"><td colspan="5">${r.memo}</td></tr>` : ""}`;
+      ${r.memo ? `<tr class="memo ${extra ? "extra" : ""}"><td colspan="5">${r.memo}</td></tr>` : ""}`;
   }).join("");
   return `
     <table class="rating-summary">
@@ -4465,7 +4472,10 @@ function buildRatingSummary(slug) {
           ${all == null ? `<td class="na total">—</td>` : `<td class="total" style="color:${ratingColor(all)}">${all}</td>`}
           ${cell(t)}${cell(v)}${cell(o)}
         </tr>
-        ${memberRows}
+        ${memberRows(shown, false)}
+        ${hidden.length ? `
+          <tr class="more"><td colspan="5"><button type="button" class="link-btn" data-toggle-rating-more data-label="ほか${hidden.length}人の評価を見る">ほか${hidden.length}人の評価を見る</button></td></tr>
+          ${memberRows(hidden, true)}` : ""}
       </tbody>
     </table>
   `;
@@ -5320,6 +5330,13 @@ document.getElementById("detailView").addEventListener("click", async e => {
     logDate = openLog.dataset.openLog || "";
     editingId = ""; editDraft = null; logMembersOpen = "";
     location.hash = "#log";
+    return;
+  }
+  const moreRatings = e.target.closest("[data-toggle-rating-more]");
+  if (moreRatings) {
+    const table = moreRatings.closest("table");
+    const open = table.classList.toggle("open");
+    moreRatings.textContent = open ? "たたむ" : moreRatings.dataset.label;
     return;
   }
   if (e.target.closest("[data-detail-edit]")) {
