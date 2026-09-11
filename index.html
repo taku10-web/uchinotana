@@ -2983,7 +2983,7 @@ try {
 // ── 自動更新 ───────────────────────────────
 // iPhoneはHTMLを長く握るので、新しい版が出ていたらURLを変えて読み直す。
 // （同じURLの再読み込みだとキャッシュが返ってきてしまうため）
-const APP_BUILD = "2026-09-12-0140";
+const APP_BUILD = "2026-09-12-0156";
 
 function markVersion(extra) {
   const el = document.getElementById("appVersion");
@@ -3693,13 +3693,9 @@ function getGameTags(g) {
   );
   const r = rulesData[slug];
   const audienceTags = ((r && r.audienceTags) || []).filter(keep);
-  const computedTags = [];
-  if (g.playersMin === 1) computedTags.push("ソロ可");
-  if (g.playersMax != null && g.playersMax >= 8) computedTags.push("大人数向け");
-  if (g.timeMax != null && g.timeMax <= 15) computedTags.push("サクッと〜15分");
-  if (g.timeMin != null && g.timeMin >= 60) computedTags.push("じっくり60分〜");
-  const mergedAudience = Array.from(new Set([...audienceTags, ...computedTags.filter(keep)]));
-  const customTags = added.filter(t => !hidden.has(t));
+  // 人数・時間の自動タグは廃止（軽量級／1人でも／大人数でも遊べる などがゲームタグに入ったため）
+  const mergedAudience = Array.from(new Set(audienceTags));
+  const customTags = added.filter(t => !hidden.has(t) && !mergedAudience.includes(t));   // 語彙と同じ名前は重複させない
   return {
     genreTags,
     mechanicTags,              // 表示用（ジャンルと重複するものを除いたもの）
@@ -3971,8 +3967,8 @@ function buildTagsAndPitch(g, forceEdit) {
 
   const vocab = Array.from(new Set(games.flatMap(x => getGameTags(x).all))).sort((a, b) => a.localeCompare(b, "ja"));
   // プルダウン用：ジャンル・メカニクス以外（雰囲気タグ＋みんなが足したタグ）
-  const AUTO_TAGS = new Set(["ソロ可", "大人数向け", "サクッと〜15分", "じっくり60分〜"]);   // 人数・時間から自動で付くもの
-  const hashVocab = vocab.filter(v => !GENRE_VOCAB.has(v) && !MECHANIC_VOCAB.has(v) && !AUTO_TAGS.has(v))
+  // プルダウンは決めた語彙＋みんなが足したタグ（件数順）
+  const hashVocab = Array.from(new Set([...HASHTAG_VOCAB, ...vocab.filter(v => !GENRE_VOCAB.has(v) && !MECHANIC_VOCAB.has(v))]))
     .sort((a, b) => (tagCounts()[b] || 0) - (tagCounts()[a] || 0) || a.localeCompare(b, "ja"));
 
   return `
@@ -4185,15 +4181,30 @@ const MECHANIC_RENAME = {
 function renameMechanic(t) {
   return t in MECHANIC_RENAME ? MECHANIC_RENAME[t] : t;
 }
+// ハッシュタグも24種類に整理した。以前の名前で足されたカスタムタグは読み替える（null＝表示しない）
+const HASHTAG_RENAME = {
+  "初心者でも遊べる": "初心者向け", "手軽なルール": "初心者向け", "ルール重ため": "経験者向け",
+  "家族で": "ファミリー向け", "子供と一緒に": "子供といっしょに", "盛り上がる": "パーティ向け",
+  "頭脳戦": "真剣勝負", "じっくり考えたい人に": "真剣勝負", "心理戦": "バチバチの戦い",
+  "旅行・持ち運び便利": "外出向け", "初対面同士に": "コミュニケーション大事", "2人で盛り上がる": "2人用",
+  "カップルで": "2人用", "スピード勝負": "体育会系", "手先を使う": "体育会系", "世界観が魅力": "文系",
+  "対立少なめ": "仲良く協力", "ソロ可": "1人でも", "大人数向け": "大人数でも遊べる",
+  "サクッと〜15分": "軽量級", "じっくり60分〜": "重量級",
+  "気心知れた仲間と": null, "中毒性あり": null, "少人数向け": null, "見た目がかわいい": null,
+  "運と戦略半々": null, "女子会に": null
+};
+function renameHashtag(t) {
+  return t in HASHTAG_RENAME ? HASHTAG_RENAME[t] : t;
+}
 // 自分たちで足したタグ／消したタグ
 function getCustomTags(slug) {
   const list = customTagsCache[slug] || [];
   const add = list.filter(c => c.mode === "add");
   return {
-    added: add.filter(c => !c.kind || c.kind === "tag").map(c => c.tag),
+    added: Array.from(new Set(add.filter(c => !c.kind || c.kind === "tag").map(c => renameHashtag(c.tag)).filter(Boolean))),
     addedGenres: add.filter(c => c.kind === "genre").map(c => c.tag),
     addedMechanics: add.filter(c => c.kind === "mechanic").map(c => renameMechanic(c.tag)).filter(Boolean),
-    hidden: new Set(list.filter(c => c.mode === "hide").map(c => renameMechanic(c.tag) || c.tag))
+    hidden: new Set(list.filter(c => c.mode === "hide").map(c => renameHashtag(renameMechanic(c.tag) || c.tag) || c.tag))
   };
 }
 
@@ -5097,8 +5108,9 @@ function buildPitchSection(g) {
   return `<div class="review-card"><div class="review-title" style="margin-bottom:6px;">✨ おすすめポイント</div><ul class="pitch-list" style="margin:0;">${pts.map(p => `<li>${p}</li>`).join("")}</ul></div>`;
 }
 
-// ハッシュタグ（雰囲気タグ＋みんなが足したタグ）のチップ。自動で付く人数・時間タグは含めない
-const AUTO_TAG_SET = new Set(["ソロ可", "大人数向け", "サクッと〜15分", "じっくり60分〜"]);
+// ゲームタグの語彙（24種類）。ゲームごとの付与は data/rules.json の audienceTags
+const HASHTAG_VOCAB = ["飲み会向け", "パーティ向け", "外出向け", "ファミリー向け", "初心者向け", "経験者向け", "真剣勝負", "仲良く協力", "チーム戦", "バチバチの戦い", "子供といっしょに", "軽量級", "中量級", "重量級", "2人用", "1人でも", "大人数でも遊べる", "運ゲー", "コミュニケーション大事", "お絵かき", "理数系", "文系", "体育会系", "〆ゲーム"];
+const AUTO_TAG_SET = new Set();
 // タグごとの登録件数（何本のゲームに付いているか）。カスタムタグが変わったら作り直す
 let tagCountCache = null;
 function tagCounts() {
