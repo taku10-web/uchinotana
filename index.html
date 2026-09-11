@@ -1572,6 +1572,13 @@
     color: inherit;
   }
   .card-main:active { opacity: 0.7; }
+  /* 左に縦2枚：上が表紙、下が中身やプレイ中の写真 */
+  .card-imgs {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    flex-shrink: 0;
+  }
   .card img {
     width: 124px;
     height: 93px;
@@ -1580,6 +1587,7 @@
     background: #f1f2f5;
     flex-shrink: 0;
   }
+  .card img.card-img2 { object-fit: cover; }
   .card-body {
     min-width: 0;
     flex: 1;
@@ -2722,7 +2730,7 @@ try {
 // ── 自動更新 ───────────────────────────────
 // iPhoneはHTMLを長く握るので、新しい版が出ていたらURLを変えて読み直す。
 // （同じURLの再読み込みだとキャッシュが返ってきてしまうため）
-const APP_BUILD = "2026-09-11-1356";
+const APP_BUILD = "2026-09-11-1415";
 
 function markVersion(extra) {
   const el = document.getElementById("appVersion");
@@ -2762,6 +2770,7 @@ let games = [];
 let rulesData = {};
 let genresData = {};
 let mechanicsData = {};
+let galleryData = {};     // slug -> 表紙以外の写真ファイル名（ボドゲーマのギャラリー）
 let reviewsCache = {};
 let historyCache = {};
 let interestsCache = {};
@@ -3016,11 +3025,13 @@ Promise.all([
   fetch("data/rules.json", NO_CACHE).then(r => r.ok ? r.json() : {}).catch(() => ({})),
   fetch("data/genres.json", NO_CACHE).then(r => r.ok ? r.json() : {}).catch(() => ({})),
   fetch("data/mechanics.json", NO_CACHE).then(r => r.ok ? r.json() : {}).catch(() => ({})),
+  fetch("data/gallery.json", NO_CACHE).then(r => r.ok ? r.json() : {}).catch(() => ({})),
   fetchAllReviews()
-]).then(([gamesData, rules, genres, mechanics]) => {
+]).then(([gamesData, rules, genres, mechanics, gallery]) => {
   games = gamesData;
   rulesData = rules;
   genresData = genres;
+  galleryData = gallery || {};
   mechanicsData = mechanics;
   document.getElementById("totalCount").textContent = games.length;
   renderUserBadge();
@@ -3255,7 +3266,10 @@ function render() {
     return `
     <div class="card">
       <a class="card-main" href="#game/${encodeURIComponent(slug)}">
-        <img src="${gameImg(g, "card")}" alt="${g.jp}" loading="lazy" onerror="this.style.visibility='hidden'">
+        <div class="card-imgs">
+          <img src="${gameImg(g, "card")}" alt="${g.jp}" loading="lazy" onerror="this.style.visibility='hidden'">
+          ${gameImg2(g, "card") ? `<img class="card-img2" src="${gameImg2(g, "card")}" alt="${g.jp}の中身" loading="lazy" onerror="this.style.display='none'">` : ""}
+        </div>
         <div class="card-body">
           <div class="card-title-jp">${g.jp}</div>
           <div class="spec-row">
@@ -3302,6 +3316,15 @@ function gameImg(g, kind) {
   const url = (g && g.img) || "";
   const spec = IMG_SIZES[kind] || IMG_SIZES.card;
   return url.replace(/small_light\([^)]*\)/, "small_light(" + spec + ")");
+}
+
+// 表紙以外の写真（中身やプレイ中の様子）。無いゲームもある。
+function gameImg2(g, kind, index) {
+  const files = galleryData[slugOf(g)] || [];
+  const f = files[index || 0];
+  if (!f) return "";
+  const spec = IMG_SIZES[kind] || IMG_SIZES.card;
+  return "https://image-bodoge.cdn-hoobby.net/small_light(" + spec + ")/" + f;
 }
 
 function slugOf(g) {
