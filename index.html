@@ -2951,7 +2951,7 @@ try {
 // ── 自動更新 ───────────────────────────────
 // iPhoneはHTMLを長く握るので、新しい版が出ていたらURLを変えて読み直す。
 // （同じURLの再読み込みだとキャッシュが返ってきてしまうため）
-const APP_BUILD = "2026-09-11-2231";
+const APP_BUILD = "2026-09-11-2235";
 
 function markVersion(extra) {
   const el = document.getElementById("appVersion");
@@ -8238,7 +8238,9 @@ function buildPlayerPage(name) {
     <div class="player-head">
       <h1 class="detail-title">${isMe ? "マイページ" : name}</h1>
       ${typeFam
-        ? `<button type="button" class="type-chip-sm" data-toggle-section="p-typequick">${typeFam.emoji} ${typeFam.name}タイプ</button>${isMe ? `<a class="type-retake" href="#quiz">診断をやり直す</a>` : ""}`
+        ? (isMe
+          ? `<a class="type-chip-sm" href="#quiz">${typeFam.emoji} ${typeFam.name}タイプ</a>`
+          : `<button type="button" class="type-chip-sm" data-toggle-section="p-typequick">${typeFam.emoji} ${typeFam.name}タイプ</button>`)
         : (isMe ? `<a class="type-chip-sm type-chip-empty" href="#quiz">🧭 タイプ診断</a>` : "")}
     </div>
     ${isMe && !(prof && prof.type) ? `
