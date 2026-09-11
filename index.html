@@ -1166,6 +1166,12 @@
   .want-btn.on { background: var(--accent); color: #fff; }
   .want-btn.done { border-color: var(--border); background: var(--bg); color: var(--text-sub); cursor: default; }
   .edit-panel { border-color: var(--accent); }
+  .cover-edit { display: flex; gap: 12px; align-items: flex-start; margin-bottom: 6px; }
+  .cover-edit img { width: 120px; height: 90px; object-fit: contain; background: #fff; border: 1px solid var(--border); border-radius: 8px; flex-shrink: 0; }
+  .cover-edit-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+  .cover-edit-body .photo-add { margin: 0; }
+  .cover-edit-body .link-btn { align-self: flex-start; font-size: 12px; }
+  .cover-edit-body .link-btn.danger { color: #c0392b; }
   .edit-sec-title {
     font-size: 12.5px;
     font-weight: 700;
@@ -2939,7 +2945,7 @@ try {
 // ── 自動更新 ───────────────────────────────
 // iPhoneはHTMLを長く握るので、新しい版が出ていたらURLを変えて読み直す。
 // （同じURLの再読み込みだとキャッシュが返ってきてしまうため）
-const APP_BUILD = "2026-09-11-2120";
+const APP_BUILD = "2026-09-11-2142";
 
 function markVersion(extra) {
   const el = document.getElementById("appVersion");
@@ -3537,6 +3543,8 @@ const IMG_SIZES = {
 };
 
 function gameImg(g, kind) {
+  const ov = g && coverOverride[slugOf(g)];
+  if (ov) return ov;   // 差し替えた箱写真があれば、一覧・詳細・棚すべてそれを使う
   const url = (g && g.img) || "";
   const spec = IMG_SIZES[kind] || IMG_SIZES.card;
   return url.replace(/small_light\([^)]*\)/, "small_light(" + spec + ")");
@@ -3941,7 +3949,8 @@ function fetchAllReviews() {
     fetchCollectionCache("customtags", CUSTOMTAGS_CACHE_KEY).then(c => { customTagsCache = c; }),
     fetchCollectionCache("ruleedits", RULEEDITS_CACHE_KEY).then(c => { ruleEditsCache = c; }),
     fetchProfiles().then(c => { profilesCache = c; }),
-    fetchSessions().then(c => { sessionsCache = c; })
+    fetchSessions().then(c => { sessionsCache = c; }),
+    fetchCoverOverrides()
   ]);
 }
 
@@ -4639,6 +4648,19 @@ const PHOTO_MAX_PX = 1400;
 const PHOTO_MAX_BYTES = 700000;
 let photoCache = {};          // slug -> [写真]
 let photoLoading = {};
+// 差し替えた箱写真（photos の kind="cover"）。起動時に全部まとめて読む
+let coverOverride = {};       // slug -> dataURL
+let coverOverrideId = {};     // slug -> doc id（差し替え・削除用）
+function fetchCoverOverrides() {
+  if (!firebaseReady) return Promise.resolve();
+  return db.collection("photos").where("kind", "==", "cover").get().then(snap => {
+    const rows = [];
+    snap.forEach(d => rows.push(Object.assign({ id: d.id }, d.data())));
+    rows.sort((a, b) => (a.createdAt?.seconds || 0) - (b.createdAt?.seconds || 0));
+    coverOverride = {}; coverOverrideId = {};
+    rows.forEach(r => { coverOverride[r.slug] = r.data; coverOverrideId[r.slug] = r.id; });
+  }).catch(err => console.error("cover取得エラー", err));
+}
 function getPhotos(slug, kind) {
   return (photoCache[slug] || []).filter(p => p.kind === kind);
 }
@@ -4661,14 +4683,14 @@ function fetchPhotos(slug) {
 }
 
 // 端末側で長辺1400pxまで縮め、700KBを超えないところまで品質を落とす
-function shrinkImage(file) {
+function shrinkImage(file, maxPx = PHOTO_MAX_PX) {
   return new Promise((resolve, reject) => {
     const url = URL.createObjectURL(file);
     const img = new Image();
     img.onload = () => {
       URL.revokeObjectURL(url);
       let w = img.naturalWidth, h = img.naturalHeight;
-      const scale = Math.min(1, PHOTO_MAX_PX / Math.max(w, h));
+      const scale = Math.min(1, maxPx / Math.max(w, h));
       w = Math.max(1, Math.round(w * scale));
       h = Math.max(1, Math.round(h * scale));
       const c = document.createElement("canvas");
@@ -4853,6 +4875,19 @@ function buildEditPanel(g) {
     <div class="review-card edit-panel">
       <div class="review-title" style="margin-bottom:4px;">このゲームを編集</div>
       <div class="review-count" style="margin-bottom:10px;">変えたところは、みんなの画面にも反映されます。</div>
+
+      <div class="edit-sec-title">表紙（箱の写真）</div>
+      <div class="cover-edit">
+        <img src="${coverSrc(slug)}" alt="表紙" onerror="this.src='${gameImg(g, "card")}'">
+        <div class="cover-edit-body">
+          <div class="review-count">背景が白い「箱だけ」の写真だと棚がきれいに見えます。一覧・詳細・棚に反映されます。</div>
+          <label class="photo-add">
+            <input type="file" accept="image/*" data-cover-add="${slug}" hidden>
+            📷 ${coverOverride[slug] ? "別の写真に差し替える" : "箱の写真に差し替える"}
+          </label>
+          ${coverOverride[slug] ? `<button type="button" class="link-btn ${pendingPhotoDelete === "cover:" + slug ? "danger" : ""}" data-cover-reset="${slug}">${pendingPhotoDelete === "cover:" + slug ? "本当に元に戻す？" : "元の写真に戻す"}</button>` : ""}
+        </div>
+      </div>
 
       <div class="edit-sec-title">ジャンル・メカニクス・ハッシュタグ</div>
       ${buildClassGrid(g)}
@@ -5363,6 +5398,24 @@ document.getElementById("detailView").addEventListener("click", async e => {
     const table = moreRatings.closest("table");
     const open = table.classList.toggle("open");
     moreRatings.textContent = open ? "たたむ" : moreRatings.dataset.label;
+    return;
+  }
+  const coverReset = e.target.closest("[data-cover-reset]");
+  if (coverReset) {
+    const slug = coverReset.dataset.coverReset;
+    if (pendingPhotoDelete !== "cover:" + slug) {
+      pendingPhotoDelete = "cover:" + slug;
+      coverReset.textContent = "本当に元に戻す？"; coverReset.classList.add("danger");
+      setTimeout(() => { if (pendingPhotoDelete === "cover:" + slug) { pendingPhotoDelete = ""; const g = currentDetailGame(); if (g) showDetail(g); } }, 4000);
+      return;
+    }
+    pendingPhotoDelete = "";
+    const id = coverOverrideId[slug];
+    if (id) await deletePhoto(slug, id);
+    delete coverOverride[slug]; delete coverOverrideId[slug];
+    const g = currentDetailGame();
+    if (g) showDetail(g);
+    toast("元の写真に戻しました");
     return;
   }
   if (e.target.closest("[data-detail-edit]")) {
@@ -6375,6 +6428,31 @@ function toast(msg) {
 
 // 写真を選んだら、その場で縮めて保存する
 document.getElementById("detailView").addEventListener("change", async e => {
+  const coverInput = e.target.closest("[data-cover-add]");
+  if (coverInput && coverInput.files && coverInput.files[0]) {
+    const file = coverInput.files[0];
+    const slug = coverInput.dataset.coverAdd;
+    const name = ensureMyName();
+    coverInput.value = "";
+    if (!name) return;
+    toast("写真を用意しています…");
+    try {
+      const data = await shrinkImage(file, 800);
+      const oldId = coverOverrideId[slug];
+      const id = await addPhoto(slug, "cover", data, name);
+      if (id) {
+        coverOverride[slug] = data; coverOverrideId[slug] = id;
+        if (oldId) await deletePhoto(slug, oldId);   // 先に足してから古いほうを消す
+        toast("表紙を差し替えました");
+      }
+      const g = currentDetailGame();
+      if (g) showDetail(g);
+    } catch (err) {
+      console.error("表紙の処理に失敗", err);
+      toast(err.message || "この写真は使えませんでした");
+    }
+    return;
+  }
   const input = e.target.closest("[data-photo-add]");
   if (!input || !input.files || !input.files[0]) return;
   const file = input.files[0];
@@ -7817,7 +7895,7 @@ function shelfGames(name) {
     .slice(0, SHELF_COLS * SHELF_ROWS);
 }
 function coverSrc(slug) {
-  return `data/covers/${slug}.jpg`;
+  return coverOverride[slug] || `data/covers/${slug}.jpg`;
 }
 function buildShelf(name) {
   const list = shelfGames(name);

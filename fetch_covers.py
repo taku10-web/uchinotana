@@ -15,6 +15,9 @@ for g in games:
     dst = os.path.join(out, slug + ".jpg")
     if os.path.exists(dst) and os.path.getsize(dst) > 0:
         skipped += 1; continue
+    if picks.get(slug) == "manual":
+        # 手作業で置いた画像（data/covers に直接コピー済み）。自動取得しない
+        skipped += 1; continue
     src = re.sub(r"small_light\([^)]*\)", "small_light(" + SIZE + ")", g["img"])
     if slug in picks:
         src = src.rsplit("/", 1)[0] + "/" + picks[slug]
