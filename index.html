@@ -939,7 +939,9 @@
     font-weight: 600;
   }
   .member-title-chip.empty { opacity: .6; font-weight: 400; }
-  .member-card-exp { font-size: 11.5px; color: #a8d3e8; margin-top: 8px; }
+  .member-card-exp { font-size: 11.5px; color: #a8d3e8; }
+  .member-card-foot { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 10px; }
+  .member-shelf-btn { border: 1px solid rgba(255,255,255,0.55); background: rgba(255,255,255,0.12); color: #fff; border-radius: 999px; padding: 6px 12px; font-size: 12px; font-weight: 700; cursor: pointer; white-space: nowrap; }
 
   /* ゲーム記録 */
   .followup { background: var(--accent-soft); border: 1px solid var(--accent); border-radius: 12px; padding: 12px 14px; margin-bottom: 12px; }
@@ -2981,7 +2983,7 @@ try {
 // ── 自動更新 ───────────────────────────────
 // iPhoneはHTMLを長く握るので、新しい版が出ていたらURLを変えて読み直す。
 // （同じURLの再読み込みだとキャッシュが返ってきてしまうため）
-const APP_BUILD = "2026-09-12-0131";
+const APP_BUILD = "2026-09-12-0140";
 
 function markVersion(extra) {
   const el = document.getElementById("appVersion");
@@ -3970,7 +3972,8 @@ function buildTagsAndPitch(g, forceEdit) {
   const vocab = Array.from(new Set(games.flatMap(x => getGameTags(x).all))).sort((a, b) => a.localeCompare(b, "ja"));
   // プルダウン用：ジャンル・メカニクス以外（雰囲気タグ＋みんなが足したタグ）
   const AUTO_TAGS = new Set(["ソロ可", "大人数向け", "サクッと〜15分", "じっくり60分〜"]);   // 人数・時間から自動で付くもの
-  const hashVocab = vocab.filter(v => !GENRE_VOCAB.has(v) && !MECHANIC_VOCAB.has(v) && !AUTO_TAGS.has(v));
+  const hashVocab = vocab.filter(v => !GENRE_VOCAB.has(v) && !MECHANIC_VOCAB.has(v) && !AUTO_TAGS.has(v))
+    .sort((a, b) => (tagCounts()[b] || 0) - (tagCounts()[a] || 0) || a.localeCompare(b, "ja"));
 
   return `
     ${anyTags ? `
@@ -4070,7 +4073,7 @@ function fetchAllReviews() {
     fetchCollectionCache("ratings", RATINGS_CACHE_KEY).then(c => { reviewsCache = c; }),
     fetchCollectionCache("history", HISTORY_CACHE_KEY).then(c => { historyCache = c; }),
     fetchCollectionCache("interests", INTERESTS_CACHE_KEY).then(c => { interestsCache = c; }),
-    fetchCollectionCache("customtags", CUSTOMTAGS_CACHE_KEY).then(c => { customTagsCache = c; }),
+    fetchCollectionCache("customtags", CUSTOMTAGS_CACHE_KEY).then(c => { customTagsCache = c; tagCountCache = null; }),
     fetchCollectionCache("ruleedits", RULEEDITS_CACHE_KEY).then(c => { ruleEditsCache = c; }),
     fetchProfiles().then(c => { profilesCache = c; }),
     fetchSessions().then(c => { sessionsCache = c; }),
@@ -4101,7 +4104,7 @@ const COLLECTION_TARGETS = {
   ratings:    { key: RATINGS_CACHE_KEY,    set: c => { reviewsCache = c; } },
   history:    { key: HISTORY_CACHE_KEY,    set: c => { historyCache = c; } },
   interests:  { key: INTERESTS_CACHE_KEY,  set: c => { interestsCache = c; } },
-  customtags: { key: CUSTOMTAGS_CACHE_KEY, set: c => { customTagsCache = c; } },
+  customtags: { key: CUSTOMTAGS_CACHE_KEY, set: c => { customTagsCache = c; tagCountCache = null; } },
   ruleedits:  { key: RULEEDITS_CACHE_KEY,  set: c => { ruleEditsCache = c; } }
 };
 
@@ -5096,9 +5099,20 @@ function buildPitchSection(g) {
 
 // ハッシュタグ（雰囲気タグ＋みんなが足したタグ）のチップ。自動で付く人数・時間タグは含めない
 const AUTO_TAG_SET = new Set(["ソロ可", "大人数向け", "サクッと〜15分", "じっくり60分〜"]);
+// タグごとの登録件数（何本のゲームに付いているか）。カスタムタグが変わったら作り直す
+let tagCountCache = null;
+function tagCounts() {
+  if (tagCountCache) return tagCountCache;
+  const c = {};
+  games.forEach(g => getGameTags(g).all.forEach(t => { c[t] = (c[t] || 0) + 1; }));
+  tagCountCache = c;
+  return c;
+}
 function hashTagsOf(g) {
   const t = getGameTags(g);
-  return [...t.audienceTags.filter(x => !AUTO_TAG_SET.has(x)), ...t.customTags];
+  const c = tagCounts();
+  return [...t.audienceTags.filter(x => !AUTO_TAG_SET.has(x)), ...t.customTags]
+    .sort((a, b) => (c[b] || 0) - (c[a] || 0) || a.localeCompare(b, "ja"));   // 登録件数の多い順
 }
 function hashChips(g, mini) {
   return hashTagsOf(g).map(x => `<button type="button" class="tag-chip ${mini ? "mini" : ""}" data-tag-search="${x}">#${x}</button>`).join("");
@@ -5779,7 +5793,10 @@ function buildMembersTab() {
             <span>評価<b>${st.ratings}</b>件</span>
             <span>遊んでみたい<b>${want}</b>本</span>
           </div>
-          <div class="member-card-exp">通算 ${total.toLocaleString()} EXP</div>
+          <div class="member-card-foot">
+            <span class="member-card-exp">通算 ${total.toLocaleString()} EXP</span>
+            <button type="button" class="member-shelf-btn" data-member-shelf="${n}">📚 ${n === me ? "MYボドゲ棚" : "ボドゲ棚"}</button>
+          </div>
         </a>`;
     }).join("")}
     <a href="#recommend" class="recommend-btn" style="margin-top:14px;">👥 メンバーで選んでおすすめしてもらう</a>
@@ -8622,7 +8639,17 @@ function showPlayerPage(name) {
   pv.innerHTML = buildPlayerPage(name);
   refineShelfImages(pv);
   window.scrollTo(0, 0);
+  if (pendingPlayerSection) {
+    const key = pendingPlayerSection; pendingPlayerSection = "";
+    setTimeout(() => {
+      const body = pv.querySelector(`[data-section="${key}"]`);
+      const head = pv.querySelector(`[data-toggle-section="${key}"]`);
+      if (body && body.style.display === "none" && head) head.click();
+      (head || body)?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 80);
+  }
 }
+let pendingPlayerSection = "";
 
 document.getElementById("playerView").addEventListener("change", e => {
   if (e.target.matches("[data-recent-month]")) {
@@ -8775,6 +8802,12 @@ function goBackInApp() {
 
 document.addEventListener("click", e => {
   if (e.target.closest("[data-back]")) { e.preventDefault(); goBackInApp(); }
+  const shelfBtn = e.target.closest("[data-member-shelf]");
+  if (shelfBtn) {
+    e.preventDefault();
+    pendingPlayerSection = "p-shelf";
+    location.hash = `#player/${encodeURIComponent(shelfBtn.dataset.memberShelf)}`;
+  }
 });
 </script>
 
