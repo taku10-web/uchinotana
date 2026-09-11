@@ -6,6 +6,9 @@ ROOT = os.path.dirname(os.path.abspath(__file__))
 games = json.load(open(os.path.join(ROOT, "data/games.json")))
 out = os.path.join(ROOT, "data/covers"); os.makedirs(out, exist_ok=True)
 SIZE = "dw=auto,dh=300,cw=400,ch=300,da=l,ds=s,q=85,cc=FFFFFF"
+# 表紙が箱写真でないゲームは、ギャラリー内の箱写真を data/cover_pick.json で指定できる（slug → 画像ファイル名）
+pick_path = os.path.join(ROOT, "data/cover_pick.json")
+picks = json.load(open(pick_path)) if os.path.exists(pick_path) else {}
 done = skipped = failed = 0
 for g in games:
     slug = g["url"].rstrip("/").split("/")[-1]
@@ -13,6 +16,8 @@ for g in games:
     if os.path.exists(dst) and os.path.getsize(dst) > 0:
         skipped += 1; continue
     src = re.sub(r"small_light\([^)]*\)", "small_light(" + SIZE + ")", g["img"])
+    if slug in picks:
+        src = src.rsplit("/", 1)[0] + "/" + picks[slug]
     try:
         req = urllib.request.Request(src, headers={"User-Agent": "Mozilla/5.0"})
         data = urllib.request.urlopen(req, timeout=20).read()
