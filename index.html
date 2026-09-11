@@ -680,6 +680,7 @@
   .rating-axis { font-size: 12.5px; color: var(--text-sub); }
   .rating-axis b { font-size: 15px; margin-left: 5px; }
   .rating-axis.avg { font-weight: 700; color: var(--text); }
+  .rating-axis.na b { color: var(--text-sub); font-weight: 400; }
   .rating-slider-block { margin: 14px 0 4px; }
   .rating-slider-head {
     display: flex;
@@ -2780,7 +2781,7 @@ try {
 // ── 自動更新 ───────────────────────────────
 // iPhoneはHTMLを長く握るので、新しい版が出ていたらURLを変えて読み直す。
 // （同じURLの再読み込みだとキャッシュが返ってきてしまうため）
-const APP_BUILD = "2026-09-11-1453";
+const APP_BUILD = "2026-09-11-1459";
 
 function markVersion(extra) {
   const el = document.getElementById("appVersion");
@@ -3227,9 +3228,14 @@ function matches(g) {
   return true;
 }
 
-// 軸ごとの平均（その軸を入れている評価だけで平均する）
+// 軸ごとの平均。以前の1本評価（levelだけ）はリプレイ性として数える。
+function axisValue(r, key) {
+  if (r[key] != null) return r[key];
+  if (key === "replay" && !ratingHasAxes(r)) return r.level;
+  return null;
+}
 function averageAxis(slug, key) {
-  const vals = getReviews(slug).map(r => r[key]).filter(v => v != null);
+  const vals = getReviews(slug).map(r => axisValue(r, key)).filter(v => v != null);
   if (!vals.length) return null;
   return Math.round((vals.reduce((a, b) => a + b, 0) / vals.length) * 10) / 10;
 }
@@ -4019,19 +4025,10 @@ function toggleInterest(slug, name) {
 
 // 評価は「好み」と「リプレイ性」の2軸。平均を level として持ち、
 // 並べ替えや推薦は今までどおり level を見る。
-function ratingTaste(r) {
-  return r.taste != null ? r.taste : r.level;
-}
-function ratingReplay(r) {
-  return r.replay != null ? r.replay : r.level;
-}
-function ratingRecommend(r) {
-  return r.recommend != null ? r.recommend : r.level;
-}
 // 入っている軸だけで平均を取る（古い評価は level 1本のまま）
 function ratingAvg(r) {
   const axes = [r.taste, r.replay, r.recommend].filter(v => v != null);
-  if (!axes.length) return r.level;
+  if (!axes.length) return r.level;   // 以前の1本評価＝リプレイ性だけの評価として、その値をそのまま総合にする
   return Math.round((axes.reduce((a, b) => a + b, 0) / axes.length) * 10) / 10;
 }
 function ratingHasAxes(r) {
@@ -4207,8 +4204,7 @@ function buildOtherMembersPicker() {
 }
 
 function buildRatingItem(r, slug) {
-  const t = ratingTaste(r), v = ratingReplay(r), o = ratingRecommend(r), a = ratingAvg(r);
-  const both = ratingHasAxes(r);
+  const t = axisValue(r, "taste"), v = axisValue(r, "replay"), o = axisValue(r, "recommend"), a = ratingAvg(r);
   return `
     <div class="review-item">
       <div class="review-item-top">
@@ -4218,12 +4214,10 @@ function buildRatingItem(r, slug) {
           : ""}
       </div>
       <div class="rating-axes">
-        ${both ? `
-          <span class="rating-axis">好み<b style="color:${ratingColor(t)}">${t}</b></span>
-          <span class="rating-axis">リプレイ性<b style="color:${ratingColor(v)}">${v}</b></span>
-          ${r.recommend != null ? `<span class="rating-axis">おすすめ度<b style="color:${ratingColor(o)}">${o}</b></span>` : ""}
-        ` : ""}
-        <span class="rating-axis avg">平均<b style="color:${ratingColor(a)}">${a}</b></span>
+        ${t != null ? `<span class="rating-axis">好み<b style="color:${ratingColor(t)}">${t}</b></span>` : `<span class="rating-axis na">好み<b>—</b></span>`}
+        ${v != null ? `<span class="rating-axis">リプレイ性<b style="color:${ratingColor(v)}">${v}</b></span>` : `<span class="rating-axis na">リプレイ性<b>—</b></span>`}
+        ${o != null ? `<span class="rating-axis">おすすめ度<b style="color:${ratingColor(o)}">${o}</b></span>` : `<span class="rating-axis na">おすすめ度<b>—</b></span>`}
+        <span class="rating-axis avg">総合<b style="color:${ratingColor(a)}">${a}</b></span>
       </div>
       ${r.memo ? `<div class="review-item-memo">${r.memo}</div>` : ""}
     </div>
@@ -4331,33 +4325,20 @@ function buildRatingSection(g) {
 // 自分とみんなの評価を軸ごとに並べる。古い評価（1本だけ）は総合にしか入らない。
 function buildRatingSummary(slug) {
   const reviews = getReviews(slug);
-  const me = getMyName();
-  const mine = me ? reviews.find(r => r.name === me) : null;
-  if (!reviews.length && !mine) return "";
   const cell = v => v == null ? `<td class="na">—</td>` : `<td style="color:${ratingColor(v)}">${v}</td>`;
-  const axisN = key => reviews.filter(r => r[key] != null).length;
-  const rowMine = mine ? `
-    <tr>
-      <th>自分</th>
-      ${cell(mine.taste)}${cell(mine.replay)}${cell(mine.recommend)}
-      <td class="total" style="color:${ratingColor(ratingAvg(mine))}">${ratingAvg(mine)}</td>
-    </tr>` : `
-    <tr class="muted"><th>自分</th><td class="na">—</td><td class="na">—</td><td class="na">—</td><td class="na">未評価</td></tr>`;
   const t = averageAxis(slug, "taste"), v = averageAxis(slug, "replay"), o = averageAxis(slug, "recommend");
   const all = averageScore(slug);
-  const rowAll = reviews.length ? `
-    <tr>
-      <th>みんな<i>${reviews.length}人</i></th>
-      ${cell(t)}${cell(v)}${cell(o)}
-      <td class="total" style="color:${ratingColor(all)}">${all}</td>
-    </tr>` : "";
-  const legacy = reviews.filter(r => !ratingHasAxes(r)).length;
   return `
     <table class="rating-summary">
       <thead><tr><th></th><th>好み</th><th>リプレイ性</th><th>おすすめ度</th><th>総合</th></tr></thead>
-      <tbody>${rowMine}${rowAll}</tbody>
+      <tbody>
+        <tr>
+          <th>みんな<i>${reviews.length}人</i></th>
+          ${cell(t)}${cell(v)}${cell(o)}
+          ${all == null ? `<td class="na total">—</td>` : `<td class="total" style="color:${ratingColor(all)}">${all}</td>`}
+        </tr>
+      </tbody>
     </table>
-    ${legacy ? `<div class="review-count" style="margin-top:4px;">※ ${legacy}件は以前の1本評価なので、総合にだけ入っています。</div>` : ""}
   `;
 }
 
@@ -4369,9 +4350,9 @@ const RECOMMEND_WORDS = { 10: "全員にすすめたい", 9: "かなりおすす
 function buildRatingForm(slug) {
   const me = getMyName();
   const mine = me ? getReviews(slug).find(r => r.name === me) : null;
-  const t = mine ? (ratingTaste(mine) || 5) : 5;
-  const v = mine ? (ratingReplay(mine) || 5) : 5;
-  const o = mine ? (ratingRecommend(mine) || 5) : 5;
+  const t = mine && mine.taste != null ? mine.taste : 5;
+  const v = mine ? (axisValue(mine, "replay") ?? 5) : 5;
+  const o = mine && mine.recommend != null ? mine.recommend : 5;
   const slider = (name, label, value, words) => `
     <div class="rating-slider-block">
       <div class="rating-slider-head">
@@ -7812,10 +7793,11 @@ function buildBestRated(name) {
         <div class="rec-title">${x.g.jp}</div>
         <div class="rec-spec">${x.g.playersRaw || "人数不明"} ・ ${x.g.timeRaw || "時間不明"}</div>
         <div class="rating-axes">
-          ${x.r.taste != null ? `<span class="rating-axis">好み<b style="color:${ratingColor(ratingTaste(x.r))}">${ratingTaste(x.r)}</b></span>` : ""}
-          ${x.r.replay != null ? `<span class="rating-axis">リプレイ性<b style="color:${ratingColor(ratingReplay(x.r))}">${ratingReplay(x.r)}</b></span>` : ""}
-          ${x.r.recommend != null ? `<span class="rating-axis">おすすめ度<b style="color:${ratingColor(ratingRecommend(x.r))}">${ratingRecommend(x.r)}</b></span>` : ""}
-          <span class="rating-axis avg">平均<b style="color:${ratingColor(ratingAvg(x.r))}">${ratingAvg(x.r)}</b></span>
+          ${["taste", "replay", "recommend"].map((k, i) => {
+            const val = axisValue(x.r, k), lab = ["好み", "リプレイ性", "おすすめ度"][i];
+            return val != null ? `<span class="rating-axis">${lab}<b style="color:${ratingColor(val)}">${val}</b></span>` : `<span class="rating-axis na">${lab}<b>—</b></span>`;
+          }).join("")}
+          <span class="rating-axis avg">総合<b style="color:${ratingColor(ratingAvg(x.r))}">${ratingAvg(x.r)}</b></span>
         </div>
       </div>
     </a>`).join("");
