@@ -669,19 +669,15 @@
   .rs-pill.na b { color: var(--text-sub); font-weight: 400; }
   .rs-pill.total { background: var(--accent-soft); border-color: var(--accent-soft); color: var(--text); font-weight: 600; }
   .rs-pill.total b { font-size: 15px; }
-  .hero-rating {
-    background: var(--card-bg);
-    border: 1px solid var(--border);
-    border-top: none;
-    border-radius: 0 0 14px 14px;
-    padding: 8px 12px 10px;
-    margin: -12px 0 10px;
+  .hero .rs-strip {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 4px;
+    margin: 0;
   }
-  .hero-rating-label { font-size: 11.5px; font-weight: 700; color: var(--text-sub); }
-  .hero-rating-label i { font-style: normal; font-weight: 500; margin-left: 4px; }
-  .hero-rating .rs-strip { margin: 5px 0 0; }
-  .hero-rating .rs-pill b { font-size: 16px; }
-  .hero-rating .rs-pill.total b { font-size: 18px; }
+  .hero .rs-pill { justify-content: space-between; padding: 4px 8px; }
+  .hero .rs-pill b { font-size: 15px; }
+  .hero .rs-pill.total b { font-size: 16px; }
   .rating-summary {
     width: 100%;
     border-collapse: collapse;
@@ -1075,17 +1071,17 @@
   /* 詳細の頭：写真と作品名と人数・時間・評価をひとまとめに */
   .hero {
     display: flex;
-    gap: 14px;
+    gap: 12px;
     align-items: flex-start;
     background: var(--card-bg);
     border: 1px solid var(--border);
-    border-radius: 14px 14px 0 0;
+    border-radius: 14px;
     padding: 12px;
-    margin: 10px 0 0;
+    margin: 10px 0 10px;
   }
   .hero-img {
-    width: 132px;
-    height: 132px;
+    width: 118px;
+    height: 118px;
     object-fit: contain;
     border-radius: 10px;
     background: #f1f2f5;
@@ -1101,16 +1097,12 @@
   .hero-specs {
     display: flex;
     flex-wrap: wrap;
-    gap: 6px 12px;
-    font-size: 14px;
+    gap: 4px 10px;
+    font-size: 13px;
     font-weight: 600;
     color: var(--text-sub);
     margin-bottom: 8px;
   }
-  .hero-scores { display: flex; gap: 14px; }
-  .hero-score { font-size: 12.5px; color: var(--text-sub); }
-  .hero-score b { font-size: 20px; margin-left: 5px; color: var(--text); }
-  .hero-score i { font-style: normal; font-size: 11.5px; margin-left: 3px; }
 
   /* 作品名の下のジャンプ・操作ボタン列 */
   .detail-act-row {
@@ -2812,7 +2804,7 @@ try {
 // ── 自動更新 ───────────────────────────────
 // iPhoneはHTMLを長く握るので、新しい版が出ていたらURLを変えて読み直す。
 // （同じURLの再読み込みだとキャッシュが返ってきてしまうため）
-const APP_BUILD = "2026-09-11-1508";
+const APP_BUILD = "2026-09-11-1514";
 
 function markVersion(extra) {
   const el = document.getElementById("appVersion");
@@ -4244,10 +4236,10 @@ function buildRatingItem(r, slug) {
           : ""}
       </div>
       <div class="rating-axes">
+        <span class="rating-axis avg">総合<b style="color:${ratingColor(a)}">${a}</b></span>
         ${t != null ? `<span class="rating-axis">好み<b style="color:${ratingColor(t)}">${t}</b></span>` : `<span class="rating-axis na">好み<b>—</b></span>`}
         ${v != null ? `<span class="rating-axis">リプレイ性<b style="color:${ratingColor(v)}">${v}</b></span>` : `<span class="rating-axis na">リプレイ性<b>—</b></span>`}
         ${o != null ? `<span class="rating-axis">おすすめ度<b style="color:${ratingColor(o)}">${o}</b></span>` : `<span class="rating-axis na">おすすめ度<b>—</b></span>`}
-        <span class="rating-axis avg">総合<b style="color:${ratingColor(a)}">${a}</b></span>
       </div>
       ${r.memo ? `<div class="review-item-memo">${r.memo}</div>` : ""}
     </div>
@@ -4359,7 +4351,7 @@ function ratingStrip(slug) {
   const all = averageScore(slug);
   const pill = (label, val, cls) => `
     <span class="rs-pill ${cls || ""} ${val == null ? "na" : ""}">${label}<b${val != null ? ` style="color:${ratingColor(val)}"` : ""}>${val != null ? val : "—"}</b></span>`;
-  return `<div class="rs-strip">${pill("好み", t)}${pill("リプレイ", v)}${pill("おすすめ", o)}${pill("総合", all, "total")}</div>`;
+  return `<div class="rs-strip">${pill("総合", all, "total")}${pill("好み", t)}${pill("リプレイ", v)}${pill("おすすめ", o)}</div>`;
 }
 
 function buildRatingSummary(slug) {
@@ -4369,12 +4361,12 @@ function buildRatingSummary(slug) {
   const all = averageScore(slug);
   return `
     <table class="rating-summary">
-      <thead><tr><th></th><th>好み</th><th>リプレイ性</th><th>おすすめ度</th><th>総合</th></tr></thead>
+      <thead><tr><th></th><th>総合</th><th>好み</th><th>リプレイ性</th><th>おすすめ度</th></tr></thead>
       <tbody>
         <tr>
           <th>みんな<i>${reviews.length}人</i></th>
-          ${cell(t)}${cell(v)}${cell(o)}
           ${all == null ? `<td class="na total">—</td>` : `<td class="total" style="color:${ratingColor(all)}">${all}</td>`}
+          ${cell(t)}${cell(v)}${cell(o)}
         </tr>
       </tbody>
     </table>
@@ -4927,11 +4919,8 @@ function showDetail(g) {
           <span>👥 ${g.playersRaw || "人数不明"}</span>
           <span>⏱ ${g.timeRaw || "時間不明"}</span>
         </div>
+        ${ratingStrip(slug)}
       </div>
-    </div>
-    <div class="hero-rating">
-      <span class="hero-rating-label">みんなの評価${getReviews(slug).length ? `<i>${getReviews(slug).length}人</i>` : ""}</span>
-      ${ratingStrip(slug)}
     </div>
     <div class="detail-act-row">
       <button type="button" class="detail-act ${iLike ? "on" : ""}" data-toggle-interest="${slug}">
@@ -7832,11 +7821,11 @@ function buildBestRated(name) {
         <div class="rec-title">${x.g.jp}</div>
         <div class="rec-spec">${x.g.playersRaw || "人数不明"} ・ ${x.g.timeRaw || "時間不明"}</div>
         <div class="rating-axes">
+          <span class="rating-axis avg">総合<b style="color:${ratingColor(ratingAvg(x.r))}">${ratingAvg(x.r)}</b></span>
           ${["taste", "replay", "recommend"].map((k, i) => {
             const val = axisValue(x.r, k), lab = ["好み", "リプレイ性", "おすすめ度"][i];
             return val != null ? `<span class="rating-axis">${lab}<b style="color:${ratingColor(val)}">${val}</b></span>` : `<span class="rating-axis na">${lab}<b>—</b></span>`;
           }).join("")}
-          <span class="rating-axis avg">総合<b style="color:${ratingColor(ratingAvg(x.r))}">${ratingAvg(x.r)}</b></span>
         </div>
       </div>
     </a>`).join("");
