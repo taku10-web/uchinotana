@@ -315,6 +315,14 @@
     color: var(--text-sub);
     margin-top: 6px;
   }
+  .axis16 { margin-bottom: 12px; }
+  .axis16-labels { display: flex; justify-content: space-between; font-size: 12.5px; color: var(--text-sub); margin-bottom: 4px; }
+  .axis16-labels .on { color: var(--accent); font-weight: 700; }
+  .axis16-track { position: relative; height: 10px; background: var(--bg); border-radius: 999px; }
+  .axis16-track::after { content: ""; position: absolute; left: 50%; top: -2px; bottom: -2px; width: 1px; background: var(--border); }
+  .axis16-track b { position: absolute; top: 0; bottom: 0; background: var(--accent); border-radius: 999px; opacity: .55; }
+  .axis16-track i { position: absolute; top: -3px; width: 16px; height: 16px; margin-left: -8px; border-radius: 50%; background: var(--accent); border: 2px solid #fff; box-shadow: 0 1px 3px rgba(0,0,0,.25); }
+  .axis16-pct { font-size: 11px; color: var(--text-sub); margin-top: 4px; text-align: right; }
   .axis-row {
     display: flex;
     align-items: center;
@@ -2951,7 +2959,7 @@ try {
 // ── 自動更新 ───────────────────────────────
 // iPhoneはHTMLを長く握るので、新しい版が出ていたらURLを変えて読み直す。
 // （同じURLの再読み込みだとキャッシュが返ってきてしまうため）
-const APP_BUILD = "2026-09-11-2235";
+const APP_BUILD = "2026-09-11-2246";
 
 function markVersion(extra) {
   const el = document.getElementById("appVersion");
@@ -3172,65 +3180,110 @@ const FAMILIES = {
   }
 };
 
+// ── タイプ診断（4軸×2＝16タイプ）───────────────
+// MBTIの4軸をボドゲの遊び方に読み替えている。各軸4問、選択肢はどちらか一方に1点。
+// E/I=ワイワイ派/じっくり派, S/N=堅実派/直感派, T/F=勝負派/調和派, J/P=計画派/即興派
+const AXES = [
+  { key: "EI", a: "E", b: "I", aLabel: "ワイワイ派", bLabel: "じっくり派" },
+  { key: "SN", a: "S", b: "N", aLabel: "堅実派",     bLabel: "直感派" },
+  { key: "TF", a: "T", b: "F", aLabel: "勝負派",     bLabel: "調和派" },
+  { key: "JP", a: "J", b: "P", aLabel: "計画派",     bLabel: "即興派" }
+];
+// 各文字と相性のいいメカニクス（おすすめと「向いていそう」に使う）
+const LETTER_MECHANICS = {
+  E: ["言葉遊び", "ストーリーメイキング", "お絵かき", "リアルタイム", "アクションゲーム", "投票/多数決", "交渉", "交換・貿易", "役割担当", "バランスゲーム"],
+  I: ["推理", "記憶", "パターン認識", "謎解き", "パズル", "ハンドマネージメント", "アブストラクト", "コミュニケーション禁止", "セットコレクション"],
+  S: ["拡大再生産", "セットコレクション", "タイル・カード配置", "パターンビルディング", "ワーカープレイスメント", "ネットワーク形成", "グリッド移動", "接続マスへの移動", "パズル"],
+  N: ["ブラフ", "正体隠匿", "シークレットユニット", "バッティング", "三すくみ", "ストーリーメイキング", "謎解き", "推理"],
+  T: ["陣取り", "直接攻撃", "競り", "トリックテイキング", "囲み", "エリア移動", "株・投資", "プレイヤーの脱落", "デッキ構築", "アブストラクト"],
+  F: ["協力プレイ", "チーム戦", "役割担当", "投票/多数決", "交渉", "お絵かき", "言葉遊び", "記憶"],
+  J: ["アクション事前決定", "ワーカープレイスメント", "デッキ構築", "ドラフト", "ハンドマネージメント", "タイル・カード配置", "アクションポイント", "タイムトラック", "モジュラーボード", "拡大再生産"],
+  P: ["ダイスロール", "出目移動", "チキンレース", "バースト", "賭け", "リアルタイム", "割り込み", "バランスゲーム", "プレイヤー別固有能力", "アクションゲーム"]
+};
+const TYPE16 = {
+  ISTJ: { emoji: "📋", name: "番人",         catch: "手順を守って積み上げ、堅実に勝ち切る人" },
+  ISFJ: { emoji: "🛡", name: "守り手",       catch: "仲間のために黙々と支える人" },
+  INFJ: { emoji: "🔮", name: "予言者",       catch: "場の流れを先読みして静かに導く人" },
+  INTJ: { emoji: "♟", name: "軍師",         catch: "盤面全体を設計して勝ち筋を描く人" },
+  ISTP: { emoji: "🔧", name: "職人",         catch: "状況を見極めて最小の手で決める人" },
+  ISFP: { emoji: "🎨", name: "芸術家",       catch: "自分だけの箱庭を組み上げるのが好きな人" },
+  INFP: { emoji: "🌙", name: "夢見人",       catch: "物語と世界観にどっぷり浸る人" },
+  INTP: { emoji: "🧪", name: "研究者",       catch: "仕組みを解析して裏をかく人" },
+  ESTP: { emoji: "⚡", name: "勝負師",       catch: "ここぞで踏み込む一発勝負の人" },
+  ESFP: { emoji: "🎉", name: "ムードメーカー", catch: "場を沸かせて全員を巻き込む人" },
+  ENFP: { emoji: "🎭", name: "トリックスター", catch: "ひらめきとノリで場をかき回す人" },
+  ENTP: { emoji: "🃏", name: "詐欺師",       catch: "口と読みで相手を手玉に取る人" },
+  ESTJ: { emoji: "⚔", name: "司令官",       catch: "率先して仕切り、正面から勝ちに行く人" },
+  ESFJ: { emoji: "🤝", name: "世話役",       catch: "みんなが楽しめる空気を作る人" },
+  ENFJ: { emoji: "📣", name: "リーダー",     catch: "仲間をまとめて大きな目標に向かう人" },
+  ENTJ: { emoji: "👑", name: "覇王",         catch: "戦略で場を支配し、勝利を掴み取る人" }
+};
+
+// 質問は軸を順番に回す（E,S,T,J,E,S,...）。各選択肢はどちらかの文字に1点。
 const QUIZ_QUESTIONS = [
-  { q: "ゲーム中、一番テンションが上がる瞬間は？", a: [
-    { t: "相手が自分のハッタリに引っかかった", s: { trickster: 3 } },
-    { t: "バラバラの手がかりが一本につながった", s: { detective: 3 } },
-    { t: "一発勝負のダイスで大成功した", s: { gambler: 3 } },
-    { t: "自分の組んだ仕組みが回り出した", s: { builder: 3 } }
+  { q: "ゲーム会の帰り道。気分は？", a: [
+    { t: "楽しかった！次いつやる？と話が止まらない", s: { E: 1 } },
+    { t: "楽しかった。しばらく一人で余韻に浸りたい", s: { I: 1 } }
   ]},
-  { q: "勝ち方を選べるなら？", a: [
-    { t: "全員で力を合わせて勝ちたい", s: { ally: 3 } },
-    { t: "こっそり出し抜いて一人だけ勝ちたい", s: { trickster: 2, conqueror: 1 } },
-    { t: "実力差をきっちり見せつけたい", s: { tactician: 2, builder: 1 } }
+  { q: "手を決めるとき、より頼るのは？", a: [
+    { t: "今の点差や残り枚数など、確かな情報", s: { S: 1 } },
+    { t: "「たぶんこう来る」という直感", s: { N: 1 } }
   ]},
-  { q: "初対面の人が多い場。あなたは？", a: [
-    { t: "話を振って場を回す", s: { host: 3 } },
-    { t: "お題があれば全力でやる", s: { performer: 3 } },
-    { t: "まずは黙って観察する", s: { detective: 2, trickster: 1 } }
+  { q: "友達が大差で負けている。あなたは？", a: [
+    { t: "勝負は勝負。手は緩めない", s: { T: 1 } },
+    { t: "さりげなくフォローに回る", s: { F: 1 } }
   ]},
-  { q: "手札を配られた。最初に考えるのは？", a: [
-    { t: "どの順番で出せば伸びるか", s: { tactician: 3 } },
-    { t: "相手にどう見せかけるか", s: { trickster: 3 } },
-    { t: "何を集めれば強くなるか", s: { builder: 2, tactician: 1 } }
+  { q: "自分の手番。どう決める？", a: [
+    { t: "数手先まで組み立ててから動く", s: { J: 1 } },
+    { t: "その場のノリと直感で決める", s: { P: 1 } }
   ]},
-  { q: "制限時間10秒。急かされている！", a: [
-    { t: "考えるより手が先に動く", s: { athlete: 3 } },
-    { t: "焦りながらも最善手を探す", s: { tactician: 2, detective: 1 } }
+  { q: "新しいゲームの説明を受けるとき", a: [
+    { t: "とりあえず遊びながら覚えたい", s: { E: 1 } },
+    { t: "先に一通り理解してから始めたい", s: { I: 1 } }
   ]},
-  { q: "「あと1回引けば点が伸びる。失敗したら全部パー」", a: [
-    { t: "引く", s: { gambler: 3 } },
-    { t: "やめておく", s: { builder: 2, tactician: 1 } }
+  { q: "取りたい作戦は？", a: [
+    { t: "定石どおり手堅く積み上げる", s: { S: 1 } },
+    { t: "試したことのない奇策を打ってみる", s: { N: 1 } }
   ]},
-  { q: "相手のコマが自分の進路を塞いでいる", a: [
-    { t: "どかす。そのための手番", s: { conqueror: 3 } },
-    { t: "別ルートを組み直す", s: { builder: 2, detective: 1 } }
+  { q: "勝ったとき、いちばん嬉しいのは？", a: [
+    { t: "読みが当たった、実力で勝った", s: { T: 1 } },
+    { t: "みんなが楽しんでくれた", s: { F: 1 } }
   ]},
-  { q: "「“切ない”を声だけで表現して」と言われたら", a: [
-    { t: "やる。恥ずかしくない", s: { performer: 3 } },
-    { t: "人がやるのを見て楽しみたい", s: { host: 2, detective: 1 } }
+  { q: "「あと1回引けば大量得点、外せば全部パー」", a: [
+    { t: "やめておく。確実に取る", s: { J: 1 } },
+    { t: "引く。そこがおもしろい", s: { P: 1 } }
   ]},
-  { q: "30分前に誰が何を言ったか覚えている？", a: [
-    { t: "だいたい覚えている", s: { detective: 3 } },
-    { t: "今のことで精一杯", s: { athlete: 2, gambler: 1 } }
+  { q: "自分の手番じゃないとき", a: [
+    { t: "みんなとしゃべって場を盛り上げる", s: { E: 1 } },
+    { t: "盤面と人の動きをじっと観察する", s: { I: 1 } }
   ]},
-  { q: "グループで方針を決めるとき", a: [
-    { t: "意見をまとめて落とし所を作る", s: { host: 3 } },
-    { t: "自分が得な方向にそっと誘導する", s: { trickster: 2, conqueror: 2 } },
-    { t: "全員が納得する形を優先する", s: { ally: 3 } }
+  { q: "テンションが上がる瞬間は？", a: [
+    { t: "計画どおりに仕組みが回り出した", s: { S: 1 } },
+    { t: "読み合いで相手の裏をかけた", s: { N: 1 } }
   ]},
-  { q: "一人だけ大きく出遅れてしまった。あなたは？", a: [
-    { t: "フォローに回る", s: { ally: 3 } },
-    { t: "今のうちに差を広げる", s: { conqueror: 3 } }
+  { q: "ルールの解釈で揉めた。どう決める？", a: [
+    { t: "ルールブック上どうかで決める", s: { T: 1 } },
+    { t: "その場の空気で丸く収める", s: { F: 1 } }
   ]},
-  { q: "「自分らしい」と思うのは？", a: [
-    { t: "身振り手振りで伝えるのが得意", s: { performer: 3 } },
-    { t: "人の話を聞いてまとめるのが得意", s: { ally: 2, host: 1 } },
-    { t: "黙って最適解を探すのが得意", s: { tactician: 2, builder: 1 } }
+  { q: "今日遊ぶゲームは", a: [
+    { t: "事前に決めて準備しておきたい", s: { J: 1 } },
+    { t: "集まってから気分で決めたい", s: { P: 1 } }
   ]},
-  { q: "遊ぶならどっち？", a: [
-    { t: "短いのを何回も回したい", s: { athlete: 2, host: 2, gambler: 1 } },
-    { t: "じっくり長い1本に浸りたい", s: { builder: 3, tactician: 1 } }
+  { q: "好きな人数は？", a: [
+    { t: "大人数でワイワイ", s: { E: 1 } },
+    { t: "少人数でじっくり", s: { I: 1 } }
+  ]},
+  { q: "ゲームを選ぶなら", a: [
+    { t: "ルールが明快で、実力が出るもの", s: { S: 1 } },
+    { t: "世界観や物語に浸れるもの", s: { N: 1 } }
+  ]},
+  { q: "やりたいのはどっち？", a: [
+    { t: "相手を出し抜く対戦", s: { T: 1 } },
+    { t: "全員で目標を目指す協力", s: { F: 1 } }
+  ]},
+  { q: "予定外のイベントで計画が崩れた！", a: [
+    { t: "正直イラッとする", s: { J: 1 } },
+    { t: "むしろ燃える", s: { P: 1 } }
   ]}
 ];
 
@@ -4115,47 +4168,40 @@ function getInterests(slug) {
   return interestsCache[slug] || [];
 }
 
-// 満点で割る方式だと、出番の設問が少ないタイプほど「たまたま満点」になりやすく、
-// 結果が偏ってしまう（実測でアスリート19.8% / 詐欺師4.4%）。
-// そこで「適当に答えたときの分布」を基準にして、そこからどれだけ上振れしたかで測る。
-function quizBaseline(questions) {
-  const mean = {}, variance = {};
-  Object.keys(FAMILIES).forEach(f => { mean[f] = 0; variance[f] = 0; });
-  questions.forEach(q => {
-    Object.keys(FAMILIES).forEach(f => {
-      const vals = q.a.map(o => o.s[f] || 0);
-      const m = vals.reduce((a, b) => a + b, 0) / vals.length;
-      const m2 = vals.reduce((a, b) => a + b * b, 0) / vals.length;
-      mean[f] += m;
-      variance[f] += m2 - m * m;
-    });
-  });
-  const sd = {};
-  Object.keys(FAMILIES).forEach(f => { sd[f] = Math.sqrt(variance[f]) || 1; });
-  return { mean, sd };
-}
-
-const QUIZ_BASELINE = quizBaseline(QUIZ_QUESTIONS);
-
+// 回答を4軸の値にする。各軸 -1〜1（正＝E/S/T/J側）。同点は I/N/F/P に倒す。
 function scoreQuiz(answers, questions) {
-  const base = questions === QUIZ_QUESTIONS ? QUIZ_BASELINE : quizBaseline(questions);
-  const raw = {};
-  Object.keys(FAMILIES).forEach(f => { raw[f] = 0; });
+  const pts = { E: 0, I: 0, S: 0, N: 0, T: 0, F: 0, J: 0, P: 0 };
   questions.forEach((q, i) => {
     const chosen = q.a[answers[i]];
-    if (chosen) Object.entries(chosen.s).forEach(([f, v]) => { raw[f] += v; });
+    if (chosen) Object.entries(chosen.s).forEach(([k, v]) => { pts[k] = (pts[k] || 0) + v; });
   });
   const out = {};
-  Object.keys(FAMILIES).forEach(f => {
-    const z = (raw[f] - base.mean[f]) / base.sd[f];
-    const v = Math.max(0, Math.min(1, 0.5 + z / 4));   // 表示用に 0〜1 へ収める
-    out[f] = Math.round(v * 100) / 100;
+  AXES.forEach(ax => {
+    const n = pts[ax.a] + pts[ax.b];
+    out[ax.key] = n ? Math.round(((pts[ax.a] - pts[ax.b]) / n) * 100) / 100 : 0;
   });
   return out;
 }
-
-function topFamilies(scores, n) {
-  return Object.entries(scores).sort((a, b) => b[1] - a[1]).slice(0, n).map(([f]) => f);
+function typeCodeOf(scores) {
+  return AXES.map(ax => ((scores[ax.key] || 0) > 0 ? ax.a : ax.b)).join("");
+}
+// 新方式（16タイプ）の診断結果か
+function isType16(prof) {
+  return !!(prof && prof.type && TYPE16[prof.type] && prof.scores && "EI" in prof.scores);
+}
+function typeInfo(prof) {
+  return isType16(prof) ? TYPE16[prof.type] : null;
+}
+// 4軸の値から、メカニクスごとの相性 0〜1 を作る（両側の文字に入っているものは高いほう）
+function mechanicWeights(scores) {
+  const w = {};
+  AXES.forEach(ax => {
+    const v = Math.max(-1, Math.min(1, scores[ax.key] || 0));
+    const wa = 0.5 + v / 2, wb = 0.5 - v / 2;
+    LETTER_MECHANICS[ax.a].forEach(m => { w[m] = Math.max(w[m] || 0, wa); });
+    LETTER_MECHANICS[ax.b].forEach(m => { w[m] = Math.max(w[m] || 0, wb); });
+  });
+  return w;
 }
 
 function getProfile(name) {
@@ -4184,7 +4230,7 @@ function writeProfile(name, patch) {
 }
 
 function saveProfile(name, scores) {
-  return writeProfile(name, { type: topFamilies(scores, 1)[0], scores });
+  return writeProfile(name, { type: typeCodeOf(scores), scores });
 }
 
 // 名前を登録した時点でサーバーにも残す。そうしないと本人の端末にしか名前が無く、
@@ -5567,7 +5613,7 @@ function buildMembersTab() {
       const sel = new Set(getSelectedTitles(n));
       const shown = earned.filter(t => sel.has(t.id)).slice(0, 3);
       const p = getProfile(n);
-      const f = p && FAMILIES[p.type];
+      const f = typeInfo(p);
       const st = getPlayStats(n);
       const want = getWantToPlay(n).length;
       return `
@@ -5980,16 +6026,12 @@ function getPlayerTagAffinity(name) {
   // 診断結果は「実際の評価がまだ無いタグ」だけを埋める補助にする。
   // 評価が増えるほど診断の影響を薄める（自己申告より実績のほうが正確なので）。
   const prof = getProfile(name);
-  if (prof && prof.scores) {
+  if (isType16(prof)) {
     const w = 1 / (1 + ratings.length / 3);
-    Object.entries(prof.scores).forEach(([fam, score]) => {
-      const fm = FAMILIES[fam];
-      if (!fm) return;
+    Object.entries(mechanicWeights(prof.scores)).forEach(([m, score]) => {
       const affinity = 3.5 + score * 5.5;                                   // 0→3.5, 1→9.0
       const shrunk = RATING_NEUTRAL + (affinity - RATING_NEUTRAL) * w;      // 評価が増えたら真ん中へ寄せる
-      fm.mechanics.forEach(m => {
-        if (out[m] == null) out[m] = shrunk;
-      });
+      if (out[m] == null) out[m] = shrunk;
     });
   }
   return out;
@@ -6641,8 +6683,8 @@ document.getElementById("recommendView").addEventListener("click", e => {
 let quizAnswers = [];
 let quizStarted = false;
 
-function buildTypeHero(fam) {
-  const f = FAMILIES[fam];
+function buildTypeHero(code) {
+  const f = TYPE16[code];
   if (!f) return "";
   return `
     <div class="type-hero">
@@ -6653,25 +6695,14 @@ function buildTypeHero(fam) {
   `;
 }
 
-// メカニクス → 属するタイプ（お絵かきのように複数に跨るものがある）
-const MECHANIC_FAMILIES = (() => {
-  const m = {};
-  Object.entries(FAMILIES).forEach(([f, fm]) => {
-    fm.mechanics.forEach(x => { (m[x] = m[x] || []).push(f); });
-  });
-  return m;
-})();
-
 // そのゲームが「どれだけ自分の好みで出来ているか」を 0〜1 で返す
 function gameFit(g, scores) {
   const mech = getGameTags(g).allMechanics;
   if (!mech.length) return null;
-  let sum = 0;
-  mech.forEach(x => {
-    const fams = MECHANIC_FAMILIES[x] || [];
-    sum += fams.reduce((a, f) => Math.max(a, scores[f] || 0), 0);
-  });
-  return sum / mech.length;
+  const w = mechanicWeights(scores);
+  let sum = 0, n = 0;
+  mech.forEach(x => { if (w[x] != null) { sum += w[x]; n++; } });
+  return n ? sum / n : null;
 }
 
 // 実際の所蔵ゲームを通して、ジャンル／メカニクスの相性を並べる。
@@ -6735,28 +6766,24 @@ function buildAffinityRanking(scores) {
 }
 
 function buildAxisChart(scores) {
-  if (!scores || typeof scores !== "object") return "";
-  return Object.entries(scores)
-    .sort((a, b) => b[1] - a[1])
-    .map(([fam, v]) => {
-      const f = FAMILIES[fam];
-      if (!f) return "";
-      return `
-        <div class="axis-row">
-          <span class="axis-label">${f.emoji} ${f.name}</span>
-          <span class="axis-track"><i style="width:${Math.round(v * 100)}%"></i></span>
-        </div>
-      `;
-    }).join("");
+  if (!scores || typeof scores !== "object" || !("EI" in scores)) return "";
+  return AXES.map(ax => {
+    const v = Math.max(-1, Math.min(1, scores[ax.key] || 0));
+    const pctA = Math.round((0.5 + v / 2) * 100);
+    return `
+      <div class="axis16">
+        <div class="axis16-labels"><span class="${v > 0 ? "on" : ""}">${ax.aLabel}</span><span class="${v <= 0 ? "on" : ""}">${ax.bLabel}</span></div>
+        <div class="axis16-track"><b style="left:${v > 0 ? 50 : pctA}%; width:${Math.abs(pctA - 50)}%"></b><i style="left:${pctA}%"></i></div>
+        <div class="axis16-pct">${v > 0 ? `${ax.aLabel} ${pctA}%` : v < 0 ? `${ax.bLabel} ${100 - pctA}%` : "ちょうど半々"}</div>
+      </div>`;
+  }).join("");
 }
 
 // 診断結果に合うゲームを、上位タイプのメカニクスから拾う
 function sampleGamesForScores(scores, n) {
-  const top = topFamilies(scores, 3);
+  // 相性0.5（どちらでもない）を0にして、好み寄りのメカニクスだけ加点する
   const weight = {};
-  top.forEach((fam, i) => {
-    FAMILIES[fam].mechanics.forEach(m => { weight[m] = Math.max(weight[m] || 0, 3 - i); });
-  });
+  Object.entries(mechanicWeights(scores)).forEach(([m, w]) => { weight[m] = Math.max(0, (w - 0.5) * 2); });
   return games.map(g => {
     const t = getGameTags(g);
     if (t.genreTags.includes("拡張")) return { g, s: 0 };  // 単体で遊べないので出さない
@@ -6775,7 +6802,7 @@ function buildQuizView() {
   const myName = getMyName();
   // 称号だけ選んで診断はまだ、という人もいるので「診断済み」は type と scores で判定する
   const prof = myName ? getProfile(myName) : null;
-  const existing = (prof && prof.type && FAMILIES[prof.type] && prof.scores) ? prof : null;
+  const existing = isType16(prof) ? prof : null;
   const i = quizAnswers.length;
 
   // まだ始めていない状態
@@ -6792,7 +6819,7 @@ function buildQuizView() {
         </div>
       ` : ""}
       <div class="review-card">
-        <div class="review-count">${QUIZ_QUESTIONS.length}問の質問に答えると、あなたのタイプと相性のいいゲームが分かります。${existing ? "もう一度やると結果は上書きされます。" : ""}</div>
+        <div class="review-count">${QUIZ_QUESTIONS.length}問に直感で答えると、16タイプのどれかと相性のいいゲームが分かります。${existing ? "もう一度やると結果は上書きされます。" : ""}</div>
         <button type="button" class="section-toggle-btn section-toggle-btn-primary" data-quiz-start>
           ${existing ? "もう一度診断する" : "診断をはじめる"}
         </button>
@@ -6815,7 +6842,7 @@ function buildQuizView() {
 
   // 結果
   const scores = scoreQuiz(quizAnswers, QUIZ_QUESTIONS);
-  const type = topFamilies(scores, 1)[0];
+  const type = typeCodeOf(scores);
   const picks = sampleGamesForScores(scores, 6);
   return `
     <button type="button" class="detail-back" data-back>← 戻る</button>
@@ -7828,8 +7855,8 @@ function buildStatsCard(s, name) {
 
 // タイプ名の横から開く簡易版。向き不向きのメカニクスを3つずつ。
 function buildTypeQuick(prof) {
-  if (!prof || !prof.scores) return "";
-  const f = FAMILIES[prof.type];
+  if (!isType16(prof)) return "";
+  const f = TYPE16[prof.type];
   const ranked = rankAffinity(prof.scores).filter(x => x.kind === "メカニクス");
   const good = ranked.slice(0, 3);
   const bad = ranked.slice(-3).reverse();
@@ -8219,19 +8246,19 @@ function buildPlayerPage(name) {
     ${moreBtn("rated", ratedShown, totalCount)}` : `<div class="review-count">まだ評価がありません</div>`;
 
 
-  const typeInner = prof && prof.type && FAMILIES[prof.type] ? `
+  const typeInner = isType16(prof) ? `
     ${buildTypeHero(prof.type)}
     ${buildAxisChart(prof.scores)}
     ${buildAffinityRanking(prof.scores)}
     ${isMe ? `<a class="quiz-cta" style="margin-top:12px;" href="#quiz">診断をやり直す</a>` : ""}
   ` : `
     <div class="review-count">${isMe
-      ? "まだタイプ診断をしていません。13問でタイプが分かり、おすすめの精度も上がります。"
+      ? "まだタイプ診断をしていません。16問でタイプが分かり、おすすめの精度も上がります。"
       : `${name} さんはまだ診断をしていません。`}</div>
     ${isMe ? `<a class="quiz-cta" style="margin-top:10px;" href="#quiz">🧭 診断をやってみる</a>` : ""}
   `;
 
-  const typeFam = prof && prof.type ? FAMILIES[prof.type] : null;
+  const typeFam = typeInfo(prof);
 
   return `
     <button type="button" class="detail-back" data-back>← 戻る</button>
@@ -8243,10 +8270,10 @@ function buildPlayerPage(name) {
           : `<button type="button" class="type-chip-sm" data-toggle-section="p-typequick">${typeFam.emoji} ${typeFam.name}タイプ</button>`)
         : (isMe ? `<a class="type-chip-sm type-chip-empty" href="#quiz">🧭 タイプ診断</a>` : "")}
     </div>
-    ${isMe && !(prof && prof.type) ? `
+    ${isMe && !isType16(prof) ? `
       <div class="onboard-card">
         <div class="onboard-title">🧭 まずはタイプ診断から</div>
-        <p>13問であなたのタイプが分かります。診断すると、遊んだ記録がまだ少なくても「あなたへのオススメ」が出せるようになります。</p>
+        <p>16問であなたのタイプが分かります。診断すると、遊んだ記録がまだ少なくても「あなたへのオススメ」が出せるようになります。</p>
         <a class="detail-cta detail-cta-primary" href="#quiz" style="margin:0;">診断をはじめる（3分ほど）</a>
       </div>` : ""}
     ${buildTitleStrip(name, isMe, shownTitles, earned.length)}
