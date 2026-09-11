@@ -2641,13 +2641,11 @@
       <span class="result-count" id="resultCount"></span>
       <select id="sort" class="sort-inline">
         <option value="rating_desc">みんなの評価が高い順</option>
+        <option value="recommend_desc">おすすめ度が高い順</option>
+        <option value="replay_desc">リプレイ性が高い順</option>
         <option value="myrating_desc">自分の評価が高い順</option>
-        <option value="default">登録順</option>
-        <option value="players_asc">人数：少ない順</option>
-        <option value="time_asc">時間：短い順</option>
-        <option value="time_desc">時間：長い順</option>
-        <option value="aiueo">あ→ん順</option>
         <option value="played_desc">プレイ回数が多い順</option>
+        <option value="default">入荷順</option>
       </select>
     </div>
     <div class="card-list" id="cardList"></div>
@@ -2724,7 +2722,7 @@ try {
 // ── 自動更新 ───────────────────────────────
 // iPhoneはHTMLを長く握るので、新しい版が出ていたらURLを変えて読み直す。
 // （同じURLの再読み込みだとキャッシュが返ってきてしまうため）
-const APP_BUILD = "2026-09-11-1351";
+const APP_BUILD = "2026-09-11-1356";
 
 function markVersion(extra) {
   const el = document.getElementById("appVersion");
@@ -3168,20 +3166,23 @@ function matches(g) {
   return true;
 }
 
+// 軸ごとの平均（その軸を入れている評価だけで平均する）
+function averageAxis(slug, key) {
+  const vals = getReviews(slug).map(r => r[key]).filter(v => v != null);
+  if (!vals.length) return null;
+  return Math.round((vals.reduce((a, b) => a + b, 0) / vals.length) * 10) / 10;
+}
+
 function sortGames(list) {
   const arr = list.slice();
   switch (state.sort) {
-    case "players_asc":
-      arr.sort((a, b) => (a.playersMin ?? 999) - (b.playersMin ?? 999));
+    case "recommend_desc":
+      arr.sort((a, b) => (averageAxis(slugOf(b), "recommend") ?? -1) - (averageAxis(slugOf(a), "recommend") ?? -1)
+        || (averageScore(slugOf(b)) ?? -1) - (averageScore(slugOf(a)) ?? -1));
       break;
-    case "time_asc":
-      arr.sort((a, b) => (a.timeMin ?? 9999) - (b.timeMin ?? 9999));
-      break;
-    case "time_desc":
-      arr.sort((a, b) => (b.timeMax ?? -1) - (a.timeMax ?? -1));
-      break;
-    case "aiueo":
-      arr.sort((a, b) => a.jp.localeCompare(b.jp, "ja"));
+    case "replay_desc":
+      arr.sort((a, b) => (averageAxis(slugOf(b), "replay") ?? -1) - (averageAxis(slugOf(a), "replay") ?? -1)
+        || (averageScore(slugOf(b)) ?? -1) - (averageScore(slugOf(a)) ?? -1));
       break;
     case "rating_desc":
       arr.sort((a, b) => (averageScore(slugOf(b)) ?? -1) - (averageScore(slugOf(a)) ?? -1));
