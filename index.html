@@ -1194,6 +1194,7 @@
   .want-btn.on { background: var(--accent); color: #fff; }
   .want-btn.done { border-color: var(--border); background: var(--bg); color: var(--text-sub); cursor: default; }
   .edit-panel { border-color: var(--accent); }
+  .tag-pick { width: 100%; font-size: 14px; padding: 9px 10px; border: 1px solid var(--border); border-radius: 10px; background: var(--card-bg); color: var(--text); }
   .cover-edit { display: flex; gap: 12px; align-items: flex-start; margin-bottom: 6px; }
   .cover-edit img { width: 120px; height: 90px; object-fit: contain; background: #fff; border: 1px solid var(--border); border-radius: 8px; flex-shrink: 0; }
   .cover-edit-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
@@ -2977,7 +2978,7 @@ try {
 // ── 自動更新 ───────────────────────────────
 // iPhoneはHTMLを長く握るので、新しい版が出ていたらURLを変えて読み直す。
 // （同じURLの再読み込みだとキャッシュが返ってきてしまうため）
-const APP_BUILD = "2026-09-12-0043";
+const APP_BUILD = "2026-09-12-0053";
 
 function markVersion(extra) {
   const el = document.getElementById("appVersion");
@@ -3922,8 +3923,12 @@ function buildClassBox(g, kind) {
           : `<span class="class-empty">未設定</span>`}
       </div>
       ${editing ? `
-      <form class="tag-add-form" style="margin-top:10px;" data-class-form="${kind}" data-slug="${slug}">
-        <input type="text" name="tag" list="${listId}" placeholder="${isGenre ? "ジャンル" : "メカニクス"}を追加" maxlength="20" required>
+      <select class="tag-pick" data-class-pick="${kind}" data-slug="${slug}" style="margin-top:10px;">
+        <option value="">${isGenre ? "ジャンル" : "メカニクス"}を選んで追加…</option>
+        ${[...vocab].filter(v => !tags.includes(v)).map(v => `<option value="${v}">${v}</option>`).join("")}
+      </select>
+      <form class="tag-add-form" style="margin-top:6px;" data-class-form="${kind}" data-slug="${slug}">
+        <input type="text" name="tag" list="${listId}" placeholder="または自由に入力" maxlength="20" required>
         <button type="submit">追加</button>
       </form>
       <datalist id="${listId}">${[...vocab].map(v => `<option value="${v}">`).join("")}</datalist>
@@ -3955,6 +3960,9 @@ function buildTagsAndPitch(g, forceEdit) {
     : `<button class="tag-chip ${own ? "tag-chip-own" : ""}" data-tag-search="${t}">#${t}</button>`;
 
   const vocab = Array.from(new Set(games.flatMap(x => getGameTags(x).all))).sort((a, b) => a.localeCompare(b, "ja"));
+  // プルダウン用：ジャンル・メカニクス以外（雰囲気タグ＋みんなが足したタグ）
+  const AUTO_TAGS = new Set(["ソロ可", "大人数向け", "サクッと〜15分", "じっくり60分〜"]);   // 人数・時間から自動で付くもの
+  const hashVocab = vocab.filter(v => !GENRE_VOCAB.has(v) && !MECHANIC_VOCAB.has(v) && !AUTO_TAGS.has(v));
 
   return `
     ${anyTags ? `
@@ -3969,8 +3977,12 @@ function buildTagsAndPitch(g, forceEdit) {
     </div>`}
     ${tagEditModeNow ? `
     <div class="tag-edit-card">
-      <form class="tag-add-form" data-tag-form="${slug}">
-        <input type="text" name="tag" list="tagVocab" placeholder="遊んだ体感でタグを足す（例: 初手が肝心）" maxlength="20" required>
+      <select class="tag-pick" data-tag-pick="${slug}">
+        <option value="">ハッシュタグを選んで追加…</option>
+        ${hashVocab.filter(v => !getGameTags(g).all.includes(v)).map(v => `<option value="${v}">#${v}</option>`).join("")}
+      </select>
+      <form class="tag-add-form" style="margin-top:6px;" data-tag-form="${slug}">
+        <input type="text" name="tag" list="tagVocab" placeholder="または自由に入力（例: 初手が肝心）" maxlength="20" required>
         <button type="submit">追加</button>
       </form>
       <datalist id="tagVocab">${vocab.map(v => `<option value="${v}">`).join("")}</datalist>
@@ -6635,6 +6647,28 @@ function toast(msg) {
 
 // 写真を選んだら、その場で縮めて保存する
 document.getElementById("detailView").addEventListener("change", async e => {
+  const classPick = e.target.closest("[data-class-pick]");
+  if (classPick && classPick.value) {
+    const kind = classPick.dataset.classPick, slug = classPick.dataset.slug, tag = classPick.value;
+    classPick.disabled = true;
+    await addCustomTag(slug, tag, getMyName() || "", kind);
+    const g = games.find(x => slugOf(x) === slug);
+    if (g) showDetail(g);
+    renderTagCloud(); renderGenreOptions(); renderMechanicOptions(); renderSearchSuggest();
+    toast(`${tag} を追加しました`);
+    return;
+  }
+  const tagPick = e.target.closest("[data-tag-pick]");
+  if (tagPick && tagPick.value) {
+    const slug = tagPick.dataset.tagPick, tag = tagPick.value;
+    tagPick.disabled = true;
+    await addCustomTag(slug, tag, getMyName() || "");
+    const g = games.find(x => slugOf(x) === slug);
+    if (g) showDetail(g);
+    renderTagCloud(); renderGenreOptions();
+    toast(`#${tag} を追加しました`);
+    return;
+  }
   const coverInput = e.target.closest("[data-cover-add]");
   if (coverInput && coverInput.files && coverInput.files[0]) {
     const file = coverInput.files[0];
