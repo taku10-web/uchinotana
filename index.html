@@ -2926,7 +2926,7 @@ try {
 // ── 自動更新 ───────────────────────────────
 // iPhoneはHTMLを長く握るので、新しい版が出ていたらURLを変えて読み直す。
 // （同じURLの再読み込みだとキャッシュが返ってきてしまうため）
-const APP_BUILD = "2026-09-11-2006";
+const APP_BUILD = "2026-09-11-2009";
 
 function markVersion(extra) {
   const el = document.getElementById("appVersion");
@@ -4447,11 +4447,11 @@ function buildRatingSummary(slug) {
   const t = averageAxis(slug, "taste"), v = averageAxis(slug, "replay"), o = averageAxis(slug, "recommend");
   const all = averageScore(slug);
   // メンバーごとの行は評価が高い順。名前・総合・好み・リプレイ性・おすすめ度を1行に、感想はその下に小さく
-  // 並び：自分 → ほかで一番評価が高い人 → 残りは折りたたみ
+  // 並び：みんな行は常時。次に1行だけ（自分が評価済みなら自分、なければ一番評価が高い人）。残りは折りたたみ
   const others = reviews.filter(r => r.name !== me).sort((a, b) => (ratingAvg(b) ?? -1) - (ratingAvg(a) ?? -1));
   const mineR = reviews.find(r => r.name === me);
-  const shown = [...(mineR ? [mineR] : []), ...others.slice(0, 1)];
-  const hidden = others.slice(1);
+  const shown = mineR ? [mineR] : others.slice(0, 1);
+  const hidden = mineR ? others : others.slice(1);
   const memberRows = (list, extra) => list.map(r => {
     const rt = axisValue(r, "taste"), rv = axisValue(r, "replay"), ro = axisValue(r, "recommend"), ra = ratingAvg(r);
     const mine = r.name === me;
