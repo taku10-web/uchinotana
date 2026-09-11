@@ -1800,6 +1800,8 @@
   .card-sec-body { font-size: 13px; line-height: 1.55; color: var(--text); }
   .card-sec .card-about { margin: 0; }
   .card-genres { gap: 5px; margin-top: 1px; }
+  .card-tags { gap: 5px; margin: 8px 0 0; max-height: 54px; overflow: hidden; }
+  .detail-tags { gap: 5px; margin: 10px 0 0; }
   .card-memo.one { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .card-memo.folded { display: none; }
   .card-memos.open .card-memo.folded { display: block; white-space: normal; }
@@ -2978,7 +2980,7 @@ try {
 // ── 自動更新 ───────────────────────────────
 // iPhoneはHTMLを長く握るので、新しい版が出ていたらURLを変えて読み直す。
 // （同じURLの再読み込みだとキャッシュが返ってきてしまうため）
-const APP_BUILD = "2026-09-12-0053";
+const APP_BUILD = "2026-09-12-0108";
 
 function markVersion(extra) {
   const el = document.getElementById("appVersion");
@@ -3576,6 +3578,7 @@ function render() {
     const worldview = (r && r.worldview) || "";
     // 感想は評価が高い人のものを先頭に。2人以上いれば1人目だけ見せて残りは畳む
     const memos = gameMemos(slug);
+    const cardTags = hashChips(g, true);
     const iLike = myName && getInterests(slug).some(i => i.name === myName);
     const wanters = getWanters(slug);
     const histCount = getHistory(slug).length;
@@ -3598,9 +3601,10 @@ function render() {
         ${genreTags.length ? `<div class="card-sec"><span class="card-sec-label">ジャンル</span><div class="card-sec-body tag-row card-genres">
           ${genreTags.map(t => `<button type="button" class="tag-chip mini" data-class-filter="genre" data-value="${t}">${t}</button>`).join("")}
         </div></div>` : ""}
-        ${worldview ? `<div class="card-sec"><span class="card-sec-label">どんなゲーム？</span><div class="card-sec-body">
-          <p class="card-about ${expandedCards.has(slug) ? "open" : ""}">${worldview}</p>
+        ${(worldview || cardTags) ? `<div class="card-sec"><span class="card-sec-label">${worldview ? "どんなゲーム？" : "ハッシュタグ"}</span><div class="card-sec-body">
+          ${worldview ? `<p class="card-about ${expandedCards.has(slug) ? "open" : ""}">${worldview}</p>` : ""}
           ${worldview.length > 46 ? `<button type="button" class="card-more-about" data-toggle-about="${slug}">${expandedCards.has(slug) ? "たたむ" : "つづきを読む"}</button>` : ""}
+          ${cardTags ? `<div class="tag-row card-tags" style="${worldview ? "" : "margin-top:0;"}">${cardTags}</div>` : ""}
         </div></div>` : ""}
         ${wanters.length ? `<div class="card-sec"><span class="card-sec-label">遊びたい人</span><div class="card-sec-body card-wanters">${wanters.map(w => `<b>${w.name}</b>`).join("")}</div></div>` : ""}
         ${memos.length ? `<div class="card-sec"><span class="card-sec-label">みんなの感想</span><div class="card-sec-body card-memos">
@@ -3838,6 +3842,8 @@ document.getElementById("cardList").addEventListener("click", async e => {
   // ジャンルのチップを押したら、そのジャンルで絞り込む（カードのリンクは開かない）
   const cls = e.target.closest("[data-class-filter]");
   if (cls) { e.preventDefault(); goToClassFilter(cls.dataset.classFilter, cls.dataset.value); return; }
+  const tagChip = e.target.closest("[data-tag-search]");
+  if (tagChip) { e.preventDefault(); goToTagSearch(tagChip.dataset.tagSearch); return; }
 
   const moreMemos = e.target.closest("[data-toggle-memos]");
   if (moreMemos) {
@@ -5086,11 +5092,24 @@ function buildPitchSection(g) {
   return `<div class="review-card"><div class="review-title" style="margin-bottom:6px;">✨ おすすめポイント</div><ul class="pitch-list" style="margin:0;">${pts.map(p => `<li>${p}</li>`).join("")}</ul></div>`;
 }
 
+// ハッシュタグ（雰囲気タグ＋みんなが足したタグ）のチップ。自動で付く人数・時間タグは含めない
+const AUTO_TAG_SET = new Set(["ソロ可", "大人数向け", "サクッと〜15分", "じっくり60分〜"]);
+function hashTagsOf(g) {
+  const t = getGameTags(g);
+  return [...t.audienceTags.filter(x => !AUTO_TAG_SET.has(x)), ...t.customTags];
+}
+function hashChips(g, mini) {
+  return hashTagsOf(g).map(x => `<button type="button" class="tag-chip ${mini ? "mini" : ""}" data-tag-search="${x}">#${x}</button>`).join("");
+}
 function buildWorldviewSection(g) {
   const slug = slugOf(g);
   const r = rulesData[slug];
-  if (!r || !r.worldview) return "";
-  return `<div class="review-card"><div class="review-title" style="margin-bottom:6px;">どんなゲーム？</div><p class="detail-worldview" style="margin:0;">${r.worldview}</p></div>`;
+  const chips = hashChips(g, true);
+  if ((!r || !r.worldview) && !chips) return "";
+  return `<div class="review-card"><div class="review-title" style="margin-bottom:6px;">どんなゲーム？</div>
+    ${r && r.worldview ? `<p class="detail-worldview" style="margin:0;">${r.worldview}</p>` : ""}
+    ${chips ? `<div class="tag-row detail-tags">${chips}</div>` : ""}
+  </div>`;
 }
 
 function hostOf(u) {
@@ -5137,7 +5156,7 @@ let lastDetailSlug = "";
 // ヘッダー右の「編集」ボタン。詳細ページのときだけ出す（件数と入れ替え）。
 // ジャンル／メカニクスのチップが3行以上に膨らんだら、2行に畳んで「＋N」で開く
 function collapseTagRows(root) {
-  root.querySelectorAll(".hero-class .tag-row:not(.checked)").forEach(row => {
+  root.querySelectorAll(".hero-class .tag-row:not(.checked), .detail-tags:not(.checked)").forEach(row => {
     row.classList.add("checked");
     const chips = [...row.querySelectorAll(".tag-chip")];
     if (chips.length < 3) return;
@@ -5177,6 +5196,9 @@ document.getElementById("headEdit").addEventListener("click", () => {
 });
 
 function showDetail(g) {
+  // 同じゲームの再描画（タグ追加・評価保存など）ならスクロール位置を保つ。別のゲームなら先頭へ
+  const sameGame = slugOf(g) === lastDetailSlug && document.getElementById("detailView").style.display === "block";
+  const keepY = sameGame ? window.scrollY : null;
   if (slugOf(g) !== lastDetailSlug) { detailEditOpen = false; pendingPhotoDelete = ""; lastDetailSlug = slugOf(g); if (pendingDetailSection !== "rating") { ratingMemoPrefill = ""; ratingFormOpen = false; } }
   document.getElementById("controls").style.display = "none";
   document.getElementById("listView").style.display = "none";
@@ -5251,7 +5273,12 @@ function showDetail(g) {
     ${collapsibleSection("quickref", "🎯 プレイ中の早見表", buildQuickRef(g), false)}
     ${collapsibleSection("history", `🏆 戦績（${getHistory(slugOf(g)).length}件）`, buildHistorySection(g), false)}
   `;
-  applyPendingDetailSection();
+  if (keepY != null && !pendingDetailSection) {
+    window.scrollTo(0, keepY);
+    requestAnimationFrame(() => window.scrollTo(0, keepY));
+  } else {
+    applyPendingDetailSection();
+  }
   // 写真はそのゲームを開いたときだけ読む（全部を起動時に読むと重い）
   if (!photoCache[slugOf(g)]) {
     fetchPhotos(slugOf(g)).then(list => {
