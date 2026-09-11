@@ -2461,6 +2461,22 @@
     font-size: 13.5px;
     color: var(--text-sub);
   }
+  /* MYボドゲ棚：3列の表紙を棚板の上に並べる */
+  .shelf { padding: 6px 4px 0; }
+  .shelf-row { position: relative; display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; padding: 0 4px 14px; margin-bottom: 14px; }
+  .shelf-box {
+    display: block; aspect-ratio: 4 / 3; border-radius: 8px; overflow: hidden;
+    background: #f1f2f5; box-shadow: 0 6px 12px rgba(20,40,60,0.22); position: relative; z-index: 1;
+  }
+  .shelf-box img { width: 100%; height: 100%; object-fit: contain; display: block; }
+  .shelf-box.empty { background: rgba(255,255,255,0.35); box-shadow: none; border: 1px dashed var(--border); }
+  .shelf-board {
+    position: absolute; left: -6px; right: -6px; bottom: 0; height: 12px; border-radius: 3px;
+    background: linear-gradient(#c49768, #a87a4c); box-shadow: 0 4px 0 #7d5530, 0 8px 10px rgba(0,0,0,0.15);
+  }
+  .shelf-foot { display: flex; justify-content: space-between; align-items: center; font-size: 12px; color: var(--text-sub); margin-top: 4px; }
+  .shelf-foot .link-btn { font-size: 13px; font-weight: 700; }
+  .lightbox-dl { color: #fff; background: var(--accent); border-radius: 999px; padding: 8px 18px; font-size: 14px; font-weight: 700; text-decoration: none; }
   .rec-item {
     display: flex;
     gap: 12px;
@@ -2926,7 +2942,7 @@ try {
 // ── 自動更新 ───────────────────────────────
 // iPhoneはHTMLを長く握るので、新しい版が出ていたらURLを変えて読み直す。
 // （同じURLの再読み込みだとキャッシュが返ってきてしまうため）
-const APP_BUILD = "2026-09-11-2018";
+const APP_BUILD = "2026-09-11-2048";
 
 function markVersion(extra) {
   const el = document.getElementById("appVersion");
@@ -6739,6 +6755,8 @@ function showQuizView() {
 
 // 相性ランキングのタグをタップしたら、その絞り込みで一覧へ
 document.getElementById("playerView").addEventListener("click", async e => {
+  const shelfBtn = e.target.closest("[data-shelf-export]");
+  if (shelfBtn) { shelfBtn.disabled = true; await exportShelfImage(shelfBtn.dataset.shelfExport); shelfBtn.disabled = false; return; }
   // 称号をタップ → 獲得条件を表示
   const info = e.target.closest("[data-title-info]");
   if (info) {
@@ -7789,34 +7807,108 @@ function buildRecentDays(name) {
 }
 
 // 自分がいちばん高く評価したゲーム
-function buildBestRated(name) {
-  const list = getPlayerRatings(name)
+// MYボドゲ棚：自分の評価が高い順に12本（3列×4段）。表紙だけを棚に並べる。
+const SHELF_COLS = 3, SHELF_ROWS = 4;
+function shelfGames(name) {
+  return getPlayerRatings(name)
     .map(pr => {
       const full = (reviewsCache[pr.slug] || []).find(r => r.id === pr.id) || pr;
       return { slug: pr.slug, g: games.find(x => slugOf(x) === pr.slug), r: full };
     })
     .filter(x => x.g)
-    .sort((a, b) => (ratingAvg(b.r) || 0) - (ratingAvg(a.r) || 0))
-    .slice(0, 5);
+    .sort((a, b) => (ratingAvg(b.r) || 0) - (ratingAvg(a.r) || 0) || (b.r.createdAt?.seconds || 0) - (a.r.createdAt?.seconds || 0))
+    .slice(0, SHELF_COLS * SHELF_ROWS);
+}
+function coverSrc(slug) {
+  return `data/covers/${slug}.jpg`;
+}
+function buildShelf(name) {
+  const list = shelfGames(name);
   if (!list.length) {
     return `<div class="review-count">まだ評価がありません。ゲームのページから点を付けると、ここに並びます。</div>`;
   }
-  return list.map((x, i) => `
-    <a class="rec-item" href="#game/${encodeURIComponent(x.slug)}">
-      <div class="rec-rank">${i + 1}</div>
-      <img src="${gameImg(x.g, "mini")}" alt="${x.g.jp}" onerror="this.style.visibility='hidden'">
-      <div class="rec-body">
-        <div class="rec-title">${x.g.jp}</div>
-        <div class="rec-spec">${x.g.playersRaw || "人数不明"} ・ ${x.g.timeRaw || "時間不明"}</div>
-        <div class="rating-axes">
-          <span class="rating-axis avg">総合<b style="color:${ratingColor(ratingAvg(x.r))}">${ratingAvg(x.r)}</b></span>
-          ${["taste", "replay", "recommend"].map((k, i) => {
-            const val = axisValue(x.r, k), lab = ["好み", "リプレイ性", "おすすめ度"][i];
-            return val != null ? `<span class="rating-axis">${lab}<b style="color:${ratingColor(val)}">${val}</b></span>` : `<span class="rating-axis na">${lab}<b>—</b></span>`;
-          }).join("")}
-        </div>
-      </div>
-    </a>`).join("");
+  const rows = Math.max(1, Math.ceil(list.length / SHELF_COLS));
+  let html = `<div class="shelf" data-shelf-name="${name}">`;
+  for (let r = 0; r < rows; r++) {
+    html += `<div class="shelf-row">`;
+    for (let c = 0; c < SHELF_COLS; c++) {
+      const x = list[r * SHELF_COLS + c];
+      html += x
+        ? `<a class="shelf-box" href="#game/${encodeURIComponent(x.slug)}" title="${x.g.jp}"><img src="${coverSrc(x.slug)}" alt="${x.g.jp}" loading="lazy" onerror="this.src='${gameImg(x.g, "card")}'"></a>`
+        : `<span class="shelf-box empty"></span>`;
+    }
+    html += `<div class="shelf-board"></div></div>`;
+  }
+  html += `</div>
+    <div class="shelf-foot">
+      <span>評価が高い順に${list.length}本</span>
+      <button type="button" class="link-btn" data-shelf-export="${name}">画像で保存</button>
+    </div>`;
+  return html;
+}
+
+// 棚を1枚の画像にする。表紙は同一オリジンの data/covers を使う（CDN直だとcanvasが汚染されて書き出せない）
+async function exportShelfImage(name) {
+  const list = shelfGames(name);
+  if (!list.length) { toast("まだ棚に並ぶゲームがありません"); return; }
+  const rows = Math.max(1, Math.ceil(list.length / SHELF_COLS));
+  const W = 1080, pad = 60, gap = 36, boardH = 26, titleH = 150;
+  const boxW = Math.floor((W - pad * 2 - gap * (SHELF_COLS - 1)) / SHELF_COLS), boxH = Math.round(boxW * 3 / 4);
+  const rowH = boxH + 40 + boardH;
+  const H = titleH + rows * rowH + pad;
+  const cv = document.createElement("canvas"); cv.width = W; cv.height = H;
+  const ctx = cv.getContext("2d");
+  // 壁
+  const wall = ctx.createLinearGradient(0, 0, 0, H); wall.addColorStop(0, "#eef6fb"); wall.addColorStop(1, "#d9eaf4");
+  ctx.fillStyle = wall; ctx.fillRect(0, 0, W, H);
+  // タイトル
+  ctx.fillStyle = "#1f3a52"; ctx.font = "bold 52px -apple-system, 'Hiragino Sans', sans-serif"; ctx.textBaseline = "middle";
+  ctx.fillText(`${name}のボドゲ棚`, pad, 70);
+  ctx.fillStyle = "#5c7a90"; ctx.font = "26px -apple-system, 'Hiragino Sans', sans-serif";
+  ctx.fillText(`うちのボードゲーム棚 ・ 評価が高い順`, pad, 118);
+  const load = src => new Promise(res => { const im = new Image(); im.onload = () => res(im); im.onerror = () => res(null); im.src = src; });
+  const imgs = await Promise.all(list.map(x => load(coverSrc(x.slug))));
+  for (let r = 0; r < rows; r++) {
+    const top = titleH + r * rowH;
+    // 棚板（手前の面と側面）
+    const by = top + boxH + 20;
+    ctx.fillStyle = "#b98a5a"; ctx.fillRect(pad - 24, by, W - (pad - 24) * 2, boardH);
+    ctx.fillStyle = "#8f6238"; ctx.fillRect(pad - 24, by + boardH, W - (pad - 24) * 2, 8);
+    for (let c = 0; c < SHELF_COLS; c++) {
+      const x = list[r * SHELF_COLS + c]; if (!x) continue;
+      const im = imgs[r * SHELF_COLS + c];
+      const bx = pad + c * (boxW + gap);
+      // 影
+      ctx.save(); ctx.shadowColor = "rgba(0,0,0,0.25)"; ctx.shadowBlur = 18; ctx.shadowOffsetY = 8;
+      ctx.fillStyle = "#fff"; roundRect(ctx, bx, top + 20, boxW, boxH, 14); ctx.fill(); ctx.restore();
+      ctx.save(); roundRect(ctx, bx, top + 20, boxW, boxH, 14); ctx.clip();
+      ctx.fillStyle = "#f1f2f5"; ctx.fillRect(bx, top + 20, boxW, boxH);
+      if (im) {
+        const s = Math.min(boxW / im.width, boxH / im.height), dw = im.width * s, dh = im.height * s;
+        ctx.drawImage(im, bx + (boxW - dw) / 2, top + 20 + (boxH - dh) / 2, dw, dh);
+      }
+      ctx.restore();
+    }
+  }
+  let url;
+  try { url = cv.toDataURL("image/jpeg", 0.92); }
+  catch (e) { toast("画像の書き出しに失敗しました"); return; }
+  let el = document.getElementById("lightbox");
+  if (!el) {
+    el = document.createElement("div"); el.id = "lightbox"; el.className = "lightbox";
+    el.addEventListener("click", ev => { if (!ev.target.closest("a")) el.classList.remove("on"); });
+    document.body.appendChild(el);
+  }
+  el.innerHTML = `<img src="${url}" alt="${name}のボドゲ棚">
+    <div class="lightbox-hint">画像を長押しして「写真に追加」で保存できます</div>
+    <a class="lightbox-dl" href="${url}" download="${name}のボドゲ棚.jpg">ダウンロード</a>
+    <div class="lightbox-hint">画像の外をタップで閉じる</div>`;
+  el.classList.add("on");
+}
+function roundRect(ctx, x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath();
 }
 
 // 称号はタップで獲得条件を出す。数が多いので、付けているものを先頭に並べる。
@@ -8018,7 +8110,7 @@ function buildPlayerPage(name) {
     ${buildLevelCard(name, stats)}
     ${collapsibleSection("p-titles", `🏅 称号（${earned.length} / ${TITLE_DEFS.length}）`, buildTitlesCard(name, isMe), false)}
     ${collapsibleSection("p-recent", "🎲 直近のゲーム履歴", buildRecentDays(name), true)}
-    ${collapsibleSection("p-best", isMe ? "⭐ 自分の評価トップ5" : `⭐ ${name} さんの評価トップ5`, buildBestRated(name), true)}
+    ${collapsibleSection("p-shelf", isMe ? "📚 MYボドゲ棚" : `📚 ${name} さんのボドゲ棚`, buildShelf(name), true)}
   `;
 }
 

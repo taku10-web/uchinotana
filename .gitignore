@@ -7,3 +7,4 @@ qr_uchinotana.png
 *.py
 !deploy.py
 tag_vocabulary.json
+!fetch_covers.py
