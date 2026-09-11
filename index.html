@@ -1070,15 +1070,20 @@
 
   /* 詳細の頭：写真と作品名と人数・時間・評価をひとまとめに */
   .hero {
-    display: flex;
-    gap: 12px;
-    align-items: flex-start;
+    display: grid;
+    grid-template-columns: auto 1fr;
+    grid-template-areas: "title title" "img body";
+    gap: 8px 12px;
+    align-items: start;
     background: var(--card-bg);
     border: 1px solid var(--border);
     border-radius: 14px;
     padding: 12px;
     margin: 10px 0 10px;
   }
+  .hero-title { grid-area: title; }
+  .hero-img { grid-area: img; }
+  .hero-body { grid-area: body; }
   .hero-img {
     width: 118px;
     height: 118px;
@@ -1089,11 +1094,10 @@
     cursor: zoom-in;
   }
   .hero-body { flex: 1; min-width: 0; }
-  /* 写真の横は幅が狭いので、作品名は一段小さく */
-  .hero .detail-title { margin: 0 0 8px; font-size: 19px; line-height: 1.3; }
-  .hero .detail-title.t-md { font-size: 17px; }
-  .hero .detail-title.t-sm { font-size: 15.5px; }
-  .hero .detail-title.t-xs { font-size: 14px; }
+  .hero .detail-title { margin: 0 0 2px; font-size: 22px; line-height: 1.3; }
+  .hero .detail-title.t-md { font-size: 20px; }
+  .hero .detail-title.t-sm { font-size: 17px; }
+  .hero .detail-title.t-xs { font-size: 15px; }
   .hero-specs {
     display: flex;
     flex-wrap: wrap;
@@ -1790,6 +1794,42 @@
   .card-tag[data-extra-tag] { display: none; }
   .card-tags.open .card-tag[data-extra-tag] { display: inline-block; }
   .card-tags.open .card-more-tag { display: none; }
+  /* どんなゲームか：2行で切る。開くと全文。 */
+  .card-about {
+    margin: 4px 0 0;
+    font-size: 13px;
+    line-height: 1.55;
+    color: var(--text);
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .card-about.open { display: block; -webkit-line-clamp: unset; }
+  .card-pitch-line {
+    margin-top: 4px;
+    font-size: 12px;
+    color: var(--pitch-text);
+    line-height: 1.5;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .card-pitch-line span {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .card-pitch-line.open span { white-space: normal; }
+  .card-more-about {
+    border: none;
+    background: none;
+    color: var(--accent);
+    font-size: 12px;
+    font-weight: 700;
+    padding: 4px 0 0;
+    cursor: pointer;
+  }
   .card-more-tag {
     border: 1px dashed var(--border);
     background: none;
@@ -2804,7 +2844,7 @@ try {
 // ── 自動更新 ───────────────────────────────
 // iPhoneはHTMLを長く握るので、新しい版が出ていたらURLを変えて読み直す。
 // （同じURLの再読み込みだとキャッシュが返ってきてしまうため）
-const APP_BUILD = "2026-09-11-1647";
+const APP_BUILD = "2026-09-11-1726";
 
 function markVersion(extra) {
   const el = document.getElementById("appVersion");
@@ -3294,6 +3334,8 @@ function specHtml(value, cls) {
   return `<span class="spec${isUnknown ? " unknown" : ""}">${isUnknown ? "不明" : value}</span>`;
 }
 
+let expandedCards = new Set();   // 「つづきを読む」で開いたカード
+
 // 選んでいる条件をチップで見せる。タップでその条件だけ外せる。
 const TIME_LABEL = { "15": "〜15分", "30": "〜30分", "60": "〜60分", "9999": "60分〜" };
 function renderActiveChips() {
@@ -3335,10 +3377,10 @@ function render() {
     const slug = slugOf(g);
     const avg = averageScore(slug);
     const mine = myRating(slug);
-    const { genreTags, audienceTags } = getGameTags(g);
-    const otherTags = audienceTags;
+    const { genreTags } = getGameTags(g);
     const r = rulesData[slug];
     const pitches = (r && r.sellingPoints) || [];
+    const worldview = (r && r.worldview) || "";
     const iLike = myName && getInterests(slug).some(i => i.name === myName);
     const histCount = getHistory(slug).length;
     const todayCount = getDayTables(todayStr()).filter(h => h.slug === slug).length;
@@ -3357,24 +3399,19 @@ function render() {
           </div>
           ${ratingStrip(slug)}
           ${genreTags.length ? `<div class="card-class"><span>ジャンル：</span>${genreTags.join("・")}</div>` : ""}
-          ${otherTags.length ? `<div class="card-tags">${otherTags.map((t, ti) => `<span class="card-tag" ${ti >= 4 ? 'data-extra-tag="1"' : ""}>#${t}</span>`).join("")}${otherTags.length > 4 ? `<button type="button" class="card-more-tag" data-more-tag="${slug}">＋${otherTags.length - 4}</button>` : ""}</div>` : ""}
+          ${worldview ? `<p class="card-about ${expandedCards.has(slug) ? "open" : ""}" data-about="${slug}">${worldview}</p>` : ""}
           ${pitches.length ? `
-          <div class="card-pitch-box">
-            <div class="card-pitch-title">✨ おすすめポイント</div>
-            <ul class="card-pitch">${pitches.slice(0, 1).map(p => `<li>${p}</li>`).join("")}</ul>
-            ${pitches.length > 1 ? `
-              <ul class="card-pitch" data-pitch-rest="${slug}" style="display:none;">
-                ${pitches.slice(1).map(p => `<li>${p}</li>`).join("")}
-              </ul>
-              <button type="button" class="card-more-pitch" data-more-pitch="${slug}">ほかのおすすめポイントを見る（${pitches.length - 1}）</button>
-            ` : ""}
+          <div class="card-pitch-line ${expandedCards.has(slug) ? "open" : ""}" data-about="${slug}">
+            ${(expandedCards.has(slug) ? pitches : pitches.slice(0, 1)).map(p => `<span>✨ ${p}</span>`).join("")}
           </div>` : ""}
+          ${(worldview || pitches.length > 1) ? `
+          <button type="button" class="card-more-about" data-toggle-about="${slug}">${expandedCards.has(slug) ? "たたむ" : "つづきを読む"}</button>` : ""}
         </div>
       </a>
       <div class="card-actions">
         <button type="button" class="card-act ${iLike ? "on" : ""}" data-card-interest="${slug}">${iLike ? "🌟 興味あり" : "☆ 興味あり"}</button>
         <button type="button" class="card-act" data-card-rate="${slug}">${mine != null ? `⭐ 評価 ${mine}` : "⭐ 評価する"}</button>
-        <button type="button" class="card-act ${todayCount ? "on-today" : ""}" data-played="${slug}">🎲 今日やる${todayCount ? ` ${todayCount}` : ""}</button>
+        <button type="button" class="card-act ${todayCount ? "on-today" : ""}" data-played="${slug}">🎲 今日やる</button>
         <button type="button" class="card-act" data-card-history="${slug}">📖 戦績${histCount ? `（${histCount}）` : ""}</button>
       </div>
     </div>
@@ -3582,9 +3619,9 @@ document.getElementById("cardList").addEventListener("click", async e => {
     played.textContent = "…";
     const r = await withLevelUp(() => toggleTodayTable(played.dataset.played, name));
     render();
-    if (r === "added") toast("今日の記録に追加しました");
+    if (r === "added") { toast("今日の記録に追加しました"); openTodayLog(); }
     else if (r === "removed") toast("今日の記録から取り消しました");
-    else if (r === "hasResult") toast("もう結果が入っています");
+    else if (r === "hasResult") toast("もう結果が入っています。もう1卓やるなら記録画面の「もう1回」から");
     return;
   }
   // 評価・戦績は詳細ページの該当セクションを開いた状態で飛ばす
@@ -3593,13 +3630,14 @@ document.getElementById("cardList").addEventListener("click", async e => {
   const hist = e.target.closest("[data-card-history]");
   if (hist) { e.preventDefault(); goToDetailSection(hist.dataset.cardHistory, "history"); return; }
 
-  const moreTag = e.target.closest("[data-more-tag]");
-  if (moreTag) { e.preventDefault(); moreTag.closest(".card-tags").classList.add("open"); return; }
-  const morePitch = e.target.closest("[data-more-pitch]");
-  if (morePitch) {
+  const moreAbout = e.target.closest("[data-toggle-about]");
+  if (moreAbout) {
     e.preventDefault();
-    const rest = morePitch.parentElement.querySelector("[data-pitch-rest]");
-    if (rest) { rest.style.display = ""; morePitch.style.display = "none"; }
+    const slug = moreAbout.dataset.toggleAbout;
+    if (expandedCards.has(slug)) expandedCards.delete(slug); else expandedCards.add(slug);
+    const y = window.scrollY;
+    render();
+    window.scrollTo(0, y);
     return;
   }
 });
@@ -4915,9 +4953,9 @@ function showDetail(g) {
   dv.innerHTML = `
     <button type="button" class="detail-back" data-back>← 戻る</button>
     <div class="hero">
+      <h1 class="detail-title hero-title ${titleSizeClass(g.jp)}">${g.jp}</h1>
       <img class="hero-img" src="${gameImg(g, "detail")}" alt="${g.jp}" data-photo-src="${gameImg(g, "detail")}" onerror="this.style.visibility='hidden'">
       <div class="hero-body">
-        <h1 class="detail-title ${titleSizeClass(g.jp)}">${g.jp}</h1>
         <div class="hero-specs">
           <span>👥 ${g.playersRaw || "人数不明"}</span>
           <span>⏱ ${g.timeRaw || "時間不明"}</span>
