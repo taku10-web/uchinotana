@@ -1750,6 +1750,15 @@
     overflow: hidden;
   }
   .card-memo i { font-style: normal; color: var(--text-sub); font-size: 11px; margin-left: 4px; }
+  .card-wanters { display: flex; flex-wrap: wrap; gap: 5px; }
+  .card-wanters b {
+    font-weight: 700;
+    font-size: 12px;
+    color: var(--accent);
+    background: var(--accent-soft);
+    border-radius: 999px;
+    padding: 2px 9px;
+  }
   .card-main:active { opacity: 0.7; }
   .card img {
     width: 132px;
@@ -2370,49 +2379,6 @@
     color: var(--accent);
     border-color: var(--accent);
   }
-  .interest-bar {
-    display: flex;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: 8px;
-    margin: 14px 0;
-  }
-  .interest-btn {
-    border: 1px solid var(--accent);
-    background: var(--card-bg);
-    color: var(--accent);
-    font-size: 14px;
-    font-weight: 700;
-    padding: 8px 16px;
-    border-radius: 999px;
-    cursor: pointer;
-  }
-  .interest-btn.active {
-    background: var(--accent);
-    color: #fff;
-  }
-  .played-btn {
-    border: 1px solid var(--key);
-    background: var(--card-bg);
-    color: var(--key);
-    font-size: 14px;
-    font-weight: 700;
-    padding: 8px 16px;
-    border-radius: 999px;
-    cursor: pointer;
-  }
-  .played-btn:active { background: var(--key); color: #fff; }
-  .interest-names {
-    width: 100%;
-    font-size: 13.5px;
-    color: var(--text-sub);
-    margin-top: 2px;
-  }
-  .interest-names a {
-    color: var(--navy);
-    text-decoration: none;
-    border-bottom: 1px dotted var(--text-sub);
-  }
   .members-link {
     color: #7fdcea;
     font-size: 13px;
@@ -2860,6 +2826,7 @@
         <option value="replay_desc">リプレイ性が高い順</option>
         <option value="myrating_desc">自分の評価が高い順</option>
         <option value="played_desc">プレイ回数が多い順</option>
+        <option value="want_desc">遊びたい人が多い順</option>
         <option value="default">入荷順</option>
       </select>
     </div>
@@ -2937,7 +2904,7 @@ try {
 // ── 自動更新 ───────────────────────────────
 // iPhoneはHTMLを長く握るので、新しい版が出ていたらURLを変えて読み直す。
 // （同じURLの再読み込みだとキャッシュが返ってきてしまうため）
-const APP_BUILD = "2026-09-11-1918";
+const APP_BUILD = "2026-09-11-1924";
 
 function markVersion(extra) {
   const el = document.getElementById("appVersion");
@@ -3413,6 +3380,10 @@ function sortGames(list) {
     case "played_desc":
       arr.sort((a, b) => getHistory(slugOf(b)).length - getHistory(slugOf(a)).length);
       break;
+    case "want_desc":
+      arr.sort((a, b) => getWanters(slugOf(b)).length - getWanters(slugOf(a)).length
+        || (averageScore(slugOf(b)) ?? -1) - (averageScore(slugOf(a)) ?? -1));
+      break;
     default:
       break;
   }
@@ -3474,6 +3445,7 @@ function render() {
     const latestMemo = getReviews(slug).filter(x => x.memo)
       .sort((x, y) => (y.createdAt?.seconds || 0) - (x.createdAt?.seconds || 0))[0] || null;
     const iLike = myName && getInterests(slug).some(i => i.name === myName);
+    const wanters = getWanters(slug);
     const histCount = getHistory(slug).length;
     const todayCount = getDayTables(todayStr()).filter(h => h.slug === slug).length;
     return `
@@ -3496,6 +3468,7 @@ function render() {
           <p class="card-about ${expandedCards.has(slug) ? "open" : ""}">${worldview}</p>
           <button type="button" class="card-more-about" data-toggle-about="${slug}">${expandedCards.has(slug) ? "たたむ" : "つづきを読む"}</button>
         </div></div>` : ""}
+        ${wanters.length ? `<div class="card-sec"><span class="card-sec-label">遊びたい人</span><div class="card-sec-body card-wanters">${wanters.map(w => `<b>${w.name}</b>`).join("")}</div></div>` : ""}
         ${latestMemo ? `<div class="card-sec"><span class="card-sec-label">みんなの感想</span><div class="card-sec-body card-memo">「${latestMemo.memo}」<i>— ${latestMemo.name}</i></div></div>` : ""}
       </a>
     </div>
@@ -4927,21 +4900,6 @@ function buildRuleBlock(slug, kind, label, lines) {
 }
 
 
-function buildInterestSection(g) {
-  const slug = slugOf(g);
-  const interests = getInterests(slug);
-  const myName = getMyName();
-  if (!interests.length) return "";
-  return `
-    <div class="interest-bar">
-      <button type="button" class="link-btn" data-toggle-section="interest-names">誰が遊んでみたい？（${interests.length}人）</button>
-      <div class="interest-names" data-section="interest-names" style="display:none;">
-        ${interests.map(i => `<a href="#player/${encodeURIComponent(i.name)}">${i.name}</a>`).join("・")}
-      </div>
-    </div>
-  `;
-}
-
 let lastDetailSlug = "";
 // ヘッダー右の「編集」ボタン。詳細ページのときだけ出す（件数と入れ替え）。
 function setHeaderEdit(show) {
@@ -5014,7 +4972,6 @@ function showDetail(g) {
     ${buildWorldviewSection(g)}
     <div id="detailRecord"></div>
     ${buildRatingSection(g)}
-    ${buildInterestSection(g)}
     ${buildPitchSection(g)}
     <div id="detailRules"></div>
     ${(() => {
@@ -7242,6 +7199,10 @@ function hasPlayed(slug, name) {
 }
 function getWantToPlay(name) {
   return getPlayerInterests(name).filter(pi => !hasPlayed(pi.slug, name));
+}
+// そのゲームを「遊んでみたい」と押していて、まだ遊んでいない人
+function getWanters(slug) {
+  return getInterests(slug).filter(i => !hasPlayed(slug, i.name));
 }
 
 function getPlayerInterests(name) {
