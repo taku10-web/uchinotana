@@ -1081,12 +1081,36 @@
     padding: 12px;
     margin: 10px 0 10px;
   }
+  .hero-title-row { grid-area: title; display: flex; align-items: center; gap: 8px; }
+  .hero-title-row .hero-title { flex: 1; min-width: 0; }
+  .hero-star {
+    border: none; background: none; font-size: 22px; line-height: 1; padding: 2px; cursor: pointer; flex-shrink: 0;
+  }
+  .hero-edit {
+    flex-shrink: 0;
+    border: 1px solid var(--border);
+    background: var(--card-bg);
+    color: var(--text-sub);
+    border-radius: 999px;
+    padding: 5px 12px;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+  }
+  .hero-edit.on { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); }
+  .hero-class { margin-top: 6px; }
+  .hero-class > span { display: block; font-size: 10.5px; font-weight: 700; color: var(--text-sub); margin-bottom: 3px; }
+  .hero-class .tag-row { gap: 4px; }
+  .tag-chip.mini { font-size: 11px; padding: 3px 8px; }
+  .detail-act-row.four { grid-template-columns: repeat(4, 1fr); }
+  .detail-act-row.four .detail-act i { font-size: 10px; }
+  .edit-panel { border-color: var(--accent); }
   .hero-title { grid-area: title; }
   .hero-img { grid-area: img; }
   .hero-body { grid-area: body; }
   .hero-img {
-    width: 118px;
-    height: 118px;
+    width: 124px;
+    height: 124px;
     object-fit: contain;
     border-radius: 10px;
     background: #f1f2f5;
@@ -1642,39 +1666,48 @@
     overflow: hidden;
   }
   .card-main {
-    display: flex;
-    gap: 12px;
+    display: block;
     min-width: 0;
-    padding: 10px;
+    padding: 12px 12px 10px;
     text-decoration: none;
     color: inherit;
   }
-  .card-main:active { opacity: 0.7; }
-  /* 左に縦2枚：上が表紙、下が中身やプレイ中の写真 */
-  .card-imgs {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-    flex-shrink: 0;
+  .card-row { display: flex; gap: 12px; align-items: flex-start; margin-top: 8px; }
+  .card-avg-label { font-size: 11px; font-weight: 700; color: var(--text-sub); margin: 8px 0 4px; }
+  .card .rs-strip { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; margin: 0; }
+  .card .rs-pill { justify-content: space-between; }
+  .card-memo {
+    margin-top: 8px;
+    font-size: 12.5px;
+    line-height: 1.5;
+    color: var(--text);
+    background: var(--bg);
+    border-left: 3px solid var(--accent-soft);
+    padding: 6px 10px;
+    border-radius: 0 8px 8px 0;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
   }
+  .card-memo i { font-style: normal; color: var(--text-sub); font-size: 11px; margin-left: 4px; }
+  .card-main:active { opacity: 0.7; }
   .card img {
-    width: 124px;
-    height: 93px;
-    object-fit: contain;
-    border-radius: 8px;
+    width: 132px;
+    height: 132px;
+    object-fit: cover;
+    border-radius: 10px;
     background: #f1f2f5;
     flex-shrink: 0;
   }
-  .card img.card-img2 { object-fit: cover; }
   .card-body {
     min-width: 0;
     flex: 1;
   }
   .card-title-jp {
-    font-size: 16px;
+    font-size: 17px;
     font-weight: 700;
     line-height: 1.35;
-    margin-bottom: 5px;
   }
   .detail-badge-mini {
     display: inline-block;
@@ -2844,7 +2877,7 @@ try {
 // ── 自動更新 ───────────────────────────────
 // iPhoneはHTMLを長く握るので、新しい版が出ていたらURLを変えて読み直す。
 // （同じURLの再読み込みだとキャッシュが返ってきてしまうため）
-const APP_BUILD = "2026-09-11-1726";
+const APP_BUILD = "2026-09-11-1839";
 
 function markVersion(extra) {
   const el = document.getElementById("appVersion");
@@ -2895,6 +2928,7 @@ let customTagsCache = {}; // slug → 自分たちで足した/隠したタグ
 let ruleEditsCache = {};  // slug → 早見表の手直し
 let quickrefEditMode = false;
 let tagEditMode = false;
+let detailEditOpen = false;   // 詳細の「編集」パネル（ジャンル・メカニクス・タグをまとめて直す）
 let genreEditMode = false;
 let mechanicEditMode = false;
 let GENRE_VOCAB = new Set();      // データ読み込み後に埋める
@@ -3379,34 +3413,32 @@ function render() {
     const mine = myRating(slug);
     const { genreTags } = getGameTags(g);
     const r = rulesData[slug];
-    const pitches = (r && r.sellingPoints) || [];
     const worldview = (r && r.worldview) || "";
+    // 感想が付いた評価のうち、いちばん新しいもの
+    const latestMemo = getReviews(slug).filter(x => x.memo)
+      .sort((x, y) => (y.createdAt?.seconds || 0) - (x.createdAt?.seconds || 0))[0] || null;
     const iLike = myName && getInterests(slug).some(i => i.name === myName);
     const histCount = getHistory(slug).length;
     const todayCount = getDayTables(todayStr()).filter(h => h.slug === slug).length;
     return `
     <div class="card">
       <a class="card-main" href="#game/${encodeURIComponent(slug)}">
-        <div class="card-imgs">
-          <img src="${gameImg(g, "card")}" alt="${g.jp}" loading="lazy" onerror="this.style.visibility='hidden'">
-          ${secondImage(g, "card") ? `<img class="card-img2" src="${secondImage(g, "card")}" alt="${g.jp}の中身" loading="lazy" onerror="this.style.display='none'">` : ""}
-        </div>
-        <div class="card-body">
-          <div class="card-title-jp">${g.jp}</div>
-          <div class="spec-row">
-            ${specHtml(g.playersRaw)}
-            ${specHtml(g.timeRaw)}
+        <div class="card-title-jp">${g.jp}</div>
+        <div class="card-row">
+          <img src="${secondImage(g, "card") || gameImg(g, "card")}" alt="${g.jp}" loading="lazy" onerror="this.style.visibility='hidden'">
+          <div class="card-body">
+            <div class="spec-row">
+              ${specHtml(g.playersRaw)}
+              ${specHtml(g.timeRaw)}
+            </div>
+            <div class="card-avg-label">みんなの評価${getReviews(slug).length ? `（${getReviews(slug).length}人）` : "（まだなし）"}</div>
+            ${ratingStrip(slug)}
           </div>
-          ${ratingStrip(slug)}
-          ${genreTags.length ? `<div class="card-class"><span>ジャンル：</span>${genreTags.join("・")}</div>` : ""}
-          ${worldview ? `<p class="card-about ${expandedCards.has(slug) ? "open" : ""}" data-about="${slug}">${worldview}</p>` : ""}
-          ${pitches.length ? `
-          <div class="card-pitch-line ${expandedCards.has(slug) ? "open" : ""}" data-about="${slug}">
-            ${(expandedCards.has(slug) ? pitches : pitches.slice(0, 1)).map(p => `<span>✨ ${p}</span>`).join("")}
-          </div>` : ""}
-          ${(worldview || pitches.length > 1) ? `
-          <button type="button" class="card-more-about" data-toggle-about="${slug}">${expandedCards.has(slug) ? "たたむ" : "つづきを読む"}</button>` : ""}
         </div>
+        ${genreTags.length ? `<div class="card-class"><span>ジャンル：</span>${genreTags.join("・")}</div>` : ""}
+        ${worldview ? `<p class="card-about ${expandedCards.has(slug) ? "open" : ""}">${worldview}</p>` : ""}
+        ${worldview ? `<button type="button" class="card-more-about" data-toggle-about="${slug}">${expandedCards.has(slug) ? "たたむ" : "つづきを読む"}</button>` : ""}
+        ${latestMemo ? `<div class="card-memo">「${latestMemo.memo}」<i>— ${latestMemo.name}</i></div>` : ""}
       </a>
       <div class="card-actions">
         <button type="button" class="card-act ${iLike ? "on" : ""}" data-card-interest="${slug}">${iLike ? "🌟 興味あり" : "☆ 興味あり"}</button>
@@ -3689,14 +3721,14 @@ function buildClassBox(g, kind) {
   const vocab = isGenre ? GENRE_VOCAB : MECHANIC_VOCAB;
   const base = (isGenre ? genresData[slug] : mechanicsData[slug]) || [];
   const hiddenHere = [...hidden].filter(x => base.includes(x) || vocab.has(x));
-  const editing = isGenre ? genreEditMode : mechanicEditMode;
+  const editing = detailEditOpen || (isGenre ? genreEditMode : mechanicEditMode);
   const listId = isGenre ? "genreVocab" : "mechanicVocab";
 
   return `
     <div class="class-box">
       <div class="class-box-head">
         <span class="class-box-label">${label}</span>
-        <button type="button" class="link-btn" data-class-edit="${kind}">${editing ? "閉じる" : "直す"}</button>
+        ${detailEditOpen ? "" : `<button type="button" class="link-btn" data-class-edit="${kind}">${editing ? "閉じる" : "直す"}</button>`}
       </div>
       <div class="tag-row">
         ${tags.length
@@ -3724,9 +3756,10 @@ function buildClassGrid(g) {
   return `<div class="class-grid">${buildClassBox(g, "genre")}${buildClassBox(g, "mechanic")}</div>`;
 }
 
-function buildTagsAndPitch(g) {
+function buildTagsAndPitch(g, forceEdit) {
   const slug = slugOf(g);
   const { audienceTags, customTags } = getGameTags(g);
+  const tagEditModeNow = forceEdit || tagEditMode;
   const { hidden } = getCustomTags(slug);
   const r = rulesData[slug];
   const sellingPoints = r && r.sellingPoints;
@@ -3747,10 +3780,10 @@ function buildTagsAndPitch(g) {
         ${customTags.map(t => tagChip(t, true)).join("")}
       </div>
     </div>` : ""}
-    <div class="tag-edit-bar">
-      <button type="button" class="link-btn" data-tag-edit-toggle>${tagEditMode ? "編集をやめる" : "✏️ タグを編集"}</button>
-    </div>
-    ${tagEditMode ? `
+    ${forceEdit ? `<div class="class-box-label" style="margin-top:12px;">ハッシュタグ</div>` : `<div class="tag-edit-bar">
+      <button type="button" class="link-btn" data-tag-edit-toggle>${tagEditModeNow ? "編集をやめる" : "✏️ タグを編集"}</button>
+    </div>`}
+    ${tagEditModeNow ? `
     <div class="tag-edit-card">
       <form class="tag-add-form" data-tag-form="${slug}">
         <input type="text" name="tag" list="tagVocab" placeholder="遊んだ体感でタグを足す（例: 初手が肝心）" maxlength="20" required>
@@ -3763,7 +3796,7 @@ function buildTagsAndPitch(g) {
         <div class="tag-row">${[...hidden].map(t => `<button type="button" class="tag-chip tag-chip-hidden" data-tag-restore="${t}">#${t} ↩</button>`).join("")}</div>
       ` : ""}
     </div>` : ""}
-    ${sellingPoints && sellingPoints.length ? `
+    ${!forceEdit && sellingPoints && sellingPoints.length ? `
     <div class="pitch-card">
       <div class="pitch-title">✨ おすすめポイント</div>
       <ul class="pitch-list">${sellingPoints.map(p => `<li>${p}</li>`).join("")}</ul>
@@ -4856,6 +4889,13 @@ function buildQuickRef(g) {
   `;
 }
 
+function buildPitchSection(g) {
+  const r = rulesData[slugOf(g)];
+  const pts = (r && r.sellingPoints) || [];
+  if (!pts.length) return "";
+  return `<div class="review-card"><div class="review-title" style="margin-bottom:6px;">✨ おすすめポイント</div><ul class="pitch-list" style="margin:0;">${pts.map(p => `<li>${p}</li>`).join("")}</ul></div>`;
+}
+
 function buildWorldviewSection(g) {
   const slug = slugOf(g);
   const r = rulesData[slug];
@@ -4931,7 +4971,7 @@ function buildInterestSection(g) {
 
 let lastDetailSlug = "";
 function showDetail(g) {
-  if (slugOf(g) !== lastDetailSlug) { photosOpen = false; photoMenuFor = ""; lastDetailSlug = slugOf(g); }
+  if (slugOf(g) !== lastDetailSlug) { photosOpen = false; photoMenuFor = ""; detailEditOpen = false; lastDetailSlug = slugOf(g); }
   document.getElementById("controls").style.display = "none";
   document.getElementById("listView").style.display = "none";
   document.getElementById("playerView").style.display = "none";
@@ -4953,55 +4993,67 @@ function showDetail(g) {
   dv.innerHTML = `
     <button type="button" class="detail-back" data-back>← 戻る</button>
     <div class="hero">
-      <h1 class="detail-title hero-title ${titleSizeClass(g.jp)}">${g.jp}</h1>
-      <img class="hero-img" src="${gameImg(g, "detail")}" alt="${g.jp}" data-photo-src="${gameImg(g, "detail")}" onerror="this.style.visibility='hidden'">
+      <div class="hero-title-row">
+        <h1 class="detail-title hero-title ${titleSizeClass(g.jp)}">${g.jp}</h1>
+        <button type="button" class="hero-star ${iLike ? "on" : ""}" data-toggle-interest="${slug}" title="興味あり">${iLike ? "🌟" : "☆"}</button>
+        <button type="button" class="hero-edit ${detailEditOpen ? "on" : ""}" data-detail-edit>${detailEditOpen ? "閉じる" : "編集"}</button>
+      </div>
+      <img class="hero-img" src="${gameImg(g, "detail")}" alt="${g.jp}" data-jump-open="photos" onerror="this.style.visibility='hidden'">
       <div class="hero-body">
         <div class="hero-specs">
           <span>👥 ${g.playersRaw || "人数不明"}</span>
           <span>⏱ ${g.timeRaw || "時間不明"}</span>
         </div>
-        ${ratingStrip(slug)}
+        ${(() => {
+          const t = getGameTags(g);
+          const chips = (arr, kind) => arr.length
+            ? arr.map(x => `<button type="button" class="tag-chip mini" data-class-filter="${kind}" data-value="${x}">${x}</button>`).join("")
+            : `<span class="class-empty">未設定</span>`;
+          return `
+            <div class="hero-class"><span>ジャンル</span><div class="tag-row">${chips(t.genreTags, "genre")}</div></div>
+            <div class="hero-class"><span>メカニクス</span><div class="tag-row">${chips(t.allMechanics, "mechanic")}</div></div>`;
+        })()}
       </div>
     </div>
-    <div class="detail-act-row">
-      <button type="button" class="detail-act ${iLike ? "on" : ""}" data-toggle-interest="${slug}">
-        ${iLike ? "🌟" : "☆"}<i>興味あり</i><b>${interestCount || "—"}</b></button>
+    ${detailEditOpen ? `
+      <div class="review-card edit-panel">
+        <div class="review-title" style="margin-bottom:8px;">ジャンル・メカニクス・タグを直す</div>
+        ${buildClassGrid(g)}
+        ${buildTagsAndPitch(g, true)}
+      </div>` : ""}
+    <div class="detail-act-row four">
       <button type="button" class="detail-act detail-act-today ${todayCount ? "on-today" : ""}" data-played="${slug}">
         🎲<i>今日やる！</i><b>${todayCount || "—"}</b></button>
       <button type="button" class="detail-act ${mine != null ? "on" : ""}" data-jump="detailRecord">
         ⭐<i>${mine != null ? "評価済み" : "評価する"}</i><b>${mine != null ? mine : "—"}</b></button>
+      <button type="button" class="detail-act" data-jump-open="quickref">📕<i>早見表</i></button>
       <button type="button" class="detail-act" data-jump-open="history">
         📖<i>過去戦績</i><b>${getHistory(slug).length || "—"}</b></button>
-      <button type="button" class="detail-act" data-jump-open="quickref">📕<i>ルール早見表</i></button>
-      <button type="button" class="detail-act" data-jump-open="photos">📷<i>写真</i><b>${(() => {
-        const files = (galleryData[slug] || []).filter(f => !new Set((imagePrefs[slug] || {}).hidden || []).has(f));
-        const n = files.length + getPhotos(slug, "game").length;
-        return n || "—";
-      })()}</b></button>
     </div>
+    ${buildWorldviewSection(g)}
+    <div id="detailRecord"></div>
+    ${buildRatingSection(g)}
+    ${buildInterestSection(g)}
+    ${buildPitchSection(g)}
+    <div id="detailRules"></div>
+    ${(() => {
+      const d = quickRefData(g);
+      const hasS = d.setup.length || getPhotos(slug, "setup").length;
+      const hasR = d.rules.length || getPhotos(slug, "rules").length;
+      return collapsibleSection("prep", "🧩 準備", buildRuleBlock(slug, "setup", "ゲームの準備", d.setup), !!hasS || ruleEditKind === "setup")
+        + collapsibleSection("rules", "📕 ルール", buildRuleBlock(slug, "rules", "ルール", d.rules) + `
+          <div class="tag-edit-bar" style="margin-top:8px;">
+            <a class="link-btn" href="${ruleVideoUrl(g)}" target="_blank" rel="noopener">▶ 動画で確認</a>
+            <a class="link-btn" href="${g.url}" target="_blank" rel="noopener" style="margin-left:12px;">ボドゲーマで見る</a>
+          </div>`, !!hasR || ruleEditKind === "rules");
+    })()}
+    ${collapsibleSection("quickref", "🎯 プレイ中の早見表", buildQuickRef(g), quickrefEditMode)}
+    ${collapsibleSection("history", `🏆 戦績（${getHistory(slugOf(g)).length}件）`, buildHistorySection(g), false)}
     ${(() => {
       const files = (galleryData[slug] || []).filter(f => !new Set((imagePrefs[slug] || {}).hidden || []).has(f));
       const n = files.length + getPhotos(slug, "game").length;
       return collapsibleSection("photos", `📷 写真${n ? `（${n}枚）` : ""}`, buildGamePhotos(g), photosOpen || !!photoMenuFor);
     })()}
-    ${buildClassGrid(g)}
-    ${buildTagsAndPitch(g)}
-    ${buildWorldviewSection(g)}
-    <div id="detailRules"></div>
-    ${(() => {
-      const d = quickRefData(g);
-      const has = d.setup.length || d.rules.length || getPhotos(slug, "setup").length || getPhotos(slug, "rules").length;
-      return collapsibleSection("prep", "📕 簡単準備＆ルール", buildSetupSection(g), !!has || !!ruleEditKind);
-    })()}
-    ${collapsibleSection("quickref", "🎯 プレイ中の早見表", buildQuickRef(g), quickrefEditMode)}
-    ${collapsibleSection("links", "🔗 動画・ボドゲーマで調べる", `
-      <a class="detail-cta detail-cta-primary" href="${ruleVideoUrl(g)}" target="_blank" rel="noopener">▶ ルールを動画で確認</a>
-      <a class="detail-cta detail-cta-secondary" href="${g.url}" target="_blank" rel="noopener">ボドゲーマで詳細を見る</a>
-    `, false)}
-    <div id="detailRecord"></div>
-    ${buildRatingSection(g)}
-    ${buildInterestSection(g)}
-    ${collapsibleSection("history", `📖 プレイ履歴・戦績（${getHistory(slugOf(g)).length}件）`, buildHistorySection(g), false)}
   `;
   applyPendingDetailSection();
   // 写真はそのゲームを開いたときだけ読む（全部を起動時に読むと重い）
@@ -5332,6 +5384,12 @@ document.getElementById("detailView").addEventListener("click", async e => {
     logDate = openLog.dataset.openLog || "";
     editingId = ""; editDraft = null; logMembersOpen = "";
     location.hash = "#log";
+    return;
+  }
+  if (e.target.closest("[data-detail-edit]")) {
+    detailEditOpen = !detailEditOpen;
+    const g = currentDetailGame();
+    if (g) showDetail(g);
     return;
   }
   const ruleEdit = e.target.closest("[data-rule-edit]");
