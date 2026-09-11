@@ -39,6 +39,7 @@
   * { box-sizing: border-box; }
   body {
     margin: 0;
+    font-size: 15px;
     font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Yu Gothic", sans-serif;
     background: var(--bg);
     color: var(--text);
@@ -46,9 +47,42 @@
   header {
     background: var(--navy);
     color: #fff;
-    padding: 20px 16px 16px;
-    position: relative;
+    padding: 12px 16px 11px;
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 10px;
   }
+  /* 画面下のタブバー。親指で届く位置に置く。 */
+  .tab-bar {
+    position: fixed;
+    left: 0; right: 0; bottom: 0;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    background: var(--card-bg);
+    border-top: 1px solid var(--border);
+    padding: 6px 4px calc(6px + env(safe-area-inset-bottom));
+    z-index: 80;
+  }
+  .tab-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    border: none;
+    background: none;
+    color: var(--text-sub);
+    font-size: 11.5px;
+    font-weight: 700;
+    text-decoration: none;
+    padding: 4px 0;
+    cursor: pointer;
+    border-radius: 10px;
+  }
+  .tab-item .tab-ico { font-size: 20px; line-height: 1; }
+  .tab-item.on { color: var(--accent); }
+  .tab-item.on .tab-ico { transform: none; }
+  .tab-item:active { background: var(--accent-soft); }
   .theme-toggle-btn {
     position: absolute;
     top: 16px;
@@ -64,56 +98,24 @@
     align-items: center;
     justify-content: center;
   }
-  header .eyebrow {
-    font-size: 11px;
-    letter-spacing: 0.12em;
-    color: #a8d3e8;
-    font-weight: 600;
-    margin-bottom: 4px;
-  }
   header h1 {
-    margin: 0 0 4px;
-    font-size: 22px;
+    margin: 0;
+    font-size: 17px;
   }
   header .count {
-    font-size: 13px;
+    font-size: 14px;
     color: #c9dfec;
-  }
-  .main-nav {
-    display: flex;
-    gap: 6px;
-    margin-top: 12px;
-  }
-  .nav-btn {
-    flex: 1;
-    min-width: 0;
-    text-align: center;
-    text-decoration: none;
-    border: 1px solid rgba(255,255,255,0.22);
-    background: rgba(255,255,255,0.1);
-    color: #fff;
-    font-size: 11.5px;
-    font-weight: 700;
-    padding: 9px 2px;
-    border-radius: 10px;
-    cursor: pointer;
-    white-space: nowrap;
-  }
-  .nav-btn.on {
-    background: #fff;
-    border-color: #fff;
-    color: var(--navy);
   }
   .user-badge {
     margin-top: 8px;
-    font-size: 12px;
+    font-size: 13px;
     color: #c9dfec;
   }
   .user-badge button {
     background: none;
     border: none;
     color: #7fdcea;
-    font-size: 12px;
+    font-size: 13px;
     font-weight: 600;
     text-decoration: underline;
     cursor: pointer;
@@ -126,7 +128,7 @@
     color: #fff;
     text-decoration: none;
     padding: 6px 14px;
-    font-size: 12px;
+    font-size: 13px;
     font-weight: 600;
   }
 
@@ -167,7 +169,7 @@
     to { transform: scale(1); opacity: 1; }
   }
   .levelup-eyebrow {
-    font-size: 11px;
+    font-size: 12px;
     font-weight: 700;
     letter-spacing: 0.18em;
     color: #7fdcea;
@@ -180,7 +182,7 @@
   }
   .levelup-num small { font-size: 17px; color: #c9dfec; font-weight: 600; }
   .levelup-rank { font-size: 19px; font-weight: 700; margin-top: 6px; }
-  .levelup-sub { font-size: 12.5px; color: #c9dfec; margin-top: 8px; line-height: 1.6; }
+  .levelup-sub { font-size: 13.5px; color: #c9dfec; margin-top: 8px; line-height: 1.6; }
   .levelup-close {
     margin-top: 18px;
     width: 100%;
@@ -197,7 +199,7 @@
   .back-to-top {
     position: fixed;
     right: 16px;
-    bottom: 20px;
+    bottom: calc(86px + env(safe-area-inset-bottom));
     z-index: 50;
     width: 48px;
     height: 48px;
@@ -227,13 +229,13 @@
     text-decoration: none;
     padding: 9px 18px;
     border-radius: 999px;
-    font-size: 13.5px;
+    font-size: 14.5px;
     font-weight: 700;
   }
   .mypage-btn:active { opacity: 0.8; }
 
   .quiz-progress {
-    font-size: 12px;
+    font-size: 13px;
     color: var(--text-sub);
     margin-bottom: 6px;
   }
@@ -275,7 +277,7 @@
     background: none;
     border: none;
     color: var(--text-sub);
-    font-size: 13px;
+    font-size: 14px;
     text-decoration: underline;
     cursor: pointer;
     padding: 4px 0;
@@ -296,7 +298,7 @@
     color: var(--navy);
   }
   .type-hero .catch {
-    font-size: 13.5px;
+    font-size: 14.5px;
     color: var(--text-sub);
     margin-top: 6px;
   }
@@ -304,7 +306,7 @@
     display: flex;
     align-items: center;
     gap: 8px;
-    font-size: 12.5px;
+    font-size: 13.5px;
     margin-bottom: 7px;
   }
   .axis-label { width: 108px; flex-shrink: 0; }
@@ -323,7 +325,7 @@
   }
   .type-badge {
     display: inline-block;
-    font-size: 12px;
+    font-size: 13px;
     font-weight: 700;
     background: var(--accent-soft);
     color: var(--navy-light);
@@ -337,7 +339,7 @@
     text-decoration: none;
     background: linear-gradient(135deg, #7c4dff, var(--accent));
     color: #fff;
-    font-size: 13.5px;
+    font-size: 14.5px;
     font-weight: 700;
     padding: 11px 12px;
     border-radius: 999px;
@@ -352,7 +354,7 @@
     border: 1px solid var(--border);
     background: var(--bg);
     color: var(--text);
-    font-size: 12.5px;
+    font-size: 13.5px;
     font-weight: 600;
     padding: 10px 8px;
     border-radius: 10px;
@@ -363,7 +365,7 @@
     border-color: var(--accent);
     color: #fff;
   }
-  .mood-q { font-size: 12px; color: var(--text-sub); margin-bottom: 4px; }
+  .mood-q { font-size: 13px; color: var(--text-sub); margin-bottom: 4px; }
   #filterArea { margin-top: 10px; }
   .search-box {
     width: 100%;
@@ -393,7 +395,7 @@
   }
   .filter-select-group label {
     display: block;
-    font-size: 11px;
+    font-size: 12px;
     color: var(--text-sub);
     margin-bottom: 3px;
   }
@@ -402,7 +404,7 @@
     border: 1px solid var(--border);
     border-radius: 8px;
     padding: 9px 10px;
-    font-size: 13.5px;
+    font-size: 14.5px;
     background: var(--card-bg);
     color: var(--text);
   }
@@ -414,7 +416,7 @@
     display: flex;
     align-items: center;
     gap: 6px;
-    font-size: 12.5px;
+    font-size: 13.5px;
     color: var(--text);
     cursor: pointer;
     margin: 4px 0 8px;
@@ -429,7 +431,7 @@
     border: none;
     background: linear-gradient(135deg, var(--accent), #7c4dff);
     color: #fff;
-    font-size: 13px;
+    font-size: 14px;
     font-weight: 700;
     padding: 9px 12px;
     border-radius: 999px;
@@ -437,7 +439,7 @@
   }
 
   main {
-    padding: 12px 16px 40px;
+    padding: 12px 16px calc(96px + env(safe-area-inset-bottom));
     max-width: 720px;
     margin: 0 auto;
   }
@@ -450,7 +452,7 @@
     margin: 4px 4px 10px;
   }
   .result-count {
-    font-size: 13px;
+    font-size: 14px;
     color: var(--text-sub);
     flex-shrink: 0;
   }
@@ -459,7 +461,7 @@
     border: 1px solid var(--border);
     border-radius: 8px;
     padding: 6px 8px;
-    font-size: 12.5px;
+    font-size: 13.5px;
     background: var(--card-bg);
     color: var(--text);
   }
@@ -470,17 +472,54 @@
     border: 1px solid var(--border);
     background: var(--bg);
     color: var(--text-sub);
-    font-size: 12.5px;
+    font-size: 13.5px;
     font-weight: 600;
     padding: 9px 12px;
     border-radius: 999px;
     cursor: pointer;
   }
   .reset-btn:active { background: var(--accent-soft); }
+  .quick-row {
+    display: flex;
+    gap: 8px;
+    margin: 10px 0 8px;
+  }
+  .quick-row .recommend-btn { flex: 1; margin: 0; }
+  .filter-toggle {
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    border: 1px solid var(--border);
+    background: var(--card-bg);
+    color: var(--text);
+    border-radius: 999px;
+    padding: 0 14px;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+  }
+  .filter-toggle.on { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); }
+  .active-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .active-chips:empty { display: none; }
+  .active-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: 999px;
+    padding: 5px 10px 5px 12px;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+  }
+  .active-chip b { font-weight: 400; opacity: .85; }
   .cta-block { margin-bottom: 10px; }
   .cta-note {
     margin: 6px 2px 0;
-    font-size: 11.5px;
+    font-size: 12.5px;
     line-height: 1.55;
     color: var(--text-sub);
   }
@@ -492,15 +531,15 @@
   }
   .detail-title-row .detail-title { flex: 1; min-width: 0; }
   /* 端末に古い版が残っていないか確かめるための表示 */
-  .app-version { font-size: 10px; opacity: .5; margin-top: 6px; }
+  .app-version { font-size: 11px; opacity: .5; margin-top: 6px; }
   .toast {
     position: fixed;
     left: 50%;
-    bottom: 26px;
+    bottom: calc(92px + env(safe-area-inset-bottom));
     transform: translateX(-50%);
     background: var(--navy);
     color: #fff;
-    font-size: 13px;
+    font-size: 14px;
     font-weight: 600;
     padding: 11px 20px;
     border-radius: 999px;
@@ -535,11 +574,11 @@
     border-radius: 999px;
     width: 22px;
     height: 22px;
-    font-size: 13px;
+    font-size: 14px;
     line-height: 1;
     cursor: pointer;
   }
-  .photo-del.confirm { width: auto; padding: 0 9px; font-size: 10.5px; font-weight: 700; background: #c9483c; }
+  .photo-del.confirm { width: auto; padding: 0 9px; font-size: 11.5px; font-weight: 700; background: #c9483c; }
   .photo-add {
     display: inline-block;
     border: 1px dashed var(--accent);
@@ -547,7 +586,7 @@
     background: var(--accent-soft);
     border-radius: 10px;
     padding: 8px 14px;
-    font-size: 12px;
+    font-size: 13px;
     font-weight: 700;
     cursor: pointer;
   }
@@ -565,22 +604,30 @@
   }
   .lightbox.on { display: flex; }
   .lightbox img { max-width: 100%; max-height: 84vh; border-radius: 10px; }
-  .lightbox-hint { color: #cfe2ef; font-size: 12px; }
+  .lightbox-hint { color: #cfe2ef; font-size: 13px; }
   .rule-block { margin-bottom: 22px; }
   .detail-section-title-sm .link-btn { float: right; }
 
   .recent-day { margin-bottom: 14px; }
   .recent-day-head {
-    font-size: 12.5px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    border: none;
+    background: none;
+    font-size: 13.5px;
     font-weight: 700;
     color: var(--accent);
     border-bottom: 2px solid var(--accent-soft);
-    padding-bottom: 4px;
+    padding: 6px 2px;
     margin-bottom: 4px;
+    cursor: pointer;
+    text-align: left;
   }
   .recent-day-head i { font-style: normal; font-weight: 500; color: var(--text-sub); margin-left: 8px; }
   .rating-axes { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 4px; }
-  .rating-axis { font-size: 11.5px; color: var(--text-sub); }
+  .rating-axis { font-size: 12.5px; color: var(--text-sub); }
   .rating-axis b { font-size: 15px; margin-left: 5px; }
   .rating-axis.avg { font-weight: 700; color: var(--text); }
   .rating-slider-block { margin: 14px 0 4px; }
@@ -588,11 +635,11 @@
     display: flex;
     align-items: baseline;
     justify-content: space-between;
-    font-size: 12.5px;
+    font-size: 13.5px;
     font-weight: 700;
     margin-bottom: 4px;
   }
-  .rating-slider-val { font-size: 11.5px; font-weight: 500; color: var(--text-sub); }
+  .rating-slider-val { font-size: 12.5px; font-weight: 500; color: var(--text-sub); }
   .rating-slider-val b { font-size: 19px; margin-right: 6px; }
   .rating-slider {
     width: 100%;
@@ -602,14 +649,14 @@
   .rating-slider-scale {
     display: flex;
     justify-content: space-between;
-    font-size: 9.5px;
+    font-size: 10.5px;
     color: var(--text-sub);
   }
   .rating-slider-scale span:nth-child(2) { text-align: center; }
   .rating-slider-scale span:last-child { text-align: right; }
   .rating-avg-preview {
     text-align: center;
-    font-size: 12.5px;
+    font-size: 13.5px;
     color: var(--text-sub);
     margin: 12px 0 4px;
   }
@@ -621,7 +668,7 @@
     color: #fff;
     border-radius: 999px;
     padding: 4px 10px;
-    font-size: 11px;
+    font-size: 12px;
     font-weight: 700;
     width: auto;
   }
@@ -649,14 +696,14 @@
     width: 100%;
   }
   .guide-lead {
-    font-size: 10.5px;
+    font-size: 11.5px;
     font-weight: 700;
     letter-spacing: 0.12em;
     color: var(--accent);
     margin-bottom: 10px;
   }
   .guide-step h3 { margin: 0 0 8px; font-size: 17px; line-height: 1.4; }
-  .guide-step p { margin: 0; font-size: 13px; line-height: 1.7; color: var(--text-sub); }
+  .guide-step p { margin: 0; font-size: 14px; line-height: 1.7; color: var(--text-sub); }
   .guide-step .guide-emoji { font-size: 34px; display: block; margin-bottom: 8px; }
   .guide-dots { display: flex; gap: 5px; justify-content: center; margin: 16px 0 14px; }
   .guide-dots i { width: 6px; height: 6px; border-radius: 50%; background: var(--border); }
@@ -670,7 +717,7 @@
     margin-bottom: 14px;
   }
   .onboard-title { font-size: 14px; font-weight: 700; color: var(--accent); margin-bottom: 6px; }
-  .onboard-card p { margin: 0 0 12px; font-size: 12px; line-height: 1.7; color: var(--text); }
+  .onboard-card p { margin: 0 0 12px; font-size: 13px; line-height: 1.7; color: var(--text); }
   .joined-row {
     display: flex;
     align-items: center;
@@ -681,15 +728,15 @@
   .joined-main { flex: 1; min-width: 0; }
   .joined-name {
     display: block;
-    font-size: 13px;
+    font-size: 14px;
     font-weight: 600;
     color: var(--text);
     text-decoration: none;
   }
-  .joined-date { font-size: 10.5px; color: var(--text-sub); }
+  .joined-date { font-size: 11.5px; color: var(--text-sub); }
   .joined-badge {
     flex-shrink: 0;
-    font-size: 10px;
+    font-size: 11px;
     font-weight: 700;
     border-radius: 999px;
     padding: 3px 8px;
@@ -704,7 +751,7 @@
     color: var(--text-sub);
     border-radius: 8px;
     padding: 5px 9px;
-    font-size: 11px;
+    font-size: 12px;
     font-weight: 600;
     cursor: pointer;
   }
@@ -722,7 +769,7 @@
     color: var(--text-sub);
     border-radius: 10px;
     padding: 10px 4px;
-    font-size: 13px;
+    font-size: 14px;
     font-weight: 700;
     cursor: pointer;
   }
@@ -748,19 +795,19 @@
     gap: 10px;
   }
   .member-card-name { font-size: 18px; font-weight: 700; }
-  .member-card-lv { font-size: 11px; opacity: .85; }
+  .member-card-lv { font-size: 12px; opacity: .85; }
   .member-card-lv b { font-size: 19px; margin-left: 2px; }
-  .member-card-rank { font-size: 12px; color: #c9dfec; margin-top: 2px; }
+  .member-card-rank { font-size: 13px; color: #c9dfec; margin-top: 2px; }
   .member-card-titles { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 9px; }
   .member-title-chip {
     background: rgba(255,255,255,0.14);
     border-radius: 999px;
     padding: 3px 9px;
-    font-size: 10.5px;
+    font-size: 11.5px;
     font-weight: 600;
   }
   .member-title-chip.empty { opacity: .6; font-weight: 400; }
-  .member-card-exp { font-size: 10.5px; color: #a8d3e8; margin-top: 8px; }
+  .member-card-exp { font-size: 11.5px; color: #a8d3e8; margin-top: 8px; }
 
   /* ゲーム記録 */
   .log-row {
@@ -778,19 +825,19 @@
     border-bottom: none;
     margin-bottom: 6px;
   }
-  .log-row-name { flex: 1; font-size: 13px; font-weight: 600; min-width: 0; }
+  .log-row-name { flex: 1; font-size: 14px; font-weight: 600; min-width: 0; }
   .log-row-name i {
     display: block;
     font-style: normal;
-    font-size: 10.5px;
+    font-size: 11.5px;
     font-weight: 400;
     color: var(--text-sub);
     margin-top: 2px;
   }
-  .log-row-res { font-size: 12px; font-weight: 600; text-align: right; flex-shrink: 0; }
+  .log-row-res { font-size: 13px; font-weight: 600; text-align: right; flex-shrink: 0; }
   .log-waiting-badge {
     margin-left: 8px;
-    font-size: 10px;
+    font-size: 11px;
     font-weight: 700;
     background: var(--pitch-bg);
     color: var(--pitch-text);
@@ -809,7 +856,7 @@
   }
   .log-today-badge {
     margin-left: 8px;
-    font-size: 10px;
+    font-size: 11px;
     font-weight: 700;
     background: var(--accent);
     color: #fff;
@@ -828,13 +875,13 @@
     text-decoration: none;
     color: var(--text);
   }
-  .day-person-name { font-size: 12.5px; font-weight: 700; }
-  .day-person-res { font-size: 11.5px; font-weight: 700; color: var(--accent); }
+  .day-person-name { font-size: 13.5px; font-weight: 700; }
+  .day-person-res { font-size: 12.5px; font-weight: 700; color: var(--accent); }
   .day-person-res i { font-style: normal; font-weight: 400; color: var(--text-sub); margin-left: 5px; }
   .log-nth {
     display: inline-block;
     margin-left: 6px;
-    font-size: 10px;
+    font-size: 11px;
     font-weight: 700;
     color: var(--accent);
     background: var(--accent-soft);
@@ -849,14 +896,14 @@
     color: var(--accent);
     border-radius: 8px;
     padding: 5px 9px;
-    font-size: 11px;
+    font-size: 12px;
     font-weight: 700;
     cursor: pointer;
     white-space: nowrap;
   }
   .log-hit i {
     font-style: normal;
-    font-size: 10px;
+    font-size: 11px;
     font-weight: 500;
     opacity: .75;
     margin-left: 5px;
@@ -868,7 +915,7 @@
     color: var(--accent);
     border-radius: 999px;
     padding: 6px 12px;
-    font-size: 12px;
+    font-size: 13px;
     font-weight: 600;
     cursor: pointer;
   }
@@ -881,7 +928,7 @@
     border: none;
     background: none;
     color: var(--accent);
-    font-size: 11.5px;
+    font-size: 12.5px;
     font-weight: 600;
     text-decoration: underline;
     padding: 0 0 8px 2px;
@@ -913,9 +960,49 @@
     cursor: pointer;
     color: var(--text);
   }
-  .log-day-date { font-size: 12.5px; font-weight: 700; color: var(--accent); }
+  .log-day-date { font-size: 13.5px; font-weight: 700; color: var(--accent); }
   .log-day-date i { font-style: normal; font-weight: 500; color: var(--text-sub); margin-left: 8px; }
-  .log-day-games { font-size: 12px; color: var(--text-sub); margin-top: 2px; line-height: 1.5; }
+  .log-day-games { font-size: 13px; color: var(--text-sub); margin-top: 2px; line-height: 1.5; }
+
+  /* 詳細の頭：写真と作品名と人数・時間・評価をひとまとめに */
+  .hero {
+    display: flex;
+    gap: 14px;
+    align-items: flex-start;
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 12px;
+    margin: 10px 0 10px;
+  }
+  .hero-img {
+    width: 132px;
+    height: 132px;
+    object-fit: contain;
+    border-radius: 10px;
+    background: #f1f2f5;
+    flex-shrink: 0;
+    cursor: zoom-in;
+  }
+  .hero-body { flex: 1; min-width: 0; }
+  /* 写真の横は幅が狭いので、作品名は一段小さく */
+  .hero .detail-title { margin: 0 0 8px; font-size: 19px; line-height: 1.3; }
+  .hero .detail-title.t-md { font-size: 17px; }
+  .hero .detail-title.t-sm { font-size: 15.5px; }
+  .hero .detail-title.t-xs { font-size: 14px; }
+  .hero-specs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 12px;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-sub);
+    margin-bottom: 8px;
+  }
+  .hero-scores { display: flex; gap: 14px; }
+  .hero-score { font-size: 12.5px; color: var(--text-sub); }
+  .hero-score b { font-size: 20px; margin-left: 5px; color: var(--text); }
+  .hero-score i { font-style: normal; font-size: 11.5px; margin-left: 3px; }
 
   /* 作品名の下のジャンプ・操作ボタン列 */
   .detail-act-row {
@@ -940,7 +1027,7 @@
   }
   .detail-act i {
     font-style: normal;
-    font-size: 10.5px;
+    font-size: 11.5px;
     font-weight: 700;
     color: var(--text-sub);
   }
@@ -988,11 +1075,11 @@
     margin-bottom: 7px;
   }
   .class-box-label {
-    font-size: 11px;
+    font-size: 12px;
     font-weight: 700;
     color: var(--text-sub);
   }
-  .class-empty { font-size: 12px; color: var(--text-sub); }
+  .class-empty { font-size: 13px; color: var(--text-sub); }
 
   .level-card {
     background: linear-gradient(135deg, var(--navy), var(--navy-light));
@@ -1008,8 +1095,8 @@
     gap: 10px;
   }
   .level-rank { font-size: 19px; font-weight: 700; }
-  .level-exp { font-size: 12px; color: #c9dfec; margin-top: 3px; }
-  .level-num { font-size: 13px; color: #c9dfec; flex-shrink: 0; }
+  .level-exp { font-size: 13px; color: #c9dfec; margin-top: 3px; }
+  .level-num { font-size: 14px; color: #c9dfec; flex-shrink: 0; }
   .level-num b { font-size: 26px; color: #fff; margin-left: 3px; }
   .level-bar {
     height: 8px;
@@ -1024,7 +1111,7 @@
     background: #7fdcea;
     border-radius: 999px;
   }
-  .level-next { font-size: 11.5px; color: #c9dfec; }
+  .level-next { font-size: 12.5px; color: #c9dfec; }
   .level-card .section-toggle-btn {
     background: rgba(255,255,255,0.12);
     border-color: rgba(255,255,255,0.3);
@@ -1035,7 +1122,7 @@
   .exp-table td i {
     display: block;
     font-style: normal;
-    font-size: 10.5px;
+    font-size: 11.5px;
     color: #a3bdd0;
     margin-top: 2px;
   }
@@ -1052,17 +1139,17 @@
     padding: 11px 6px;
     text-align: center;
   }
-  .stat-label { font-size: 10.5px; color: var(--text-sub); }
+  .stat-label { font-size: 11.5px; color: var(--text-sub); }
   .stat-value { font-size: 21px; font-weight: 700; color: var(--navy); margin-top: 2px; }
-  .stat-value i { font-style: normal; font-size: 10.5px; color: var(--text-sub); margin-left: 2px; }
+  .stat-value i { font-style: normal; font-size: 11.5px; color: var(--text-sub); margin-left: 2px; }
 
   .title-count {
-    font-size: 13px;
+    font-size: 14px;
     font-weight: 700;
     color: #c98a1e;
     flex-shrink: 0;
   }
-  .title-count span { font-size: 11px; color: var(--text-sub); font-weight: 500; }
+  .title-count span { font-size: 12px; color: var(--text-sub); font-weight: 500; }
 
   .mode-row { display: flex; flex-wrap: wrap; gap: 6px; }
   .mode-opt { flex: 1; min-width: 84px; cursor: pointer; }
@@ -1073,7 +1160,7 @@
     border: 1px solid var(--border);
     border-radius: 9px;
     padding: 8px 6px;
-    font-size: 12.5px;
+    font-size: 13.5px;
     font-weight: 700;
     color: var(--text);
     background: var(--card-bg);
@@ -1081,7 +1168,7 @@
   .mode-opt span i {
     display: block;
     font-style: normal;
-    font-size: 10px;
+    font-size: 11px;
     font-weight: 500;
     color: var(--text-sub);
     margin-top: 2px;
@@ -1104,7 +1191,7 @@
     border: 1px solid var(--border);
     border-radius: 999px;
     padding: 7px 14px;
-    font-size: 12.5px;
+    font-size: 13.5px;
     font-weight: 600;
     color: var(--text);
     background: var(--card-bg);
@@ -1125,7 +1212,7 @@
     border: 1px solid var(--accent);
     background: var(--accent-soft);
     color: var(--accent);
-    font-size: 12px;
+    font-size: 13px;
     font-weight: 700;
     padding: 6px 13px;
     border-radius: 999px;
@@ -1150,7 +1237,7 @@
   .typequick-head i {
     display: block;
     font-style: normal;
-    font-size: 11.5px;
+    font-size: 12.5px;
     font-weight: 500;
     color: var(--text-sub);
     margin-top: 2px;
@@ -1158,7 +1245,7 @@
   /* ジャンルLvは2列。濃い枠の中に置くので文字は明るく */
   .genre-grid {
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: 1fr 1fr 1fr;
     gap: 0;
   }
   .genre-cell {
@@ -1171,35 +1258,39 @@
     gap: 3px;
     background: none;
     border: none;
-    padding: 9px 12px 9px 0;
+    padding: 9px 8px 9px 0;
     cursor: pointer;
     color: #fff;
     text-align: left;
     min-width: 0;
   }
-  .genre-cell:nth-child(even) {
+  .genre-cell:nth-child(3n+2),
+  .genre-cell:nth-child(3n) {
     border-left: 1px solid rgba(255,255,255,0.16);
-    padding-right: 0;
-    padding-left: 14px;
+    padding-left: 10px;
   }
+  .genre-cell:nth-child(3n) { padding-right: 0; }
   .genre-cell-name {
     font-size: 11.5px;
     font-weight: 600;
     line-height: 1.25;
     color: #c8d5ec;
+    overflow-wrap: anywhere;
   }
   .genre-cell-lv {
     display: flex;
     align-items: baseline;
-    gap: 4px;
+    flex-wrap: wrap;
+    gap: 2px 4px;
     font-size: 14px;
     font-weight: 700;
     color: #7fdcea;
-    white-space: nowrap;
   }
   .genre-cell-lv i {
+    display: block;          /* 3列だと横に並ばないので、必ず下の行に */
+    width: 100%;
     font-style: normal;
-    font-size: 10px;
+    font-size: 11px;
     font-weight: 500;
     color: #a3bdd0;
   }
@@ -1208,8 +1299,8 @@
   .genre-cell-lv.wr-mid  { color: #e8dfa0; }
   .genre-cell-lv.wr-low  { color: #e8a0a0; }
   .genre-cell-lv.is-empty { color: #7b8bab; }
-  .genre-cell-lv .lv-up { color: #7fdcea; font-size: 9px; }
-  .genre-cell-lv .lv-down { color: #e08a8a; font-size: 9px; }
+  .genre-cell-lv .lv-up { color: #7fdcea; font-size: 10px; }
+  .genre-cell-lv .lv-down { color: #e08a8a; font-size: 10px; }
   /* 1枚の枠の中でブロックを区切る線 */
   .lv-divider {
     height: 1px;
@@ -1217,7 +1308,7 @@
     margin: 18px 0 14px;
   }
   .lv-section-title {
-    font-size: 12px;
+    font-size: 13px;
     font-weight: 700;
     color: #a8d3e8;
     letter-spacing: 0.06em;
@@ -1238,9 +1329,9 @@
     cursor: pointer;
     color: #fff;
   }
-  .lv-stat-label { display: block; font-size: 10px; color: #c9dfec; }
+  .lv-stat-label { display: block; font-size: 11px; color: #c9dfec; }
   .lv-stat-value { display: block; font-size: 19px; font-weight: 700; margin-top: 2px; }
-  .lv-stat-value i { font-style: normal; font-size: 10px; color: #c9dfec; margin-left: 2px; }
+  .lv-stat-value i { font-style: normal; font-size: 11px; color: #c9dfec; margin-left: 2px; }
   .mine-badge {
     display: inline-block;
     background: var(--accent-soft);
@@ -1254,12 +1345,12 @@
     border: 1px solid var(--border);
     background: var(--card-bg);
     color: var(--text-sub);
-    font-size: 13px;
+    font-size: 14px;
     padding: 4px 9px;
     border-radius: 999px;
     cursor: pointer;
   }
-  .title-strip-empty { font-size: 11.5px; color: var(--text-sub); align-self: center; }
+  .title-strip-empty { font-size: 12.5px; color: var(--text-sub); align-self: center; }
   .title-strip {
     display: flex;
     flex-wrap: wrap;
@@ -1276,7 +1367,7 @@
     border: 1px solid var(--border);
     background: var(--bg);
     color: var(--text-sub);
-    font-size: 11.5px;
+    font-size: 12.5px;
     font-weight: 700;
     padding: 5px 11px;
     border-radius: 999px;
@@ -1288,7 +1379,7 @@
     color: #fff;
   }
   .title-desc {
-    font-size: 11.5px;
+    font-size: 12.5px;
     color: var(--text-sub);
     line-height: 1.6;
     margin-top: 9px;
@@ -1306,27 +1397,27 @@
     border-radius: 9px;
     padding: 9px 11px;
     cursor: pointer;
-    font-size: 13px;
+    font-size: 14px;
     color: var(--text);
   }
   .pref-row:active { background: var(--accent-soft); }
   .pref-kind {
     flex-shrink: 0;
-    font-size: 10.5px;
+    font-size: 11.5px;
     font-weight: 700;
     color: var(--text-sub);
   }
   .pref-name { flex: 1; min-width: 0; font-weight: 600; }
   .pref-score {
     flex-shrink: 0;
-    font-size: 12px;
+    font-size: 13px;
     font-weight: 700;
     color: var(--accent);
   }
   .pref-score i {
     font-style: normal;
     font-weight: 500;
-    font-size: 10.5px;
+    font-size: 11.5px;
     color: var(--text-sub);
   }
   .tag-chip-own {
@@ -1365,7 +1456,7 @@
     border: 1px solid var(--border);
     border-radius: 8px;
     padding: 9px 10px;
-    font-size: 13.5px;
+    font-size: 14.5px;
     background: var(--card-bg);
     color: var(--text);
   }
@@ -1374,14 +1465,14 @@
     border: none;
     background: var(--accent);
     color: #fff;
-    font-size: 13px;
+    font-size: 14px;
     font-weight: 700;
     padding: 9px 16px;
     border-radius: 8px;
     cursor: pointer;
   }
   .tag-edit-note {
-    font-size: 11.5px;
+    font-size: 12.5px;
     color: var(--text-sub);
     line-height: 1.55;
     margin-top: 8px;
@@ -1400,7 +1491,7 @@
     background: var(--bg);
     border: none;
     color: var(--text);
-    font-size: 12.5px;
+    font-size: 13.5px;
     font-weight: 700;
     padding: 10px 12px;
     cursor: pointer;
@@ -1421,7 +1512,7 @@
     border: 1px solid var(--border);
     background: var(--bg);
     color: var(--navy-light);
-    font-size: 12px;
+    font-size: 13px;
     font-weight: 600;
     padding: 5px 11px;
     border-radius: 999px;
@@ -1477,7 +1568,7 @@
     display: inline-block;
     vertical-align: middle;
     margin-left: 6px;
-    font-size: 9.5px;
+    font-size: 10.5px;
     font-weight: 600;
     color: var(--key);
     background: #eaf7f1;
@@ -1485,7 +1576,7 @@
     border-radius: 999px;
   }
   .card-title-en {
-    font-size: 11px;
+    font-size: 12px;
     color: var(--text-sub);
     margin-bottom: 6px;
     overflow: hidden;
@@ -1498,7 +1589,7 @@
     gap: 6px;
   }
   .spec {
-    font-size: 11.5px;
+    font-size: 12.5px;
     background: var(--accent-soft);
     color: var(--navy-light);
     padding: 3px 8px;
@@ -1517,7 +1608,7 @@
     margin-top: 6px;
   }
   .card-tag {
-    font-size: 10.5px;
+    font-size: 11.5px;
     background: var(--bg);
     border: 1px solid var(--border);
     color: var(--navy-light);
@@ -1526,7 +1617,7 @@
     white-space: nowrap;
   }
   .score-pill {
-    font-size: 10.5px;
+    font-size: 11.5px;
     color: var(--text-sub);
     background: var(--bg);
     border: 1px solid var(--border);
@@ -1535,13 +1626,13 @@
     white-space: nowrap;
   }
   .score-pill b {
-    font-size: 12.5px;
+    font-size: 13.5px;
     color: var(--text);
     margin-left: 2px;
   }
   /* ジャンル・メカニクスは検索窓の#と紛らわしいので、ラベル付きの文章で見せる */
   .card-class {
-    font-size: 11.5px;
+    font-size: 12.5px;
     line-height: 1.5;
     color: var(--text);
     margin-top: 5px;
@@ -1559,7 +1650,7 @@
     margin-top: 8px;
   }
   .card-pitch-title {
-    font-size: 10.5px;
+    font-size: 11.5px;
     font-weight: 700;
     color: var(--pitch-text);
     margin: 0 0 3px 8px;
@@ -1578,7 +1669,7 @@
     color: var(--text);
     border-radius: 8px;
     padding: 7px 2px;
-    font-size: 10.5px;
+    font-size: 11.5px;
     font-weight: 600;
     line-height: 1.2;
     cursor: pointer;
@@ -1597,14 +1688,14 @@
     color: var(--text-sub);
     border-radius: 999px;
     padding: 2px 8px;
-    font-size: 10.5px;
+    font-size: 11.5px;
     cursor: pointer;
   }
   .card-more-pitch {
     border: none;
     background: none;
     color: var(--pitch-text);
-    font-size: 11px;
+    font-size: 12px;
     font-weight: 700;
     padding: 4px 0 0 8px;
     cursor: pointer;
@@ -1613,7 +1704,7 @@
   .card-pitch {
     margin: 0;
     padding-left: 18px;
-    font-size: 11.5px;
+    font-size: 12.5px;
     color: var(--text);
     line-height: 1.55;
   }
@@ -1624,7 +1715,7 @@
     background: none;
     border: none;
     color: var(--accent);
-    font-size: 12px;
+    font-size: 13px;
     font-weight: 600;
     text-decoration: underline;
     cursor: pointer;
@@ -1670,7 +1761,7 @@
     gap: 2px;
     text-decoration: none;
     color: var(--key);
-    font-size: 10.5px;
+    font-size: 11.5px;
     font-weight: 600;
     padding: 6px 8px;
     border-radius: 8px;
@@ -1689,7 +1780,7 @@
 
   footer {
     text-align: center;
-    font-size: 11px;
+    font-size: 12px;
     color: var(--text-sub);
     padding: 20px;
   }
@@ -1703,7 +1794,7 @@
     cursor: pointer;
     display: inline-block;
     color: var(--key);
-    font-size: 13px;
+    font-size: 14px;
     font-weight: 600;
     text-decoration: none;
     margin-bottom: 18px;
@@ -1719,7 +1810,7 @@
   .detail-title.t-sm { font-size: 17px; }
   .detail-title.t-xs { font-size: 14.5px; }
   .detail-title-en {
-    font-size: 13px;
+    font-size: 14px;
     color: var(--text-sub);
     margin-bottom: 14px;
   }
@@ -1755,7 +1846,7 @@
     text-align: center;
   }
   .detail-spec-box .label {
-    font-size: 11px;
+    font-size: 12px;
     color: var(--accent);
     font-weight: 600;
     margin-bottom: 4px;
@@ -1775,7 +1866,7 @@
     border: 1px solid var(--border);
     background: var(--card-bg);
     color: var(--navy-light);
-    font-size: 12px;
+    font-size: 13px;
     font-weight: 600;
     padding: 5px 11px;
     border-radius: 999px;
@@ -1790,7 +1881,7 @@
     margin-bottom: 20px;
   }
   .pitch-title {
-    font-size: 13px;
+    font-size: 14px;
     font-weight: 700;
     color: var(--pitch-text);
     margin-bottom: 8px;
@@ -1798,7 +1889,7 @@
   .pitch-list {
     margin: 0;
     padding-left: 18px;
-    font-size: 13.5px;
+    font-size: 14.5px;
     line-height: 1.9;
     color: var(--text);
   }
@@ -1810,7 +1901,7 @@
     margin-bottom: 28px;
   }
   .detail-section-eyebrow {
-    font-size: 11px;
+    font-size: 12px;
     letter-spacing: 0.12em;
     color: var(--accent);
     font-weight: 700;
@@ -1832,7 +1923,7 @@
     background: var(--accent-soft);
     border-radius: 10px;
     padding: 12px 14px;
-    font-size: 13.5px;
+    font-size: 14.5px;
     line-height: 1.7;
     color: var(--navy);
     margin-bottom: 4px;
@@ -1840,13 +1931,13 @@
   .detail-list {
     margin: 0;
     padding-left: 20px;
-    font-size: 13.5px;
+    font-size: 14.5px;
     line-height: 1.9;
     color: var(--text);
   }
   .detail-list li { margin-bottom: 2px; }
   .detail-sources {
-    font-size: 11px;
+    font-size: 12px;
     color: var(--text-sub);
     line-height: 1.8;
     margin: 24px 0 4px;
@@ -1879,12 +1970,12 @@
     color: var(--accent);
   }
   .review-avg span {
-    font-size: 12px;
+    font-size: 13px;
     font-weight: 500;
     color: var(--text-sub);
   }
   .review-count {
-    font-size: 11px;
+    font-size: 12px;
     color: var(--text-sub);
     margin-bottom: 12px;
   }
@@ -1898,7 +1989,7 @@
     background: var(--bg);
     border-radius: 8px;
     padding: 9px 10px;
-    font-size: 13px;
+    font-size: 14px;
   }
   .review-item-top {
     display: flex;
@@ -1934,29 +2025,29 @@
     flex-shrink: 0;
   }
   .player-game-row-title { font-weight: 600; font-size: 14px; }
-  .player-game-row-level { font-size: 12px; color: var(--text-sub); margin-top: 2px; }
+  .player-game-row-level { font-size: 13px; color: var(--text-sub); margin-top: 2px; }
   .review-item-date {
     font-weight: 400;
     color: var(--text-sub);
-    font-size: 11px;
+    font-size: 12px;
     margin-left: 6px;
   }
   .review-item-score { color: var(--accent); font-weight: 700; }
   .review-item-level {
     color: var(--accent);
     font-weight: 700;
-    font-size: 12.5px;
+    font-size: 13.5px;
     background: var(--accent-soft);
     padding: 3px 9px;
     border-radius: 999px;
   }
   .review-item-members {
-    font-size: 11.5px;
+    font-size: 12.5px;
     color: var(--text-sub);
     margin-top: 4px;
   }
   .review-item-memo {
-    font-size: 12.5px;
+    font-size: 13.5px;
     color: var(--text);
     margin-top: 4px;
     line-height: 1.5;
@@ -1983,13 +2074,13 @@
   .review-form-row button { white-space: nowrap; flex-shrink: 0; }
   .review-form label {
     display: block;
-    font-size: 11px;
+    font-size: 12px;
     color: var(--text-sub);
     margin-bottom: 3px;
   }
   .review-form-field { flex: 1; min-width: 0; }
   .submitter-line {
-    font-size: 13px;
+    font-size: 14px;
     color: var(--text);
     margin-bottom: 12px;
   }
@@ -1999,7 +2090,7 @@
     background: none;
     border: none;
     color: var(--accent);
-    font-size: 12.5px;
+    font-size: 13.5px;
     font-weight: 600;
     text-decoration: underline;
     cursor: pointer;
@@ -2014,7 +2105,7 @@
     border: 1px solid var(--border);
     background: var(--card-bg);
     color: var(--text);
-    font-size: 13px;
+    font-size: 14px;
     text-align: left;
     padding: 9px 10px;
     border-radius: 8px;
@@ -2026,7 +2117,7 @@
     border: 1px solid var(--border);
     background: var(--bg);
     color: var(--navy-light);
-    font-size: 13px;
+    font-size: 14px;
     font-weight: 600;
     text-align: center;
     padding: 10px;
@@ -2050,7 +2141,7 @@
     border: 1px solid var(--accent);
     background: var(--card-bg);
     color: var(--accent);
-    font-size: 13px;
+    font-size: 14px;
     font-weight: 700;
     padding: 8px 16px;
     border-radius: 999px;
@@ -2064,7 +2155,7 @@
     border: 1px solid var(--key);
     background: var(--card-bg);
     color: var(--key);
-    font-size: 13px;
+    font-size: 14px;
     font-weight: 700;
     padding: 8px 16px;
     border-radius: 999px;
@@ -2073,7 +2164,7 @@
   .played-btn:active { background: var(--key); color: #fff; }
   .interest-names {
     width: 100%;
-    font-size: 12.5px;
+    font-size: 13.5px;
     color: var(--text-sub);
     margin-top: 2px;
   }
@@ -2084,7 +2175,7 @@
   }
   .members-link {
     color: #7fdcea;
-    font-size: 12px;
+    font-size: 13px;
     font-weight: 600;
     text-decoration: underline;
     padding: 0 0 0 6px;
@@ -2100,7 +2191,7 @@
     color: var(--navy);
     background: var(--bg);
     border: 1px solid var(--border);
-    font-size: 13.5px;
+    font-size: 14.5px;
     font-weight: 600;
     padding: 9px 16px;
     border-radius: 999px;
@@ -2112,7 +2203,7 @@
     text-decoration: none;
     background: linear-gradient(135deg, var(--navy-light), var(--accent));
     color: #fff;
-    font-size: 13.5px;
+    font-size: 14.5px;
     font-weight: 700;
     padding: 11px 12px;
     border-radius: 999px;
@@ -2127,7 +2218,7 @@
     border: 1px solid var(--border);
     background: var(--bg);
     color: var(--text);
-    font-size: 13.5px;
+    font-size: 14.5px;
     font-weight: 600;
     padding: 9px 16px;
     border-radius: 999px;
@@ -2139,7 +2230,7 @@
     color: #fff;
   }
   .rec-status {
-    font-size: 12.5px;
+    font-size: 13.5px;
     color: var(--text-sub);
   }
   .rec-item {
@@ -2160,7 +2251,7 @@
     border-radius: 50%;
     background: var(--accent);
     color: #fff;
-    font-size: 13px;
+    font-size: 14px;
     font-weight: 700;
     display: flex;
     align-items: center;
@@ -2176,9 +2267,9 @@
   }
   .rec-body { min-width: 0; flex: 1; }
   .rec-title { font-weight: 600; font-size: 14.5px; line-height: 1.35; }
-  .rec-spec { font-size: 11.5px; color: var(--text-sub); margin: 3px 0 5px; }
+  .rec-spec { font-size: 12.5px; color: var(--text-sub); margin: 3px 0 5px; }
   .rec-reason {
-    font-size: 12px;
+    font-size: 13px;
     color: var(--text);
     line-height: 1.6;
   }
@@ -2195,7 +2286,7 @@
     color: #a86b12;
   }
   .rec-excluded {
-    font-size: 12px;
+    font-size: 13px;
     color: var(--text-sub);
     line-height: 1.7;
   }
@@ -2217,7 +2308,7 @@
     padding: 7px 12px;
     border: 1px solid var(--border);
     border-radius: 999px;
-    font-size: 12.5px;
+    font-size: 13.5px;
     font-weight: 600;
     color: var(--text);
     background: var(--card-bg);
@@ -2234,7 +2325,7 @@
     border: 1px solid var(--border);
     border-radius: 8px;
     padding: 9px 10px;
-    font-size: 13px;
+    font-size: 14px;
     font-family: inherit;
     background: var(--card-bg);
     color: var(--text);
@@ -2248,7 +2339,7 @@
     border: 1px solid var(--border);
     border-radius: 8px;
     padding: 9px 6px;
-    font-size: 13px;
+    font-size: 14px;
     text-align: center;
     background: var(--card-bg);
     color: var(--text);
@@ -2258,7 +2349,7 @@
     border: none;
     background: var(--accent);
     color: #fff;
-    font-size: 13px;
+    font-size: 14px;
     font-weight: 700;
     border-radius: 8px;
     padding: 10px 14px;
@@ -2288,7 +2379,7 @@
     border: 1px solid var(--border);
     border-left-width: 4px;
     border-radius: 9px;
-    font-size: 12px;
+    font-size: 13px;
     font-weight: 600;
     line-height: 1.3;
     color: var(--text);
@@ -2316,7 +2407,7 @@
     border: 1px solid var(--border);
     border-radius: 8px;
     padding: 9px 10px;
-    font-size: 13px;
+    font-size: 14px;
     margin-bottom: 4px;
   }
   .review-badge {
@@ -2324,7 +2415,7 @@
     align-items: center;
     gap: 3px;
     margin-left: 6px;
-    font-size: 11px;
+    font-size: 12px;
     font-weight: 700;
     color: #b8860b;
     vertical-align: middle;
@@ -2339,7 +2430,7 @@
     margin-bottom: 20px;
   }
   .quickref-title {
-    font-size: 13px;
+    font-size: 14px;
     font-weight: 700;
     color: #a8d3e8;
     letter-spacing: 0.06em;
@@ -2347,7 +2438,7 @@
   }
   /* 折りたたみの中（明るい背景）に置くので、文字色はテーマ変数に合わせる */
   .quickref-sub {
-    font-size: 12px;
+    font-size: 13px;
     font-weight: 700;
     color: var(--text-sub);
     margin: 14px 0 6px;
@@ -2364,7 +2455,7 @@
   .quickref-table {
     width: 100%;
     border-collapse: collapse;
-    font-size: 13px;
+    font-size: 14px;
   }
   .quickref-table tr {
     border-bottom: 1px solid var(--border);
@@ -2383,14 +2474,14 @@
     padding-left: 10px;
   }
   .quickref-formula {
-    font-size: 13.5px;
+    font-size: 14.5px;
     line-height: 1.8;
     color: var(--text);
   }
   .quickref-list {
     margin: 0;
     padding-left: 18px;
-    font-size: 13.5px;
+    font-size: 14.5px;
     line-height: 1.9;
     color: var(--text);
   }
@@ -2437,16 +2528,16 @@
 <body>
 
 <header>
-  <div class="eyebrow">OUR BOARD GAME SHELF</div>
   <h1>うちのボードゲーム棚</h1>
-  <div class="count"><span id="totalCount">-</span>件所蔵</div>
-  <nav class="main-nav">
-    <a href="#" class="nav-btn" data-nav="list">🔍 さがす</a>
-    <button type="button" class="nav-btn" data-nav="mypage">👤 マイ</button>
-    <a href="#members" class="nav-btn" data-nav="members">👥 みんな</a>
-    <a href="#log" class="nav-btn" data-nav="log">📝 記録</a>
-  </nav>
+  <div class="count"><span id="totalCount">-</span>件</div>
 </header>
+
+<nav class="tab-bar" id="tabBar">
+  <a href="#" class="tab-item" data-nav="list"><span class="tab-ico">🔍</span><span>さがす</span></a>
+  <button type="button" class="tab-item" data-nav="mypage"><span class="tab-ico">👤</span><span>マイページ</span></button>
+  <a href="#members" class="tab-item" data-nav="members"><span class="tab-ico">👥</span><span>みんな</span></a>
+  <a href="#log" class="tab-item" data-nav="log"><span class="tab-ico">📝</span><span>記録</span></a>
+</nav>
 
 <div class="controls" id="controls">
   <div class="controls-topline">
@@ -2454,6 +2545,12 @@
            placeholder="ゲーム名 or #ハッシュタグ（例: 初心者でも遊べる）">
     <datalist id="searchSuggest"></datalist>
   </div>
+  <div class="quick-row">
+    <a href="#today" class="recommend-btn">🎲 今日はなにする？</a>
+    <button type="button" class="filter-toggle" id="filterToggle">絞り込む<span class="collapse-mark">＋</span></button>
+  </div>
+  <div class="active-chips" id="activeChips"></div>
+  <div id="filterArea" style="display:none;">
   <div class="tagcloud-fold">
     <button type="button" class="tagcloud-head" id="tagCloudHead">
       <span>🔥 人気タグから探す</span><span class="collapse-mark">＋</span>
@@ -2463,7 +2560,6 @@
       <button type="button" class="tag-cloud-more" id="tagCloudMore">もっと見る</button>
     </div>
   </div>
-  <div id="filterArea">
 
   <div class="filter-row-compact">
     <div class="filter-select-group">
@@ -2510,10 +2606,6 @@
     <span>🗄️ 未プレイのみ表示（評価も戦績もないもの）</span>
   </label>
   <button type="button" id="resetFilterBtn" class="reset-btn">↺ 条件をリセット</button>
-  <div class="cta-block">
-    <a href="#today" class="recommend-btn">🎲 今日はなにする？</a>
-    <p class="cta-note">人数と今いるメンバーを選ぶだけ。みんなの経験・得意不得意・評価をまとめて、今日にちょうどいい3本を出します。</p>
-  </div>
   </div>
 </div>
 
@@ -2606,7 +2698,7 @@ try {
 // ── 自動更新 ───────────────────────────────
 // iPhoneはHTMLを長く握るので、新しい版が出ていたらURLを変えて読み直す。
 // （同じURLの再読み込みだとキャッシュが返ってきてしまうため）
-const APP_BUILD = "2026-09-11-0426";
+const APP_BUILD = "2026-09-11-1321";
 
 function markVersion(extra) {
   const el = document.getElementById("appVersion");
@@ -2962,6 +3054,26 @@ document.getElementById("backToTop").addEventListener("click", () => {
   setTimeout(() => { if (window.scrollY > 0) window.scrollTo(0, 0); }, 500);
 });
 
+document.getElementById("filterToggle").addEventListener("click", () => {
+  const area = document.getElementById("filterArea");
+  const open = area.style.display === "none";
+  area.style.display = open ? "" : "none";
+  document.querySelector("#filterToggle .collapse-mark").textContent = open ? "−" : "＋";
+});
+
+document.getElementById("activeChips").addEventListener("click", e => {
+  const chip = e.target.closest("[data-chip-clear]");
+  if (!chip) return;
+  const k = chip.dataset.chipClear;
+  if (k === "players") { state.players = ""; document.getElementById("playersSelect").value = ""; }
+  if (k === "time") { state.time = ""; document.getElementById("timeSelect").value = ""; }
+  if (k === "genre") { state.genre = ""; document.getElementById("genreSelect").value = ""; }
+  if (k === "mechanic") { state.mechanic = ""; document.getElementById("mechanicSelect").value = ""; }
+  if (k === "unplayedOnly") { state.unplayedOnly = false; document.getElementById("unplayedOnly").checked = false; }
+  if (k === "mine") { state.mine = ""; state.mineName = ""; }
+  applyFilterChange();
+});
+
 document.getElementById("resetFilterBtn").addEventListener("click", () => {
   state.q = ""; state.players = ""; state.time = "";
   state.genre = ""; state.mechanic = ""; state.unplayedOnly = false;
@@ -3064,7 +3176,27 @@ function specHtml(value, cls) {
   return `<span class="spec${isUnknown ? " unknown" : ""}">${isUnknown ? "不明" : value}</span>`;
 }
 
+// 選んでいる条件をチップで見せる。タップでその条件だけ外せる。
+const TIME_LABEL = { "15": "〜15分", "30": "〜30分", "60": "〜60分", "9999": "60分〜" };
+function renderActiveChips() {
+  const box = document.getElementById("activeChips");
+  if (!box) return;
+  const chips = [];
+  if (state.players) chips.push(["players", "人数", state.players === "8" ? "8人+" : state.players + "人"]);
+  if (state.time) chips.push(["time", "時間", TIME_LABEL[state.time] || state.time]);
+  if (state.genre) chips.push(["genre", "ジャンル", state.genre]);
+  if (state.mechanic) chips.push(["mechanic", "メカニクス", state.mechanic]);
+  if (state.unplayedOnly) chips.push(["unplayedOnly", "", "未プレイのみ"]);
+  if (state.mine) chips.push(["mine", state.mineName, MINE_LABEL[state.mine]]);
+  box.innerHTML = chips.map(([k, label, v]) =>
+    `<button type="button" class="active-chip" data-chip-clear="${k}">${label ? `<b>${label}</b>` : ""}${v} ×</button>`
+  ).join("");
+  const t = document.getElementById("filterToggle");
+  if (t) t.classList.toggle("on", chips.length > 0);
+}
+
 function render() {
+  renderActiveChips();
   const filtered = sortGames(games.filter(matches));
   document.getElementById("resultCount").innerHTML = state.mine
     ? `<span class="mine-badge">${state.mineName} の${MINE_LABEL[state.mine]}</span> ${filtered.length}件`
@@ -3873,7 +4005,7 @@ function myRating(slug) {
 function renderUserBadge() {
   const name = getMyName();
   const btn = document.querySelector('[data-nav="mypage"]');
-  if (btn) btn.textContent = name ? `👤 ${name}` : "👤 マイページ";
+  if (btn) btn.innerHTML = `<span class="tab-ico">👤</span><span>${name ? name : "マイページ"}</span>`;
   const h = location.hash;
   const cur = h.startsWith("#player/") ? "mypage"
     : h === "#members" ? "members"
@@ -4406,8 +4538,8 @@ function buildQuickRef(g) {
 function buildWorldviewSection(g) {
   const slug = slugOf(g);
   const r = rulesData[slug];
-  if (!r) return "";
-  return `<p class="detail-worldview">${r.worldview}</p>`;
+  if (!r || !r.worldview) return "";
+  return `<div class="review-card"><div class="review-title" style="margin-bottom:6px;">どんなゲーム？</div><p class="detail-worldview" style="margin:0;">${r.worldview}</p></div>`;
 }
 
 function hostOf(u) {
@@ -4425,9 +4557,6 @@ function buildSetupSection(g) {
   const d = quickRefData(g);
   const hasSources = r.sources && r.sources.length;
   return `
-    <div class="detail-section-eyebrow">DESCRIPTION</div>
-    <h2 class="detail-section-title">簡単準備＆ルール</h2>
-
     ${buildRuleBlock(slug, "setup", "ゲームの準備", d.setup)}
     ${buildRuleBlock(slug, "rules", "ルール", d.rules)}
 
@@ -4500,10 +4629,20 @@ function showDetail(g) {
   const todayCount = todaySess ? getSessionTables(todaySess.id).filter(h => h.slug === slug).length : 0;
   dv.innerHTML = `
     <button type="button" class="detail-back" data-back>← 戻る</button>
-    <div class="detail-title-row">
-      <h1 class="detail-title ${titleSizeClass(g.jp)}">${g.jp}</h1>
+    <div class="hero">
+      <img class="hero-img" src="${gameImg(g, "detail")}" alt="${g.jp}" data-photo-src="${gameImg(g, "detail")}" onerror="this.style.visibility='hidden'">
+      <div class="hero-body">
+        <h1 class="detail-title ${titleSizeClass(g.jp)}">${g.jp}</h1>
+        <div class="hero-specs">
+          <span>👥 ${g.playersRaw || "人数不明"}</span>
+          <span>⏱ ${g.timeRaw || "時間不明"}</span>
+        </div>
+        <div class="hero-scores">
+          <span class="hero-score">自分<b style="color:${mine != null ? ratingColor(mine) : "inherit"}">${mine != null ? mine : "—"}</b></span>
+          <span class="hero-score">みんな<b>${avg != null ? avg : "—"}</b><i>${getReviews(slug).length ? `${getReviews(slug).length}人` : ""}</i></span>
+        </div>
+      </div>
     </div>
-    <div class="detail-title-en">${g.en}</div>
     <div class="detail-act-row">
       <button type="button" class="detail-act ${iLike ? "on" : ""}" data-toggle-interest="${slug}">
         ${iLike ? "🌟" : "☆"}<i>興味あり</i><b>${interestCount || "—"}</b></button>
@@ -4516,29 +4655,15 @@ function showDetail(g) {
       <button type="button" class="detail-act" data-jump-open="quickref">📕<i>ルール早見表</i></button>
       <button type="button" class="detail-act" data-go-log>📝<i>記録を見る</i></button>
     </div>
-    <div class="detail-underline"></div>
-    <div class="detail-image-wrap">
-      <img src="${gameImg(g, "detail")}" alt="${g.jp}" onerror="this.style.visibility='hidden'">
-    </div>
-    <div class="detail-spec-grid">
-      <div class="detail-spec-box">
-        <div class="label">人数</div>
-        <div class="value">${g.playersRaw || "不明"}</div>
-      </div>
-      <div class="detail-spec-box">
-        <div class="label">プレイ時間</div>
-        <div class="value">${g.timeRaw || "不明"}</div>
-      </div>
-      <div class="detail-spec-box">
-        <div class="label">自分 / みんな</div>
-        <div class="value">${mine != null ? mine : "—"} / ${avg != null ? avg : "—"}</div>
-      </div>
-    </div>
     ${buildClassGrid(g)}
     ${buildTagsAndPitch(g)}
     ${buildWorldviewSection(g)}
-    ${buildSetupSection(g)}
     <div id="detailRules"></div>
+    ${(() => {
+      const d = quickRefData(g);
+      const has = d.setup.length || d.rules.length || getPhotos(slug, "setup").length || getPhotos(slug, "rules").length;
+      return collapsibleSection("prep", "📕 簡単準備＆ルール", buildSetupSection(g), !!has || !!ruleEditKind);
+    })()}
     ${collapsibleSection("quickref", "🎯 プレイ中の早見表", buildQuickRef(g), quickrefEditMode)}
     ${collapsibleSection("links", "🔗 動画・ボドゲーマで調べる", `
       <a class="detail-cta detail-cta-primary" href="${ruleVideoUrl(g)}" target="_blank" rel="noopener">▶ ルールを動画で確認</a>
@@ -4892,6 +5017,8 @@ document.getElementById("detailView").addEventListener("click", async e => {
     return;
   }
 
+  const heroImg = e.target.closest("[data-photo-src]");
+  if (heroImg) { openLightbox(heroImg.dataset.photoSrc); return; }
   const photoView = e.target.closest("[data-photo-view]");
   if (photoView) {
     const p = (photoCache[photoView.dataset.photoSlug] || []).find(x => x.id === photoView.dataset.photoView);
@@ -6225,6 +6352,16 @@ document.getElementById("playerView").addEventListener("click", async e => {
 ["quizView", "playerView"].forEach(id => {
   document.getElementById(id).addEventListener("click", e => {
     if (e.target.closest("[data-change-name]")) { changeMyName(); return; }
+    const dayT = e.target.closest("[data-day-toggle]");
+    if (dayT) {
+      const d = dayT.dataset.dayToggle;
+      if (openDays.has(d)) openDays.delete(d); else openDays.add(d);
+      const pv = document.getElementById("playerView");
+      const y = window.scrollY;
+      pv.innerHTML = buildPlayerPage(currentPlayerName);
+      window.scrollTo(0, y);
+      return;
+    }
     const joined = e.target.closest("[data-joined-history]");
     if (joined) { goToDetailSection(joined.dataset.joinedHistory, "history"); return; }
     const myList = e.target.closest("[data-my-list]");
@@ -6642,7 +6779,7 @@ function getPlayerInterests(name) {
 }
 
 // ジャンルLvの対象外。遊び方の傾向を表さないものは除く。
-const GENRE_LV_EXCLUDE = new Set(["子供向け", "2人用", "拡張", "チーム戦系", "レガシー・キャンペーン系"]);
+const GENRE_LV_EXCLUDE = new Set(["子供向け", "2人用", "拡張", "チーム戦系", "レガシー・キャンペーン系", "TRPG・物語系"]);
 // Lvの対象になるジャンル一覧（データ読み込み後に確定）
 let GENRE_LV_ALL = [];
 
@@ -7118,8 +7255,9 @@ function buildGenreWinRates(s) {
   return `<div class="genre-grid">${s.genreStats.map(row).join("")}</div>`;
 }
 
-// 直近3日ぶんを出し、それより前は日付を選んで見る
-let recentDayPick = "";
+// 直近3日ぶんを出し、それより前は月を選んで見る。日付ごとにたたんでおく。
+let recentMonthPick = "";
+let openDays = new Set();
 
 function buildRecentDays(name) {
   const plays = getPlayerPlays(name);
@@ -7129,22 +7267,31 @@ function buildRecentDays(name) {
   const byDate = {};
   plays.forEach(h => { (byDate[h.date || "日付なし"] = byDate[h.date || "日付なし"] || []).push(h); });
   const dates = Object.keys(byDate).sort((a, b) => b.localeCompare(a));
-  const shown = recentDayPick ? [recentDayPick] : dates.slice(0, 3);
-  const rest = dates.filter(d => !dates.slice(0, 3).includes(d));
+  const latest = dates.slice(0, 3);
+  const months = [...new Set(dates.map(d => d.slice(0, 7)))].sort((a, b) => b.localeCompare(a));
+  const shown = recentMonthPick ? dates.filter(d => d.startsWith(recentMonthPick)) : latest;
   const rated = new Set(getPlayerRatings(name).map(r => r.slug));
+  const fmtMonth = m => m.length === 7 ? `${Number(m.slice(0, 4))}年${Number(m.slice(5, 7))}月` : m;
+
   return `
-    ${rest.length ? `
-      <div class="review-form-field" style="margin-bottom:12px;">
-        <label>日付で見る</label>
-        <select class="sort-select" data-recent-day style="width:100%;">
-          <option value="">直近3日（${dates.slice(0, 3).join("・")}）</option>
-          ${dates.map(d => `<option value="${d}" ${recentDayPick === d ? "selected" : ""}>${d}（${byDate[d].length}卓）</option>`).join("")}
-        </select>
-      </div>` : ""}
-    ${shown.map(d => `
+    <div class="review-form-field" style="margin-bottom:12px;">
+      <select class="sort-select" data-recent-month style="width:100%;">
+        <option value="">直近3日</option>
+        ${months.map(m => `<option value="${m}" ${recentMonthPick === m ? "selected" : ""}>${fmtMonth(m)}（${dates.filter(d => d.startsWith(m)).length}日）</option>`).join("")}
+      </select>
+    </div>
+    ${shown.map(d => {
+      const list = byDate[d];
+      const open = openDays.has(d);
+      const wins = list.filter(h => historyWinners(h).includes(name)).length;
+      const rated0 = list.filter(historyHasResult).length;
+      return `
       <div class="recent-day">
-        <div class="recent-day-head">${d}<i>${byDate[d].length}卓</i></div>
-        ${byDate[d].map(h => {
+        <button type="button" class="recent-day-head" data-day-toggle="${d}">
+          <span>${d}<i>${list.length}卓${rated0 ? `・${wins}勝${rated0 - wins}敗` : ""}</i></span>
+          <span class="collapse-mark">${open ? "−" : "＋"}</span>
+        </button>
+        ${open ? list.map(h => {
           const g = games.find(x => slugOf(x) === h.slug);
           const res = historyResultText(h);
           const won = historyWinners(h).includes(name);
@@ -7157,8 +7304,9 @@ function buildRecentDays(name) {
               <span class="joined-badge ${rated.has(h.slug) ? "done" : ""}">${rated.has(h.slug) ? "評価ずみ" : "未評価"}</span>
               <button type="button" class="joined-btn" data-joined-history="${h.slug}">戦績</button>
             </div>`;
-        }).join("")}
-      </div>`).join("")}
+        }).join("") : ""}
+      </div>`;
+    }).join("")}
   `;
 }
 
@@ -7411,8 +7559,8 @@ function showPlayerPage(name) {
 }
 
 document.getElementById("playerView").addEventListener("change", e => {
-  if (e.target.matches("[data-recent-day]")) {
-    recentDayPick = e.target.value;
+  if (e.target.matches("[data-recent-month]")) {
+    recentMonthPick = e.target.value;
     if (currentPlayerName) {
       const pv = document.getElementById("playerView");
       pv.innerHTML = buildPlayerPage(currentPlayerName);
