@@ -315,6 +315,13 @@
     color: var(--text-sub);
     margin-top: 6px;
   }
+  .type-explain p { margin: 4px 0 10px; font-size: 14px; line-height: 1.6; }
+  .explain-row { display: flex; gap: 10px; align-items: flex-start; margin-bottom: 8px; font-size: 13px; }
+  .explain-row > span { flex-shrink: 0; width: 64px; font-size: 11px; font-weight: 700; color: var(--text-sub); padding-top: 4px; }
+  .explain-row .tag-row { margin: 0; gap: 5px; }
+  .pick-toggle { display: flex; gap: 4px; }
+  .pick-toggle button { border: 1px solid var(--border); background: var(--card-bg); color: var(--text-sub); border-radius: 999px; padding: 4px 11px; font-size: 12px; font-weight: 700; cursor: pointer; }
+  .pick-toggle button.on { background: var(--accent); border-color: var(--accent); color: #fff; }
   .axis16 { margin-bottom: 12px; }
   .axis16-labels { display: flex; justify-content: space-between; font-size: 12.5px; color: var(--text-sub); margin-bottom: 4px; }
   .axis16-labels .on { color: var(--accent); font-weight: 700; }
@@ -1147,6 +1154,8 @@
   .hero-class > span { display: block; font-size: 10.5px; font-weight: 700; color: var(--text-sub); margin-bottom: 3px; }
   .hero-class .tag-row { gap: 4px; }
   .tag-chip.mini { font-size: 11px; padding: 3px 8px; }
+  .tag-chip.tag-hidden { display: none; }
+  .tag-chip.tag-more { background: var(--bg); color: var(--text-sub); border-color: var(--border); }
   /* 文字数に合わせて列幅を配分（早見表は短いので狭く、遊んでみたいは広く） */
   .detail-act-row.four { grid-template-columns: 1.05fr 0.95fr 0.8fr 1.2fr; }
   .detail-act.rated { background: var(--accent); border-color: var(--accent); color: #fff; }
@@ -2959,7 +2968,7 @@ try {
 // ── 自動更新 ───────────────────────────────
 // iPhoneはHTMLを長く握るので、新しい版が出ていたらURLを変えて読み直す。
 // （同じURLの再読み込みだとキャッシュが返ってきてしまうため）
-const APP_BUILD = "2026-09-11-2246";
+const APP_BUILD = "2026-09-11-2303";
 
 function markVersion(extra) {
   const el = document.getElementById("appVersion");
@@ -5054,6 +5063,34 @@ function buildRuleBlock(slug, kind, label, lines) {
 
 let lastDetailSlug = "";
 // ヘッダー右の「編集」ボタン。詳細ページのときだけ出す（件数と入れ替え）。
+// ジャンル／メカニクスのチップが3行以上に膨らんだら、2行に畳んで「＋N」で開く
+function collapseTagRows(root) {
+  root.querySelectorAll(".hero-class .tag-row:not(.checked)").forEach(row => {
+    row.classList.add("checked");
+    const chips = [...row.querySelectorAll(".tag-chip")];
+    if (chips.length < 3) return;
+    const lineTop = chips[0].offsetTop;
+    const lines = new Set(chips.map(c => c.offsetTop));
+    if (lines.size < 3) return;
+    const sorted = [...lines].sort((a, b) => a - b);
+    const cut = sorted[2];                       // 3行目の先頭位置
+    const hidden = chips.filter(c => c.offsetTop >= cut);
+    hidden.forEach(c => c.classList.add("tag-hidden"));
+    const more = document.createElement("button");
+    more.type = "button"; more.className = "tag-chip mini tag-more"; more.textContent = `＋${hidden.length}`;
+    more.dataset.expandTags = "1";
+    row.appendChild(more);
+    // 「＋N」自体が3行目に落ちたら、2行目の末尾チップを追加で隠して収める
+    let guard = 0;
+    while (more.offsetTop >= cut && guard++ < 6) {
+      const visible = chips.filter(c => !c.classList.contains("tag-hidden"));
+      const last = visible[visible.length - 1];
+      if (!last) break;
+      last.classList.add("tag-hidden"); hidden.push(last);
+      more.textContent = `＋${hidden.length}`;
+    }
+  });
+}
 function setHeaderEdit(show) {
   const btn = document.getElementById("headEdit");
   btn.hidden = !show;
@@ -5080,6 +5117,8 @@ function showDetail(g) {
   const dv = document.getElementById("detailView");
   dv.style.display = "block";
   setHeaderEdit(true);
+  // 描画後にジャンル・メカニクスの行数を見て、3行以上なら2行で畳む
+  requestAnimationFrame(() => collapseTagRows(dv));
 
   const slug = slugOf(g);
   const avg = averageScore(slug);
@@ -5378,6 +5417,13 @@ document.getElementById("detailView").addEventListener("click", e => {
 });
 
 document.getElementById("detailView").addEventListener("click", async e => {
+  const expandTags = e.target.closest("[data-expand-tags]");
+  if (expandTags) {
+    const row = expandTags.closest(".tag-row");
+    row.querySelectorAll(".tag-hidden").forEach(c => c.classList.remove("tag-hidden"));
+    expandTags.remove();
+    return;
+  }
   // ジャンル・メカニクスは検索窓ではなく、専用の絞り込みプルダウンに入れる
   const classFilter = e.target.closest("[data-class-filter]");
   if (classFilter) {
@@ -6780,22 +6826,131 @@ function buildAxisChart(scores) {
 }
 
 // 診断結果に合うゲームを、上位タイプのメカニクスから拾う
-function sampleGamesForScores(scores, n) {
-  // 相性0.5（どちらでもない）を0にして、好み寄りのメカニクスだけ加点する
+// 各文字と相性のいいジャンル（結果の言語化に使う）
+const LETTER_GENRES = {
+  E: ["パーティ系", "ワード系", "アクション・バランス系"],
+  I: ["推理系", "パズル系", "戦略系"],
+  S: ["戦略系", "パズル系"],
+  N: ["心理戦・ブラフ系", "正体隠匿系", "TRPG・物語系"],
+  T: ["戦略系", "心理戦・ブラフ系", "2人用"],
+  F: ["協力系", "チーム戦系"],
+  J: ["戦略系", "レガシー・キャンペーン系"],
+  P: ["パーティ系", "アクション・バランス系"]
+};
+// プレイ時間の好み：じっくり・計画派ほど長めが合う。-1（短め）〜1（長め）
+function timeLeaning(scores) {
+  return Math.max(-1, Math.min(1, (-(scores.EI || 0) + (scores.JP || 0)) / 2));
+}
+function timePreferenceText(scores) {
+  const t = timeLeaning(scores);
+  if (t > 0.4) return { good: "60分を超えるじっくり系でも集中が続くタイプ", bad: "5分で終わるような軽すぎるものは物足りないかも", range: [45, 999] };
+  if (t < -0.4) return { good: "30分前後までのテンポよく回せるもの", bad: "60分を超える長考ゲームは途中で気が散るかも", range: [0, 40] };
+  return { good: "30〜60分くらいの中量級がちょうどいい", bad: "極端に長い・短いものは好みが分かれそう", range: [20, 75] };
+}
+// 診断結果を「向いていそう／苦手そう」として言語化する。ジャンル・メカニクスはタップで一覧へ
+function buildTypeExplanation(scores) {
+  const code = typeCodeOf(scores);
+  const letters = code.split("");
+  const opp = { E: "I", I: "E", S: "N", N: "S", T: "F", F: "T", J: "P", P: "J" };
+  const sideLabel = {};
+  AXES.forEach(ax => { sideLabel[ax.a] = ax.aLabel; sideLabel[ax.b] = ax.bLabel; });
+  // 強く出た軸から順に並べる
+  const strength = l => Math.abs(scores[AXES.find(ax => ax.a === l || ax.b === l).key] || 0);
+  const strong = letters.slice().sort((a, b) => strength(b) - strength(a));
+  const uniq = arr => arr.filter((x, i) => arr.indexOf(x) === i);
+  const ownedMech = new Set(games.flatMap(g => getGameTags(g).allMechanics));
+  const ownedGenre = new Set(games.flatMap(g => getGameTags(g).genreTags));
+  const goodGenres = uniq(strong.flatMap(l => LETTER_GENRES[l])).filter(x => ownedGenre.has(x)).slice(0, 3);
+  const badGenres = uniq(strong.map(l => opp[l]).flatMap(l => LETTER_GENRES[l])).filter(x => ownedGenre.has(x) && !goodGenres.includes(x)).slice(0, 2);
+  // 並べ替えは「複数の軸で好み側に入っているもの」を優先する（合計で見る）
+  const sumScore = {};
+  AXES.forEach(ax => {
+    const v = Math.max(-1, Math.min(1, scores[ax.key] || 0));
+    LETTER_MECHANICS[ax.a].forEach(m => { sumScore[m] = (sumScore[m] || 0) + v / 2; });
+    LETTER_MECHANICS[ax.b].forEach(m => { sumScore[m] = (sumScore[m] || 0) - v / 2; });
+  });
+  const mechRank = Object.entries(sumScore).filter(([m]) => ownedMech.has(m)).sort((a, b) => b[1] - a[1]);
+  const goodMech = mechRank.filter(([, v]) => v > 0).slice(0, 4).map(([m]) => m);
+  const badMech = mechRank.filter(([, v]) => v < 0).slice(-3).reverse().map(([m]) => m);
+  const time = timePreferenceText(scores);
+  const gChip = x => `<button type="button" class="tag-chip mini" data-class-filter="genre" data-value="${x}">${x}</button>`;
+  const mChip = x => `<button type="button" class="tag-chip mini" data-class-filter="mechanic" data-value="${x}">#${x}</button>`;
+  const styleWords = strong.slice(0, 2).map(l => sideLabel[l]).join("×");
+  const hint = {
+    E: "大人数で盛り上がれる", I: "少人数でじっくり考えられる",
+    S: "手堅く積み上げて実力が出る", N: "読み合いや世界観に浸れる",
+    T: "相手と正面から競り合う", F: "みんなで一緒に楽しめる",
+    J: "先を見て組み立てるほど強くなる", P: "運とスリルで一喜一憂できる"
+  };
+  return `
+    <div class="review-card type-explain">
+      <div class="review-header"><div class="review-title">👍 向いていそう</div></div>
+      <p><b>${styleWords}</b>のあなたには、${hint[strong[0]]}ゲームが合いそうです。</p>
+      <div class="explain-row"><span>ジャンル</span><div class="tag-row">${goodGenres.map(gChip).join("")}</div></div>
+      <div class="explain-row"><span>メカニクス</span><div class="tag-row">${goodMech.map(mChip).join("")}</div></div>
+      <div class="explain-row"><span>プレイ時間</span><div>${time.good}</div></div>
+    </div>
+    <div class="review-card type-explain">
+      <div class="review-header"><div class="review-title">🤔 苦手そう</div></div>
+      <p>反対に、${hint[opp[strong[0]]]}タイプのゲームは、気分が乗らないかもしれません。</p>
+      <div class="explain-row"><span>ジャンル</span><div class="tag-row">${badGenres.map(gChip).join("")}</div></div>
+      <div class="explain-row"><span>メカニクス</span><div class="tag-row">${badMech.map(mChip).join("")}</div></div>
+      <div class="explain-row"><span>プレイ時間</span><div>${time.bad}</div></div>
+      <div class="review-count" style="margin-top:8px;">苦手というより「今の回答からは優先度が低そう」という程度。遊んでみたら好きかもしれません。タグをタップするとその一覧に飛べます。</div>
+    </div>
+  `;
+}
+
+// 診断結果に合うゲーム。メカニクスの相性にプレイ時間の好みを少し足す。
+// onlyUnplayed=true なら自分が遊んでいない（評価も戦績もない）ものだけ
+function sampleGamesForScores(scores, n, onlyUnplayed) {
   const weight = {};
   Object.entries(mechanicWeights(scores)).forEach(([m, w]) => { weight[m] = Math.max(0, (w - 0.5) * 2); });
+  const range = timePreferenceText(scores).range;
+  const me = getMyName();
   return games.map(g => {
     const t = getGameTags(g);
     if (t.genreTags.includes("拡張")) return { g, s: 0 };  // 単体で遊べないので出さない
+    if (onlyUnplayed && me && hasPlayed(slugOf(g), me)) return { g, s: 0 };
     const mech = t.allMechanics;
     if (!mech.length) return { g, s: 0 };
-    // 合計のままだとメカニクスが多いだけのゲームが上位を独占するので、
-    // 「そのゲームがどれだけそのタイプ寄りか」で見る
     const sum = mech.reduce((a, m) => a + (weight[m] || 0), 0);
-    return { g, s: sum / Math.sqrt(mech.length) };
+    let s = sum / Math.sqrt(mech.length);
+    const tm = g.timeMax || g.timeMin;
+    if (tm != null && tm >= range[0] && tm <= range[1]) s *= 1.15;   // 時間の好みに合えば少し加点
+    return { g, s };
   }).filter(x => x.s > 0)
     .sort((a, b) => b.s - a.s || (averageScore(slugOf(b.g)) ?? 0) - (averageScore(slugOf(a.g)) ?? 0))
     .slice(0, n);
+}
+let quizPickMode = "all";   // "all"=総合 / "new"=未経験
+function buildTypePicks(scores) {
+  const picks = sampleGamesForScores(scores, 3, quizPickMode === "new");
+  const me = getMyName();
+  return `
+    <div class="review-card" id="typePicks">
+      <div class="review-header">
+        <div class="review-title">相性が良さそうなゲーム</div>
+        <div class="pick-toggle">
+          <button type="button" class="${quizPickMode === "all" ? "on" : ""}" data-pick-mode="all">総合</button>
+          <button type="button" class="${quizPickMode === "new" ? "on" : ""}" data-pick-mode="new">未経験</button>
+        </div>
+      </div>
+      ${!picks.length ? `<div class="review-count">${quizPickMode === "new" && !me ? "名前を登録すると、まだ遊んでいないゲームから選べます。" : "該当するゲームがありません。"}</div>` : `
+      <div class="player-game-list">
+        ${picks.map(p => `
+          <a class="player-game-row" href="#game/${encodeURIComponent(slugOf(p.g))}">
+            <img src="${gameImg(p.g, "mini")}" alt="${p.g.jp}" data-fb="${coverFallback(p.g, "mini")}" onerror="if(this.dataset.fb){this.src=this.dataset.fb;this.dataset.fb='';}else{this.style.visibility='hidden';}">
+            <div class="player-game-row-body">
+              <div class="player-game-row-title">${p.g.jp}</div>
+              <div class="player-game-row-level">${p.g.playersRaw || ""} ・ ${p.g.timeRaw || ""}</div>
+              <div class="player-game-row-level">${getGameTags(p.g).allMechanics.slice(0, 3).map(m => "#" + m).join(" ")}</div>
+            </div>
+          </a>
+        `).join("")}
+      </div>`}
+    </div>
+  `;
 }
 
 function buildQuizView() {
@@ -6817,6 +6972,8 @@ function buildQuizView() {
           <div class="review-header"><div class="review-title">あなたの傾向</div></div>
           ${buildAxisChart(existing.scores)}
         </div>
+        ${buildTypeExplanation(existing.scores)}
+        ${buildTypePicks(existing.scores)}
       ` : ""}
       <div class="review-card">
         <div class="review-count">${QUIZ_QUESTIONS.length}問に直感で答えると、16タイプのどれかと相性のいいゲームが分かります。${existing ? "もう一度やると結果は上書きされます。" : ""}</div>
@@ -6853,21 +7010,8 @@ function buildQuizView() {
       <div class="review-header"><div class="review-title">あなたの傾向</div></div>
       ${buildAxisChart(scores)}
     </div>
-    ${buildAffinityRanking(scores)}
-    <div class="review-card">
-      <div class="review-header"><div class="review-title">相性が良さそうなゲーム</div></div>
-      <div class="player-game-list">
-        ${picks.map(p => `
-          <a class="player-game-row" href="#game/${encodeURIComponent(slugOf(p.g))}">
-            <img src="${gameImg(p.g, "mini")}" alt="${p.g.jp}" data-fb="${coverFallback(p.g, "mini")}" onerror="if(this.dataset.fb){this.src=this.dataset.fb;this.dataset.fb='';}else{this.style.visibility='hidden';}">
-            <div class="player-game-row-body">
-              <div class="player-game-row-title">${p.g.jp}</div>
-              <div class="player-game-row-level">${getGameTags(p.g).allMechanics.slice(0, 3).map(m => "#" + m).join(" ")}</div>
-            </div>
-          </a>
-        `).join("")}
-      </div>
-    </div>
+    ${buildTypeExplanation(scores)}
+    ${buildTypePicks(scores)}
     <div class="review-card">
       <div class="review-count">${getMyName()
         ? `<strong>${getMyName()}</strong> の結果として保存すると、マイページに表示され、おすすめの精度も上がります。`
@@ -6996,6 +7140,17 @@ document.getElementById("playerView").addEventListener("click", async e => {
 });
 
 document.getElementById("quizView").addEventListener("click", async e => {
+  const pm = e.target.closest("[data-pick-mode]");
+  if (pm) {
+    quizPickMode = pm.dataset.pickMode;
+    const prof = getMyName() ? getProfile(getMyName()) : null;
+    const scores = quizAnswers.length === QUIZ_QUESTIONS.length ? scoreQuiz(quizAnswers, QUIZ_QUESTIONS) : (isType16(prof) ? prof.scores : null);
+    const box = document.getElementById("typePicks");
+    if (scores && box) box.outerHTML = buildTypePicks(scores);
+    return;
+  }
+  const cls = e.target.closest("[data-class-filter]");
+  if (cls) { goToClassFilter(cls.dataset.classFilter, cls.dataset.value); return; }
   if (e.target.closest("[data-quiz-start]")) {
     quizStarted = true; quizAnswers = []; showQuizView(); return;
   }
@@ -8245,18 +8400,6 @@ function buildPlayerPage(name) {
     <div class="player-game-list">${gameRows}</div>
     ${moreBtn("rated", ratedShown, totalCount)}` : `<div class="review-count">まだ評価がありません</div>`;
 
-
-  const typeInner = isType16(prof) ? `
-    ${buildTypeHero(prof.type)}
-    ${buildAxisChart(prof.scores)}
-    ${buildAffinityRanking(prof.scores)}
-    ${isMe ? `<a class="quiz-cta" style="margin-top:12px;" href="#quiz">診断をやり直す</a>` : ""}
-  ` : `
-    <div class="review-count">${isMe
-      ? "まだタイプ診断をしていません。16問でタイプが分かり、おすすめの精度も上がります。"
-      : `${name} さんはまだ診断をしていません。`}</div>
-    ${isMe ? `<a class="quiz-cta" style="margin-top:10px;" href="#quiz">🧭 診断をやってみる</a>` : ""}
-  `;
 
   const typeFam = typeInfo(prof);
 
