@@ -58,7 +58,7 @@
     position: fixed;
     left: 0; right: 0; bottom: 0;
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(5, 1fr);
     background: var(--card-bg);
     border-top: 1px solid var(--border);
     padding: 6px 4px calc(6px + env(safe-area-inset-bottom));
@@ -83,6 +83,8 @@
   .tab-item.on { color: var(--accent); }
   .tab-item.on .tab-ico { transform: none; }
   .tab-item:active { background: var(--accent-soft); }
+  .tab-item.spinning .tab-ico { animation: spin 0.8s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
   .theme-toggle-btn {
     position: absolute;
     top: 16px;
@@ -2842,6 +2844,7 @@
   <button type="button" class="tab-item" data-nav="mypage"><span class="tab-ico">👤</span><span>マイページ</span></button>
   <a href="#members" class="tab-item" data-nav="members"><span class="tab-ico">👥</span><span>みんな</span></a>
   <a href="#log" class="tab-item" data-nav="log"><span class="tab-ico">📝</span><span>記録</span></a>
+  <button type="button" class="tab-item" id="refreshBtn" title="最新のデータを読み込む"><span class="tab-ico">🔄</span><span>更新</span></button>
 </nav>
 
 <div class="controls" id="controls">
@@ -3002,7 +3005,7 @@ try {
 // ── 自動更新 ───────────────────────────────
 // iPhoneはHTMLを長く握るので、新しい版が出ていたらURLを変えて読み直す。
 // （同じURLの再読み込みだとキャッシュが返ってきてしまうため）
-const APP_BUILD = "2026-09-12-1547";
+const APP_BUILD = "2026-09-12-1551";
 
 function markVersion(extra) {
   const el = document.getElementById("appVersion");
@@ -4505,6 +4508,27 @@ async function changeMyName() {
 }
 
 document.querySelector('[data-nav="mypage"]').addEventListener("click", goToMyPage);
+// 更新：みんなが入れた評価・戦績・写真などを取り直して、いまの画面を描き直す。アプリ本体の新版もここで確認する
+document.getElementById("refreshBtn").addEventListener("click", async e => {
+  const btn = e.currentTarget;
+  if (btn.classList.contains("spinning")) return;
+  btn.classList.add("spinning");
+  try {
+    await Promise.all([fetchAllReviews(), fetchCoverOverrides()]);
+    tagCountCache = null;
+    Object.keys(photoCache).forEach(k => delete photoCache[k]);
+    Object.keys(trimmedCoverCache).forEach(k => { if (coverOverride[k]) delete trimmedCoverCache[k]; });
+    router();
+    renderUserBadge();
+    toast("最新のデータに更新しました");
+    checkForUpdate();
+  } catch (err) {
+    console.error("更新に失敗", err);
+    toast("更新に失敗しました。電波を確認してもう一度");
+  } finally {
+    btn.classList.remove("spinning");
+  }
+});
 document.querySelector('[data-nav="list"]').addEventListener("click", e => {
   e.preventDefault();
   location.hash = "";
