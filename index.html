@@ -3000,7 +3000,7 @@ try {
 // ── 自動更新 ───────────────────────────────
 // iPhoneはHTMLを長く握るので、新しい版が出ていたらURLを変えて読み直す。
 // （同じURLの再読み込みだとキャッシュが返ってきてしまうため）
-const APP_BUILD = "2026-09-12-1531";
+const APP_BUILD = "2026-09-12-1542";
 
 function markVersion(extra) {
   const el = document.getElementById("appVersion");
@@ -5875,15 +5875,38 @@ function allRecordDates() {
 // 今日は常に一番上。ほかの日を選んだら、その下に並べて出す（今日が消えない）。
 let logQuery = {};          // 日付 -> 検索語
 
+// その日に遊んだゲームを棚として並べる（結果の有無は問わない）
+function buildDayShelf(date, isToday) {
+  const tables = getDayTables(date);
+  const seen = new Set();
+  const list = [];
+  tables.forEach(h => {
+    if (seen.has(h.slug)) return;
+    const g = games.find(x => slugOf(x) === h.slug);
+    if (g) { seen.add(h.slug); list.push({ slug: h.slug, g }); }
+  });
+  if (!list.length) return "";
+  return `
+    <div class="review-card">
+      <div class="review-header"><div class="review-title">${isToday ? "今日" : date}のボドゲ棚</div></div>
+      ${renderShelfRows(list)}
+      <div class="shelf-foot">
+        <span>${list.length}本</span>
+        <button type="button" class="link-btn" data-day-shelf-export="${date}">画像で保存</button>
+      </div>
+    </div>`;
+}
 function buildLogView() {
   const today = todayStr();
   const picked = logDate && logDate !== today ? logDate : "";
+  const shown = picked || today;
   return `
     <button type="button" class="detail-back" data-back>← 戻る</button>
     <h1 class="detail-title">ゲーム記録</h1>
-    ${buildDayBlock(today, true)}
-    ${picked ? buildDayBlock(picked, false) : ""}
     ${buildSessionLog()}
+    ${picked ? `<button type="button" class="section-toggle-btn" data-log-unpick style="margin-bottom:10px;">← 今日の記録に戻る</button>` : ""}
+    ${buildDayBlock(shown, !picked)}
+    ${buildDayShelf(shown, !picked)}
   `;
 }
 
@@ -6011,13 +6034,13 @@ function showLogView() {
   hideAllViews();
   const lv = document.getElementById("logView");
   lv.style.display = "block";
-  lv.innerHTML = buildLogView();
+  lv.innerHTML = buildLogView(); refineCoverImages(lv);
   window.scrollTo(0, 0);
 }
 
 function rerenderLog() {
   const lv = document.getElementById("logView");
-  if (lv && lv.style.display !== "none") lv.innerHTML = buildLogView();
+  if (lv && lv.style.display !== "none") { lv.innerHTML = buildLogView(); refineCoverImages(lv); }
 }
 
 // 卓は「追加した時点で保存」し、結果はあとから入れる。
@@ -6211,15 +6234,14 @@ function buildSessionLog() {
     const n = byDate[key] || 0;
     const isToday = key === today, picked = key === logDate;
     const cls = ["cal-cell", n ? "has" : "", isToday ? "today" : "", picked ? "picked" : ""].join(" ");
-    cells.push(n
-      ? `<button type="button" class="${cls}" data-log-open-date="${key}"><b>${d}</b><i>${n}卓</i></button>`
+    cells.push(n || isToday
+      ? `<button type="button" class="${cls}" data-log-open-date="${key}"><b>${d}</b>${n ? `<i>${n}卓</i>` : ""}</button>`
       : `<span class="${cls}"><b>${d}</b></span>`);
   }
   const monthDays = dates.filter(d => d.startsWith(cur));
   const monthTables = monthDays.reduce((a, d) => a + byDate[d], 0);
   return `
     <div class="review-card">
-      <div class="review-header"><div class="review-title">ほかの日の記録</div></div>
       <div class="cal-nav">
         <button type="button" class="cal-arrow" data-log-month="${months[idx - 1] || ""}" ${idx <= 0 ? "disabled" : ""}>‹</button>
         <div class="cal-title">${y}年${m}月<i>${monthDays.length ? `${monthDays.length}日・${monthTables}卓` : "記録なし"}</i></div>
@@ -6229,7 +6251,7 @@ function buildSessionLog() {
         ${["日", "月", "火", "水", "木", "金", "土"].map(w => `<span class="cal-w">${w}</span>`).join("")}
         ${cells.join("")}
       </div>
-      <div class="review-count" style="margin-top:8px;">色の付いた日をタップすると、その日の記録が上に開きます。</div>
+      <div class="review-count" style="margin-top:8px;">色の付いた日をタップすると、その日の記録が下に開きます。</div>
     </div>
   `;
 }
@@ -7252,7 +7274,7 @@ function showQuizView() {
 // 相性ランキングのタグをタップしたら、その絞り込みで一覧へ
 document.getElementById("playerView").addEventListener("click", async e => {
   const shelfBtn = e.target.closest("[data-shelf-export]");
-  if (shelfBtn) { shelfBtn.disabled = true; await exportShelfImage(shelfBtn.dataset.shelfExport); shelfBtn.disabled = false; return; }
+  if (shelfBtn) { const nm = shelfBtn.dataset.shelfExport; shelfBtn.disabled = true; await exportShelfImage(`${nm}のボドゲ棚`, "うちのボードゲーム棚 ・ 評価が高い順", shelfGames(nm)); shelfBtn.disabled = false; return; }
   // 称号をタップ → 獲得条件を表示
   const info = e.target.closest("[data-title-info]");
   if (info) {
@@ -7467,6 +7489,14 @@ document.getElementById("logView").addEventListener("click", async e => {
     return;
   }
 
+  const dayExp = e.target.closest("[data-day-shelf-export]");
+  if (dayExp) {
+    const date = dayExp.dataset.dayShelfExport;
+    const seen = new Set(); const list = [];
+    getDayTables(date).forEach(h => { const g = games.find(x => slugOf(x) === h.slug); if (g && !seen.has(h.slug)) { seen.add(h.slug); list.push({ slug: h.slug, g }); } });
+    dayExp.disabled = true; await exportShelfImage(`${date} のボドゲ棚`, "うちのボードゲーム棚 ・ この日に遊んだゲーム", list); dayExp.disabled = false;
+    return;
+  }
   const monthBtn = e.target.closest("button[data-log-month]");
   if (monthBtn) {
     if (monthBtn.dataset.logMonth) { logMonthPick = monthBtn.dataset.logMonth; rerenderLog(); }
@@ -7474,10 +7504,10 @@ document.getElementById("logView").addEventListener("click", async e => {
   }
   const open = e.target.closest("[data-log-open-date]");
   if (open) {
-    logDate = open.dataset.logOpenDate;
+    logDate = open.dataset.logOpenDate === todayStr() ? "" : open.dataset.logOpenDate;
     editingId = ""; editDraft = null;
     rerenderLog();
-    const el = document.getElementById("day-" + logDate);
+    const el = document.getElementById("day-" + (logDate || todayStr()));
     if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
     return;
   }
@@ -8400,6 +8430,22 @@ function refineCoverImages(root) {
 }
 const refineShelfImages = refineCoverImages;
 
+// 棚の見た目だけを作る（list = [{slug, g}]）。マイページと記録ページで共用
+function renderShelfRows(list) {
+  const rows = Math.max(1, Math.ceil(list.length / SHELF_COLS));
+  let html = `<div class="shelf">`;
+  for (let r = 0; r < rows; r++) {
+    html += `<div class="shelf-row">`;
+    for (let c = 0; c < SHELF_COLS; c++) {
+      const x = list[r * SHELF_COLS + c];
+      html += x
+        ? `<a class="shelf-box" href="#game/${encodeURIComponent(x.slug)}" title="${x.g.jp}"><img src="${coverSrc(x.slug)}" data-slug="${x.slug}" alt="${x.g.jp}" onerror="this.src='${coverFallback(x.g, "card")}'"></a>`
+        : `<span class="shelf-box empty"></span>`;
+    }
+    html += `<div class="shelf-board"></div></div>`;
+  }
+  return html + `</div>`;
+}
 function buildShelf(name) {
   const list = shelfGames(name);
   if (!list.length) {
@@ -8426,9 +8472,8 @@ function buildShelf(name) {
 }
 
 // 棚を1枚の画像にする。表紙は同一オリジンの data/covers を使う（CDN直だとcanvasが汚染されて書き出せない）
-async function exportShelfImage(name) {
-  const list = shelfGames(name);
-  if (!list.length) { toast("まだ棚に並ぶゲームがありません"); return; }
+async function exportShelfImage(title, subtitle, list) {
+  if (!list || !list.length) { toast("まだ棚に並ぶゲームがありません"); return; }
   const rows = Math.max(1, Math.ceil(list.length / SHELF_COLS));
   const W = 1080, pad = 60, gap = 36, boardH = 26, titleH = 150;
   const boxW = Math.floor((W - pad * 2 - gap * (SHELF_COLS - 1)) / SHELF_COLS), boxH = Math.round(boxW * 3 / 4);
@@ -8440,9 +8485,9 @@ async function exportShelfImage(name) {
   ctx.fillStyle = "#ffffff"; ctx.fillRect(0, 0, W, H);
   // タイトル
   ctx.fillStyle = "#1f3a52"; ctx.font = "bold 52px -apple-system, 'Hiragino Sans', sans-serif"; ctx.textBaseline = "middle";
-  ctx.fillText(`${name}のボドゲ棚`, pad, 70);
+  ctx.fillText(title, pad, 70);
   ctx.fillStyle = "#5c7a90"; ctx.font = "26px -apple-system, 'Hiragino Sans', sans-serif";
-  ctx.fillText(`うちのボードゲーム棚 ・ 評価が高い順`, pad, 118);
+  ctx.fillText(subtitle, pad, 118);
   const load = src => new Promise(res => { const im = new Image(); im.onload = () => res(im); im.onerror = () => res(null); im.src = src; });
   const imgs = await Promise.all(list.map(x => trimmedCover(x.slug).then(u => load(u || coverSrc(x.slug)))));
   for (let r = 0; r < rows; r++) {
@@ -8471,9 +8516,9 @@ async function exportShelfImage(name) {
     el.addEventListener("click", ev => { if (!ev.target.closest("a")) el.classList.remove("on"); });
     document.body.appendChild(el);
   }
-  el.innerHTML = `<img src="${url}" alt="${name}のボドゲ棚">
+  el.innerHTML = `<img src="${url}" alt="${title}">
     <div class="lightbox-hint">画像を長押しして「写真に追加」で保存できます</div>
-    <a class="lightbox-dl" href="${url}" download="${name}のボドゲ棚.jpg">ダウンロード</a>
+    <a class="lightbox-dl" href="${url}" download="${title}.jpg">ダウンロード</a>
     <div class="lightbox-hint">画像の外をタップで閉じる</div>`;
   el.classList.add("on");
 }
