@@ -3009,7 +3009,7 @@ try {
 // ── 自動更新 ───────────────────────────────
 // iPhoneはHTMLを長く握るので、新しい版が出ていたらURLを変えて読み直す。
 // （同じURLの再読み込みだとキャッシュが返ってきてしまうため）
-const APP_BUILD = "2026-09-12-2347";
+const APP_BUILD = "2026-09-12-2352";
 
 function markVersion(extra) {
   const el = document.getElementById("appVersion");
@@ -3519,7 +3519,7 @@ const RATING_AXES = [
   { key: "addict",   label: "中毒性",   short: "中毒性" },
   { key: "everyone", label: "みんな向け", short: "みんな向け" }
 ];
-const RATING_TOTAL_MAX = 30;   // 総合＝3軸の合計（各10点）
+const RATING_TOTAL_MAX = 10;   // 総合＝3軸の平均
 const AXIS_LEGACY = { like: "taste", addict: "replay", everyone: "recommend" };
 function axisValue(r, key) {
   if (r[key] != null) return r[key];
@@ -4387,14 +4387,13 @@ function toggleInterest(slug, name) {
 // 評価は「好み」と「リプレイ性」の2軸。平均を level として持ち、
 // 並べ替えや推薦は今までどおり level を見る。
 // 入っている軸だけで平均を取る（古い評価は level 1本のまま）
-// 総合＝3軸の合計（30点満点）。3つそろっていないもの（昔の1本評価など）は総合なし
+// 総合＝3軸の平均（10点満点・小数1桁）。3つそろっていないもの（昔の1本評価など）は総合なし
 function ratingAvg(r) {
   const vals = RATING_AXES.map(a => axisValue(r, a.key));
   if (vals.some(v => v == null)) return null;
-  return vals.reduce((a, b) => a + b, 0);
+  return Math.round(vals.reduce((a, b) => a + b, 0) / vals.length * 10) / 10;
 }
-// 総合を1〜10の色に落とす（合計÷3）
-function totalColor(total) { return ratingColor(Math.round(total / 3)); }
+function totalColor(total) { return ratingColor(Math.round(total)); }
 // 感想付きの評価を、評価が高い人から順に n 件
 // そのゲームの感想を全部まとめる。評価に付けた感想と、戦績を入れたときのメモの両方を「感想」として扱う
 // 並びは評価が高い人から。戦績メモだけの人（評価なし）は評価つきの後ろ
@@ -4428,8 +4427,8 @@ function addRating(slug, name, v) {
     alert("Firebaseが未設定のため、まだ「評価」は使えません。");
     return Promise.resolve();
   }
-  // level（総合）＝3軸の合計。古い画面や集計との互換のために残す
-  const level = v.like + v.addict + v.everyone;
+  // level（総合）＝3軸の平均。古い画面や集計との互換のために残す
+  const level = Math.round((v.like + v.addict + v.everyone) / 3 * 10) / 10;
   // 書き換えは許可していないので入れ直す。先に足してから古いものを消す。
   const mine = getReviews(slug).filter(r => r.name === name);
   return db.collection("ratings").add({
@@ -4700,7 +4699,7 @@ function ratingStrip(slug) {
     <span class="rs-pill ${cls || ""} ${val == null ? "na" : ""}">${label}<b${val != null ? ` style="color:${ratingColor(val)}"` : ""}>${val != null ? val : "—"}</b></span>`;
   const total = averageScore(slug);
   return `<div class="rs-strip">
-    <span class="rs-pill total ${total == null ? "na" : ""}">総合<b${total != null ? ` style="color:${totalColor(total)}"` : ""}>${total != null ? total : "—"}</b><i>/30</i></span>
+    <span class="rs-pill total ${total == null ? "na" : ""}">総合<b${total != null ? ` style="color:${totalColor(total)}"` : ""}>${total != null ? total : "—"}</b></span>
     ${pill("評価", averageAxis(slug, "like"))}${pill("中毒性", averageAxis(slug, "addict"))}${pill("みんな向け", averageAxis(slug, "everyone"))}</div>`;
 }
 
@@ -4744,7 +4743,7 @@ function buildRatingSummary(slug) {
   }).join("");
   return `
     <table class="rating-summary">
-      <thead><tr><th></th><th>総合<i>/30</i></th><th>評価</th><th>中毒性</th><th>みんな向け</th></tr></thead>
+      <thead><tr><th></th><th>総合</th><th>評価</th><th>中毒性</th><th>みんな向け</th></tr></thead>
       <tbody>
         <tr class="all">
           <th>みんな<i>${reviews.length}人</i></th>
@@ -4766,23 +4765,12 @@ const ADDICT_WORDS   = { 10: "終わった瞬間もう1回", 9: "続けて何回
 const EVERYONE_WORDS = { 10: "誰と遊んでも盛り上がる", 9: "初めての人でも楽しめる", 8: "たいていの人はOK", 7: "説明すれば大丈夫", 6: "少し人を選ぶ", 5: "普通", 4: "慣れた人向け", 3: "好みが分かれる", 2: "ボドゲ好き限定", 1: "身内だけ" };
 const AXIS_WORDS = { like: LIKE_WORDS, addict: ADDICT_WORDS, everyone: EVERYONE_WORDS };
 
-// 「好き」の自分の分布。8以上の割合を出して、無意識の高評価に気づけるようにする
-function myLikeDistribution() {
-  const me = getMyName();
-  if (!me) return null;
-  const vals = getPlayerRatings(me).map(pr => { const full = (reviewsCache[pr.slug] || []).find(r => r.id === pr.id) || pr; return axisValue(full, "like"); }).filter(v => v != null);
-  if (vals.length < 5) return null;
-  const hi = vals.filter(v => v >= 8).length;
-  return { n: vals.length, hiPct: Math.round(hi / vals.length * 100), avg: Math.round(vals.reduce((a, b) => a + b, 0) / vals.length * 10) / 10 };
-}
-
 function buildRatingForm(slug) {
   const me = getMyName();
   const mine = me ? getReviews(slug).find(r => r.name === me) : null;
   const cur = key => (mine ? (axisValue(mine, key) ?? 5) : 5);
-  const dist = myLikeDistribution();
   const hint = {
-    like: dist ? `あなたの「評価」：8以上が${dist.hiPct}%・平均${dist.avg}（${dist.n}本）` : "純粋にどれだけ好きか",
+    like: "純粋にどれだけ好きか",
     addict: "終わった直後に「もう1回」が出るか",
     everyone: "初めての人・慣れていない人でも一緒に楽しめるか"
   };
@@ -4807,7 +4795,7 @@ function buildRatingForm(slug) {
         ${slider("like", "評価", cur("like"), LIKE_WORDS)}
         ${slider("addict", "中毒性", cur("addict"), ADDICT_WORDS)}
         ${slider("everyone", "みんな向け", cur("everyone"), EVERYONE_WORDS)}
-        <div class="rating-avg-preview">総合 <b data-rating-total>${cur("like") + cur("addict") + cur("everyone")}</b> / 30</div>
+        <div class="rating-avg-preview">総合（3つの平均） <b data-rating-total>${Math.round((cur("like") + cur("addict") + cur("everyone")) / 3 * 10) / 10}</b></div>
         <div class="review-form-field">
           <label>感想・おすすめポイント（任意）</label>
           <textarea name="memo" rows="3" maxlength="400" placeholder="どこが良かったか、どんな人に合うか、気をつけること など">${mine && mine.memo ? mine.memo : ratingMemoPrefill}</textarea>
@@ -5980,7 +5968,7 @@ function buildLogFollowUp(date) {
   const mine = myRating(logFollowUp.slug);
   const body = mine == null
     ? `<b>${g.jp}</b> を記録しました。遊んだ直後の印象が一番正確です。<b>評価と感想</b>も残しませんか？`
-    : `<b>${g.jp}</b> を記録しました。あなたの総合は <b>${mine} / 30</b>。今回遊んで印象が変わったなら、評価を見直しておきましょう。`;
+    : `<b>${g.jp}</b> を記録しました。あなたの総合は <b>${mine}</b>。今回遊んで印象が変わったなら、評価を見直しておきましょう。`;
   return `
     <div class="followup">
       <div class="followup-body">${body}</div>
@@ -6327,7 +6315,7 @@ function getPlayerTagAffinity(name) {
     if (!g) return;
     getGameTags(g).all.forEach(t => {
       if (!acc[t]) acc[t] = { sum: 0, n: 0 };
-      acc[t].sum += pr.level != null ? pr.level / 3 : pr.legacy;   // 総合(30点)は10点換算、昔の1本評価はそのまま
+      acc[t].sum += pr.level != null ? pr.level : pr.legacy;
       acc[t].n += 1;
     });
   });
@@ -6370,7 +6358,7 @@ function buildRecommendations(members) {
   members.forEach(m => {
     affinity[m] = getPlayerTagAffinity(m);
     rated[m] = {};
-    getPlayerRatings(m).forEach(pr => { rated[m][pr.slug] = pr.level != null ? Math.round(pr.level / 3 * 10) / 10 : pr.legacy; });
+    getPlayerRatings(m).forEach(pr => { rated[m][pr.slug] = pr.level != null ? pr.level : pr.legacy; });
     interested[m] = new Set();
   });
   Object.keys(interestsCache).forEach(slug => {
@@ -6678,7 +6666,7 @@ function todayRecommend() {
   members.forEach(m => {
     affinity[m] = getPlayerTagAffinity(m);
     rated[m] = {};
-    getPlayerRatings(m).forEach(pr => { rated[m][pr.slug] = pr.level != null ? Math.round(pr.level / 3 * 10) / 10 : pr.legacy; });
+    getPlayerRatings(m).forEach(pr => { rated[m][pr.slug] = pr.level != null ? pr.level : pr.legacy; });
     stats[m] = getPlayStats(m);
   });
   const interested = {};
@@ -6916,7 +6904,7 @@ document.getElementById("detailView").addEventListener("input", e => {
   const out = form.querySelector(`[data-val-for="${e.target.name}"]`);
   if (out) out.innerHTML = `<b style="color:${ratingColor(v)}">${v}</b>${words[v] || ""}`;
   const tot = form.querySelector("[data-rating-total]");
-  if (tot) tot.textContent = RATING_AXES.reduce((a, ax) => a + parseInt(form.elements[ax.key].value, 10), 0);
+  if (tot) tot.textContent = Math.round(RATING_AXES.reduce((a, ax) => a + parseInt(form.elements[ax.key].value, 10), 0) / RATING_AXES.length * 10) / 10;
 });
 
 // 卓が無いまま日付をまたいだ会は残す意味が無いので、起動時に片付ける
@@ -7796,7 +7784,7 @@ function getPlayerRatings(name) {
   const result = [];
   Object.keys(reviewsCache).forEach(slug => {
     (reviewsCache[slug] || []).forEach(r => {
-      if (r.name === name) result.push({ slug, level: ratingAvg(r), id: r.id, createdAt: r.createdAt, legacy: ratingAvg(r) == null ? r.level : null });   // level＝総合(30点)。昔の1本評価は総合なし
+      if (r.name === name) result.push({ slug, level: ratingAvg(r), id: r.id, createdAt: r.createdAt, legacy: ratingAvg(r) == null ? r.level : null });   // level＝総合（3軸平均）。昔の1本評価は総合なし
     });
   });
   return result;
@@ -8697,7 +8685,7 @@ function buildPlayerPage(name) {
         <img src="${gameImg(g, "detail")}" alt="${g.jp}" data-fb="${coverFallback(g, "detail")}" onerror="if(this.dataset.fb){this.src=this.dataset.fb;this.dataset.fb='';}else{this.style.visibility='hidden';}">
         <div class="player-game-row-body">
           <div class="player-game-row-title">${g.jp}</div>
-          <div class="player-game-row-level">${pr.level != null ? `総合 <b style="color:${totalColor(pr.level)}">${pr.level}</b> / 30` : `<span class="unrated-badge">未評価</span> 旧評価 ${pr.legacy}`}</div>
+          <div class="player-game-row-level">${pr.level != null ? `総合 <b style="color:${totalColor(pr.level)}">${pr.level}</b>` : `<span class="unrated-badge">未評価</span> 旧評価 ${pr.legacy}`}</div>
         </div>
       </a>
     `;
