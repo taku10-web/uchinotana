@@ -1113,6 +1113,22 @@
     font-weight: 700;
     margin-bottom: 10px;
   }
+  .cal-nav { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+  .cal-title { font-weight: 700; font-size: 15px; }
+  .cal-title i { font-style: normal; font-size: 11px; color: var(--text-sub); margin-left: 8px; font-weight: 600; }
+  .cal-arrow { width: 36px; height: 36px; border-radius: 50%; border: 1px solid var(--border); background: var(--card-bg); color: var(--text); font-size: 20px; line-height: 1; cursor: pointer; }
+  .cal-arrow:disabled { opacity: .3; cursor: default; }
+  .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+  .cal-w { text-align: center; font-size: 10.5px; color: var(--text-sub); font-weight: 700; padding: 2px 0; }
+  .cal-w:first-child { color: #d0554a; } .cal-w:nth-child(7) { color: #3b7dd8; }
+  .cal-cell { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 44px; border-radius: 9px; background: var(--bg); color: var(--text-sub); border: 1px solid transparent; padding: 3px 0; font: inherit; }
+  .cal-cell b { font-size: 13px; font-weight: 600; }
+  .cal-cell i { font-style: normal; font-size: 9.5px; line-height: 1; margin-top: 2px; }
+  .cal-cell.empty { background: transparent; }
+  .cal-cell.has { background: var(--accent-soft); color: var(--accent); border-color: var(--accent); cursor: pointer; }
+  .cal-cell.has b { font-weight: 800; }
+  .cal-cell.today { box-shadow: inset 0 0 0 2px var(--navy); }
+  .cal-cell.picked { background: var(--accent); color: #fff; }
   .log-day {
     display: block;
     width: 100%;
@@ -2984,7 +3000,7 @@ try {
 // ── 自動更新 ───────────────────────────────
 // iPhoneはHTMLを長く握るので、新しい版が出ていたらURLを変えて読み直す。
 // （同じURLの再読み込みだとキャッシュが返ってきてしまうため）
-const APP_BUILD = "2026-09-12-0222";
+const APP_BUILD = "2026-09-12-1531";
 
 function markVersion(extra) {
   const el = document.getElementById("appVersion");
@@ -6176,39 +6192,44 @@ function allLogNames(sess) {
 }
 
 // ほかの日：直近3日を出し、それより前は月を選ぶ。卓が無い日は出さない。
-let logMonthPick = "";
-
+let logMonthPick = "";   // カレンダーで表示中の月 "YYYY-MM"（空なら今月）
+// ほかの日の記録：月めくりカレンダー。記録のある日に卓数の印を出し、タップでその日を開く
 function buildSessionLog() {
   const today = todayStr();
-  const dates = allRecordDates().filter(d => d !== today && getDayTables(d).length);
-  if (!dates.length) return "";
-  const latest = dates.slice(0, 3);
-  const months = [...new Set(dates.map(d => d.slice(0, 7)))].sort((a, b) => b.localeCompare(a));
-  const shown = logMonthPick ? dates.filter(d => d.startsWith(logMonthPick)) : latest;
-  const fmtMonth = m => `${Number(m.slice(0, 4))}年${Number(m.slice(5, 7))}月`;
+  const dates = allRecordDates().filter(d => getDayTables(d).length);
+  const byDate = {}; dates.forEach(d => { byDate[d] = getDayTables(d).length; });
+  const months = [...new Set([today.slice(0, 7), ...dates.map(d => d.slice(0, 7))])].sort();
+  const cur = logMonthPick && months.includes(logMonthPick) ? logMonthPick : today.slice(0, 7);
+  const idx = months.indexOf(cur);
+  const [y, m] = [Number(cur.slice(0, 4)), Number(cur.slice(5, 7))];
+  const first = new Date(y, m - 1, 1), daysIn = new Date(y, m, 0).getDate();
+  const pad = n => String(n).padStart(2, "0");
+  const cells = [];
+  for (let i = 0; i < first.getDay(); i++) cells.push(`<span class="cal-cell empty"></span>`);
+  for (let d = 1; d <= daysIn; d++) {
+    const key = `${y}-${pad(m)}-${pad(d)}`;
+    const n = byDate[key] || 0;
+    const isToday = key === today, picked = key === logDate;
+    const cls = ["cal-cell", n ? "has" : "", isToday ? "today" : "", picked ? "picked" : ""].join(" ");
+    cells.push(n
+      ? `<button type="button" class="${cls}" data-log-open-date="${key}"><b>${d}</b><i>${n}卓</i></button>`
+      : `<span class="${cls}"><b>${d}</b></span>`);
+  }
+  const monthDays = dates.filter(d => d.startsWith(cur));
+  const monthTables = monthDays.reduce((a, d) => a + byDate[d], 0);
   return `
     <div class="review-card">
       <div class="review-header"><div class="review-title">ほかの日の記録</div></div>
-      <div class="review-form-field" style="margin-bottom:10px;">
-        <select class="sort-select" data-log-month style="width:100%;">
-          <option value="">直近3日</option>
-          ${months.map(m => `<option value="${m}" ${logMonthPick === m ? "selected" : ""}>${fmtMonth(m)}（${dates.filter(d => d.startsWith(m)).length}日）</option>`).join("")}
-        </select>
+      <div class="cal-nav">
+        <button type="button" class="cal-arrow" data-log-month="${months[idx - 1] || ""}" ${idx <= 0 ? "disabled" : ""}>‹</button>
+        <div class="cal-title">${y}年${m}月<i>${monthDays.length ? `${monthDays.length}日・${monthTables}卓` : "記録なし"}</i></div>
+        <button type="button" class="cal-arrow" data-log-month="${months[idx + 1] || ""}" ${idx >= months.length - 1 ? "disabled" : ""}>›</button>
       </div>
-      ${shown.map(d => {
-        const tables = getDayTables(d);
-        const titles = [...new Set(tables.map(h => {
-          const g = games.find(y => slugOf(y) === h.slug);
-          return g ? g.jp : h.slug;
-        }))];
-        const people = new Set(tables.flatMap(historyParticipants));
-        const picked = d === logDate;
-        return `
-          <button type="button" class="log-day ${picked ? "picked" : ""}" data-log-open-date="${d}">
-            <div class="log-day-date">${d}<i>${tables.length}卓・${people.size}人</i>${picked ? '<span class="log-today-badge" style="background:var(--text-sub);">表示中</span>' : ""}</div>
-            <div class="log-day-games">${titles.join("・")}</div>
-          </button>`;
-      }).join("")}
+      <div class="cal-grid">
+        ${["日", "月", "火", "水", "木", "金", "土"].map(w => `<span class="cal-w">${w}</span>`).join("")}
+        ${cells.join("")}
+      </div>
+      <div class="review-count" style="margin-top:8px;">色の付いた日をタップすると、その日の記録が上に開きます。</div>
     </div>
   `;
 }
@@ -7386,7 +7407,7 @@ function updateLogHits(el) {
   });
 });
 document.getElementById("logView").addEventListener("change", e => {
-  if (e.target.matches("[data-log-month]")) { logMonthPick = e.target.value; rerenderLog(); }
+  if (e.target.matches("select[data-log-month]")) { logMonthPick = e.target.value; rerenderLog(); }
 });
 document.getElementById("logView").addEventListener("input", e => {
   if (e.target.matches("[data-table-memo]") && editDraft) editDraft.memo = e.target.value;
@@ -7446,6 +7467,11 @@ document.getElementById("logView").addEventListener("click", async e => {
     return;
   }
 
+  const monthBtn = e.target.closest("button[data-log-month]");
+  if (monthBtn) {
+    if (monthBtn.dataset.logMonth) { logMonthPick = monthBtn.dataset.logMonth; rerenderLog(); }
+    return;
+  }
   const open = e.target.closest("[data-log-open-date]");
   if (open) {
     logDate = open.dataset.logOpenDate;
