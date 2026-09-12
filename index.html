@@ -1126,6 +1126,8 @@
   .cal-cell i { font-style: normal; font-size: 9.5px; line-height: 1; margin-top: 2px; }
   .cal-cell.empty { background: transparent; }
   .cal-cell.has { background: var(--accent-soft); color: var(--accent); border-color: var(--accent); cursor: pointer; }
+  .cal-cell.blank { cursor: pointer; color: var(--text); }
+  .cal-cell.blank:active { background: var(--border); }
   .cal-cell.has b { font-weight: 800; }
   .cal-cell.today { box-shadow: inset 0 0 0 2px var(--navy); }
   .cal-cell.picked { background: var(--accent); color: #fff; }
@@ -3000,7 +3002,7 @@ try {
 // ── 自動更新 ───────────────────────────────
 // iPhoneはHTMLを長く握るので、新しい版が出ていたらURLを変えて読み直す。
 // （同じURLの再読み込みだとキャッシュが返ってきてしまうため）
-const APP_BUILD = "2026-09-12-1542";
+const APP_BUILD = "2026-09-12-1547";
 
 function markVersion(extra) {
   const el = document.getElementById("appVersion");
@@ -5949,8 +5951,9 @@ function buildLogEmpty(date) {
   const picked = logDraft.members;
   return `
     <div class="review-count" style="margin-bottom:12px;">
-      まだ記録がありません。ゲームのページで <b>「🎲 今日やる！」</b> を押すか、下から検索して足してください。<br>
-      先にメンバーを決めておくこともできます。
+      ${date === todayStr()
+        ? `まだ記録がありません。ゲームのページで <b>「🎲 今日やる！」</b> を押すか、下から検索して足してください。<br>先にメンバーを決めておくこともできます。`
+        : `この日の記録はまだありません。その日にいたメンバーを選んで始めると、あとから戦績を足せます。`}
     </div>
     ${pickerGrid(names, "start", n => picked.includes(n), n => `data-log-member="${n}"`)}
     <form class="review-form" data-log-newmember style="margin-top:6px;">
@@ -6234,8 +6237,9 @@ function buildSessionLog() {
     const n = byDate[key] || 0;
     const isToday = key === today, picked = key === logDate;
     const cls = ["cal-cell", n ? "has" : "", isToday ? "today" : "", picked ? "picked" : ""].join(" ");
-    cells.push(n || isToday
-      ? `<button type="button" class="${cls}" data-log-open-date="${key}"><b>${d}</b>${n ? `<i>${n}卓</i>` : ""}</button>`
+    // 過去〜今日はどの日でも開ける（あとから戦績を足せるように）。未来の日は押せない
+    cells.push(key <= today
+      ? `<button type="button" class="${cls} ${n ? "" : "blank"}" data-log-open-date="${key}"><b>${d}</b>${n ? `<i>${n}卓</i>` : ""}</button>`
       : `<span class="${cls}"><b>${d}</b></span>`);
   }
   const monthDays = dates.filter(d => d.startsWith(cur));
@@ -6251,7 +6255,7 @@ function buildSessionLog() {
         ${["日", "月", "火", "水", "木", "金", "土"].map(w => `<span class="cal-w">${w}</span>`).join("")}
         ${cells.join("")}
       </div>
-      <div class="review-count" style="margin-top:8px;">色の付いた日をタップすると、その日の記録が下に開きます。</div>
+      <div class="review-count" style="margin-top:8px;">日付をタップするとその日の記録が下に開きます。記録のない過去の日にも、あとから戦績を足せます。</div>
     </div>
   `;
 }
