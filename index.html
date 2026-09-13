@@ -37,6 +37,7 @@
     --pitch-text: #e0b85c;
   }
   * { box-sizing: border-box; }
+  html, body { touch-action: manipulation; }   /* ダブルタップでの拡大を止める（ピンチは残す） */
   body {
     margin: 0;
     font-size: 15px;
@@ -1153,6 +1154,12 @@
   .cal-cell.blank:active { background: var(--border); }
   .cal-cell.has b { font-weight: 800; }
   .cal-cell.today { box-shadow: inset 0 0 0 2px var(--navy); }
+  .cal-stats { display: flex; align-items: center; gap: 14px; margin-top: 10px; flex-wrap: wrap; }
+  .cal-stat { display: flex; align-items: baseline; gap: 4px; }
+  .cal-stat b { font-size: 20px; }
+  .cal-stat span { font-size: 11.5px; color: var(--text-sub); }
+  .cal-me { margin-left: auto; border: 1px solid var(--border); background: var(--bg); color: var(--text); font-size: 12.5px; font-weight: 600; padding: 6px 11px; border-radius: 999px; cursor: pointer; font-family: inherit; }
+  .cal-me.on { background: var(--accent); border-color: var(--accent); color: #fff; }
   .cal-cell.picked { background: var(--accent); color: #fff; }
   .log-day {
     display: block;
@@ -3104,7 +3111,7 @@ try {
 // ── 自動更新 ───────────────────────────────
 // iPhoneはHTMLを長く握るので、新しい版が出ていたらURLを変えて読み直す。
 // （同じURLの再読み込みだとキャッシュが返ってきてしまうため）
-const APP_BUILD = "2026-09-13-1838";
+const APP_BUILD = "2026-09-13-1914";
 
 function markVersion(extra) {
   const el = document.getElementById("appVersion");
@@ -3640,7 +3647,11 @@ window.addEventListener("scroll", () => {
   document.getElementById("backToTop").classList.toggle("show", y > 400);
   const c = document.getElementById("controls");
   if (!controlsHold) {
-    if (y > 140 && y > lastScrollY + 4) c.classList.add("scrolled");          // 下へ：畳む
+    if (y > 140 && y > lastScrollY + 4) {                                       // 下へ：畳む（絞り込みも閉じておく）
+      c.classList.add("scrolled");
+      const area = document.getElementById("filterArea");
+      if (area && area.style.display !== "none") { area.style.display = "none"; document.querySelector("#filterToggle .collapse-mark").textContent = "＋"; }
+    }
     else if (y < 40 || y < lastScrollY - 24) c.classList.remove("scrolled");   // 上へ／先頭：開く
   }
   lastScrollY = y;
@@ -4507,7 +4518,7 @@ function saveProfile(name, scores) {
 // 名前を登録した時点でサーバーにも残す。そうしないと本人の端末にしか名前が無く、
 // 他の人の「勝った人」候補に出てこない＝戦績に入れてもらえない。
 function registerNameOnServer(name) {
-  if (!firebaseReady || !name) return Promise.resolve();
+  if (!firebaseReady || !name || HIDDEN_NAMES.has(name)) return Promise.resolve();
   if (getProfile(name)) return Promise.resolve();   // すでに居るなら何もしない
   return db.collection("profiles").add({
     name, type: "", scores: {}, titles: [],
@@ -4717,6 +4728,8 @@ function todayStr() {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
+// サンプルで使った名前。どこかの端末に残っていても、一覧・自動登録の対象にしない
+const HIDDEN_NAMES = new Set(["あお"]);
 function getAllKnownNames() {
   const names = new Set();
   Object.values(reviewsCache).forEach(list => list.forEach(r => { if (r.name) names.add(r.name); }));
@@ -4725,7 +4738,7 @@ function getAllKnownNames() {
   Object.keys(profilesCache).forEach(n => names.add(n));   // 診断だけした人も仲間に入れる
   const myName = getMyName();
   if (myName) names.add(myName);                            // 名前を登録した本人は常に選べる
-  const arr = Array.from(names).sort((a, b) => a.localeCompare(b, "ja"));
+  const arr = Array.from(names).filter(n => !HIDDEN_NAMES.has(n)).sort((a, b) => a.localeCompare(b, "ja"));
   if (myName && arr.includes(myName)) {
     return [myName, ...arr.filter(n => n !== myName)];
   }
@@ -6229,6 +6242,7 @@ function buildLogView() {
     ${picked ? `<button type="button" class="section-toggle-btn" data-log-unpick style="margin-bottom:10px;">← 今日の記録に戻る</button>` : ""}
     ${buildDayBlock(shown, !picked)}
     ${buildDayShelf(shown, !picked)}
+    ${buildMonthShelf(logMonthShown(), logOnlyMe && !!getMyName())}
   `;
 }
 
@@ -6539,11 +6553,43 @@ function allLogNames(sess) {
 
 // ほかの日：直近3日を出し、それより前は月を選ぶ。卓が無い日は出さない。
 let logMonthPick = "";   // カレンダーで表示中の月 "YYYY-MM"（空なら今月）
+let logOnlyMe = false;   // 自分がいた日だけに絞る
+// その日の卓のうち、自分が参加していたもの（絞り込み中だけ使う）
+function dayTablesFor(date, onlyMe) {
+  const list = getDayTables(date);
+  if (!onlyMe) return list;
+  const me = getMyName();
+  return me ? list.filter(h => historyParticipants(h).includes(me)) : [];
+}
+// その月に遊んだゲーム（重複なし）を棚に並べる
+function buildMonthShelf(ym, onlyMe) {
+  const seen = new Set(); const list = [];
+  allRecordDates().filter(d => d.startsWith(ym)).sort().forEach(d => {
+    dayTablesFor(d, onlyMe).forEach(h => {
+      if (seen.has(h.slug)) return;
+      const g = games.find(x => slugOf(x) === h.slug);
+      if (g) { seen.add(h.slug); list.push({ slug: h.slug, g }); }
+    });
+  });
+  if (!list.length) return "";
+  const [y, m] = [Number(ym.slice(0, 4)), Number(ym.slice(5, 7))];
+  return `
+    <div class="review-card">
+      <div class="review-header"><div class="review-title">${m}月${onlyMe ? "に自分が遊んだ" : "の"}ボドゲ棚</div><span class="review-count">${list.length}本</span></div>
+      ${renderShelfRows(list)}
+      <div class="shelf-foot">
+        <span>${y}年${m}月</span>
+        <button type="button" class="link-btn" data-month-shelf-export="${ym}">画像で保存</button>
+      </div>
+    </div>`;
+}
 // ほかの日の記録：月めくりカレンダー。記録のある日に卓数の印を出し、タップでその日を開く
 function buildSessionLog() {
   const today = todayStr();
-  const dates = allRecordDates().filter(d => getDayTables(d).length);
-  const byDate = {}; dates.forEach(d => { byDate[d] = getDayTables(d).length; });
+  const me = getMyName();
+  const onlyMe = logOnlyMe && !!me;
+  const dates = allRecordDates().filter(d => dayTablesFor(d, onlyMe).length);
+  const byDate = {}; dates.forEach(d => { byDate[d] = dayTablesFor(d, onlyMe).length; });
   const months = [...new Set([today.slice(0, 7), ...dates.map(d => d.slice(0, 7))])].sort();
   const cur = logMonthPick && months.includes(logMonthPick) ? logMonthPick : today.slice(0, 7);
   const idx = months.indexOf(cur);
@@ -6564,6 +6610,7 @@ function buildSessionLog() {
   }
   const monthDays = dates.filter(d => d.startsWith(cur));
   const monthTables = monthDays.reduce((a, d) => a + byDate[d], 0);
+  const monthKinds = new Set(); monthDays.forEach(d => dayTablesFor(d, onlyMe).forEach(h => monthKinds.add(h.slug)));
   return `
     <div class="review-card">
       <div class="cal-nav">
@@ -6575,9 +6622,21 @@ function buildSessionLog() {
         ${["日", "月", "火", "水", "木", "金", "土"].map(w => `<span class="cal-w">${w}</span>`).join("")}
         ${cells.join("")}
       </div>
+      <div class="cal-stats">
+        <div class="cal-stat"><b>${monthKinds.size}</b><span>${onlyMe ? "自分が遊んだ本数" : "遊んだ本数"}</span></div>
+        <div class="cal-stat"><b>${monthTables}</b><span>卓</span></div>
+        <div class="cal-stat"><b>${monthDays.length}</b><span>日</span></div>
+        ${me ? `<button type="button" class="cal-me ${onlyMe ? "on" : ""}" data-log-only-me>${onlyMe ? "✓ 自分がいた日" : "自分がいた日だけ"}</button>` : ""}
+      </div>
       <div class="review-count" style="margin-top:8px;">日付をタップするとその日の記録が下に開きます。記録のない過去の日にも、あとから戦績を足せます。</div>
     </div>
   `;
+}
+// カレンダーで見ている月（空なら今月）
+function logMonthShown() {
+  const today = todayStr();
+  const months = [...new Set([today.slice(0, 7), ...allRecordDates().map(d => d.slice(0, 7))])];
+  return logMonthPick && months.includes(logMonthPick) ? logMonthPick : today.slice(0, 7);
 }
 
 // その人の「タグごとの好み」。ジャンル・メカニクス・ゲームタグそれぞれについて、
@@ -7049,7 +7108,7 @@ function hideAllViews() {
 // タイプ診断（16タイプ）をした人同士の相性。4軸の寄り具合と、実際に一緒に遊んだ記録の両方から占う。
 // 恋愛の相性ではなく「一緒に卓を囲むメンバーとして」の見立て。
 let matchPick = [];
-let matchPickMode = "all";   // 相性ゲーム：all=総合 / new=全員未経験
+let matchPickMode = "play";   // 相性ゲーム：play=この人数で遊べるもの / fit=人数を問わず相性のいいもの
 
 function typedNames() {
   return getAllKnownNames().filter(n => isType16(getProfile(n)));
@@ -7319,7 +7378,10 @@ function buildMatchResult(names) {
 
   // ── ゲーム
   const avg = avgScoresOf(names);
-  const picks = sampleGamesForScores(avg, 3, matchPickMode === "new", names);
+  const picksAll = sampleGamesForScores(avg, 40, false, names);
+  const picks = (matchPickMode === "play"
+    ? picksAll.filter(x => (x.g.playersMin == null || x.g.playersMin <= names.length) && (x.g.playersMax == null || x.g.playersMax >= names.length))
+    : picksAll).slice(0, 3);
   const favs = groupFavorites(names);
   const played = groupPlayed(names);
 
@@ -7393,10 +7455,10 @@ function buildMatchResult(names) {
 
     <div class="review-card">
       <div class="review-header">
-        <div class="review-title">遊ぶならこの3本</div>
+        <div class="review-title">${matchPickMode === "play" ? `${names.length}人で遊ぶならこの3本` : "人数を問わず相性のいい3本"}</div>
         <div class="pick-toggle">
-          <button type="button" class="${matchPickMode === "all" ? "on" : ""}" data-match-mode="all">総合</button>
-          <button type="button" class="${matchPickMode === "new" ? "on" : ""}" data-match-mode="new">全員未経験</button>
+          <button type="button" class="${matchPickMode === "play" ? "on" : ""}" data-match-mode="play">遊ぶ</button>
+          <button type="button" class="${matchPickMode === "fit" ? "on" : ""}" data-match-mode="fit">相性</button>
         </div>
       </div>
       ${picks.length ? `<div class="player-game-list">${picks.map(x => matchGameRow(x.g, getGameTags(x.g).allMechanics.slice(0, 3).map(m => "#" + m).join(" "))).join("")}</div>` : `<div class="review-count">該当するゲームがありません。</div>`}
@@ -8098,6 +8160,18 @@ document.getElementById("logView").addEventListener("click", async e => {
     const seen = new Set(); const list = [];
     getDayTables(date).forEach(h => { const g = games.find(x => slugOf(x) === h.slug); if (g && !seen.has(h.slug)) { seen.add(h.slug); list.push({ slug: h.slug, g }); } });
     dayExp.disabled = true; await exportShelfImage(`${date} のボドゲ棚`, "うちのボードゲーム棚 ・ この日に遊んだゲーム", list); dayExp.disabled = false;
+    return;
+  }
+  if (e.target.closest("[data-log-only-me]")) { logOnlyMe = !logOnlyMe; rerenderLog(); return; }
+  const monthExp = e.target.closest("[data-month-shelf-export]");
+  if (monthExp) {
+    const ym = monthExp.dataset.monthShelfExport;
+    const onlyMe = logOnlyMe && !!getMyName();
+    const seen = new Set(); const list = [];
+    allRecordDates().filter(d => d.startsWith(ym)).sort().forEach(d => dayTablesFor(d, onlyMe).forEach(h => { const g = games.find(x => slugOf(x) === h.slug); if (g && !seen.has(h.slug)) { seen.add(h.slug); list.push({ slug: h.slug, g }); } }));
+    monthExp.disabled = true;
+    await exportShelfImage(`${Number(ym.slice(0, 4))}年${Number(ym.slice(5, 7))}月${onlyMe ? "に" + getMyName() + "が遊んだ" : "の"}ボドゲ棚`, "うちのボードゲーム棚 ・ この月に遊んだゲーム", list);
+    monthExp.disabled = false;
     return;
   }
   const monthBtn = e.target.closest("button[data-log-month]");
@@ -8966,15 +9040,27 @@ function buildRecentDays(name) {
 // 自分がいちばん高く評価したゲーム
 // MYボドゲ棚：自分の評価が高い順に12本（3列×4段）。表紙だけを棚に並べる。
 const SHELF_COLS = 3, SHELF_ROWS = 4;
+// 棚の12枠は、評価の高い順 → 評価はあるが総合なし（昔の1本評価）→ 評価はないが遊んだゲーム（回数が多い順）で埋める
 function shelfGames(name) {
-  return getPlayerRatings(name)
+  const cap = SHELF_COLS * SHELF_ROWS;
+  const rated = getPlayerRatings(name)
     .map(pr => {
       const full = (reviewsCache[pr.slug] || []).find(r => r.id === pr.id) || pr;
       return { slug: pr.slug, g: games.find(x => slugOf(x) === pr.slug), r: full };
     })
     .filter(x => x.g)
-    .sort((a, b) => (ratingAvg(b.r) || 0) - (ratingAvg(a.r) || 0) || (b.r.createdAt?.seconds || 0) - (a.r.createdAt?.seconds || 0))
-    .slice(0, SHELF_COLS * SHELF_ROWS);
+    .sort((a, b) => (ratingAvg(b.r) ?? (b.r.level ?? 0)) - (ratingAvg(a.r) ?? (a.r.level ?? 0)) || (b.r.createdAt?.seconds || 0) - (a.r.createdAt?.seconds || 0));
+  if (rated.length >= cap) return rated.slice(0, cap);
+  const have = new Set(rated.map(x => x.slug));
+  const played = {};
+  getPlayerPlays(name).forEach(h => {
+    if (have.has(h.slug)) return;
+    if (!played[h.slug]) played[h.slug] = { slug: h.slug, g: games.find(x => slugOf(x) === h.slug), n: 0, last: "" };
+    played[h.slug].n += 1;
+    if ((h.date || "") > played[h.slug].last) played[h.slug].last = h.date || "";
+  });
+  const extra = Object.values(played).filter(x => x.g).sort((a, b) => b.n - a.n || b.last.localeCompare(a.last));
+  return rated.concat(extra).slice(0, cap);
 }
 function coverSrc(slug) {
   return coverOverride[slug] || `data/covers/${slug}.jpg`;
