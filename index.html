@@ -58,7 +58,7 @@
     position: fixed;
     left: 0; right: 0; bottom: 0;
     display: grid;
-    grid-template-columns: repeat(5, 1fr);
+    grid-template-columns: repeat(4, 1fr);
     background: var(--card-bg);
     border-top: 1px solid var(--border);
     padding: 6px 4px calc(6px + env(safe-area-inset-bottom));
@@ -83,7 +83,6 @@
   .tab-item.on { color: var(--accent); }
   .tab-item.on .tab-ico { transform: none; }
   .tab-item:active { background: var(--accent-soft); }
-  .tab-item.spinning .tab-ico { animation: spin 0.8s linear infinite; }
   @keyframes spin { to { transform: rotate(360deg); } }
   .theme-toggle-btn {
     position: absolute;
@@ -108,19 +107,13 @@
     font-size: 14px;
     color: #c9dfec;
   }
-  header.detail-mode .count { display: none; }
-  .head-edit {
-    align-self: center;
-    border: 1px solid rgba(255,255,255,0.55);
-    background: rgba(255,255,255,0.1);
-    color: #fff;
-    border-radius: 999px;
-    padding: 5px 13px;
-    font-size: 12.5px;
-    font-weight: 700;
-    cursor: pointer;
+  .head-right { display: flex; align-items: center; gap: 10px; }
+  .head-refresh {
+    width: 34px; height: 34px; border-radius: 50%;
+    border: 1px solid rgba(255,255,255,0.45); background: rgba(255,255,255,0.1);
+    color: #fff; font-size: 16px; line-height: 1; cursor: pointer; display: flex; align-items: center; justify-content: center;
   }
-  .head-edit.on { background: #fff; color: var(--navy); border-color: #fff; }
+  .head-refresh.spinning .tab-ico { display: inline-block; animation: spin 0.8s linear infinite; }
   .user-badge {
     margin-top: 8px;
     font-size: 13px;
@@ -1218,6 +1211,16 @@
   .want-btn.done { border-color: var(--border); background: var(--bg); color: var(--text-sub); cursor: default; }
   .edit-panel { border-color: var(--accent); }
   .tag-pick { width: 100%; font-size: 14px; padding: 9px 10px; border: 1px solid var(--border); border-radius: 10px; background: var(--card-bg); color: var(--text); }
+  .sec-edit-link { border: none; background: none; color: var(--accent); font-size: 12px; font-weight: 700; cursor: pointer; padding: 2px 4px; border-bottom: 1px dotted var(--accent); }
+  .sec-edit-bar { display: flex; justify-content: flex-end; margin: -4px 0 4px; }
+  .sec-editor { margin-top: 4px; }
+  .tag-editor { margin-top: 12px; padding-top: 10px; border-top: 1px dashed var(--border); }
+  .tag-editor-row { display: flex; gap: 10px; align-items: flex-start; margin-bottom: 10px; }
+  .tag-editor-row > span { flex-shrink: 0; width: 64px; font-size: 11px; font-weight: 700; color: var(--text-sub); padding-top: 10px; }
+  .tag-editor-row > div { flex: 1; min-width: 0; }
+  .tag-editor-row .tag-add-form { margin-top: 6px; }
+  .tag-chip-edit.confirm { background: #fdecea; border-color: #c0392b; color: #c0392b; }
+  .tag-chip-edit.confirm button { color: #c0392b; font-weight: 700; }
   .cover-edit { display: flex; gap: 12px; align-items: flex-start; margin-bottom: 6px; }
   .cover-edit img { width: 120px; height: 90px; object-fit: contain; background: #fff; border: 1px solid var(--border); border-radius: 8px; flex-shrink: 0; }
   .cover-edit-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
@@ -2844,8 +2847,10 @@
 
 <header>
   <h1>うちのボードゲーム棚</h1>
-  <div class="count"><span id="totalCount">-</span>件</div>
-  <button type="button" class="head-edit" id="headEdit" hidden>編集</button>
+  <div class="head-right">
+    <div class="count"><span id="totalCount">-</span>件</div>
+    <button type="button" class="head-refresh" id="refreshBtn" title="最新のデータを読み込む"><span class="tab-ico">🔄</span></button>
+  </div>
 </header>
 
 <nav class="tab-bar" id="tabBar">
@@ -2853,7 +2858,6 @@
   <button type="button" class="tab-item" data-nav="mypage"><span class="tab-ico">👤</span><span>マイページ</span></button>
   <a href="#members" class="tab-item" data-nav="members"><span class="tab-ico">👥</span><span>みんな</span></a>
   <a href="#log" class="tab-item" data-nav="log"><span class="tab-ico">📝</span><span>記録</span></a>
-  <button type="button" class="tab-item" id="refreshBtn" title="最新のデータを読み込む"><span class="tab-ico">🔄</span><span>更新</span></button>
 </nav>
 
 <div class="controls" id="controls">
@@ -3015,7 +3019,7 @@ try {
 // ── 自動更新 ───────────────────────────────
 // iPhoneはHTMLを長く握るので、新しい版が出ていたらURLを変えて読み直す。
 // （同じURLの再読み込みだとキャッシュが返ってきてしまうため）
-const APP_BUILD = "2026-09-13-1121";
+const APP_BUILD = "2026-09-13-1146";
 
 function markVersion(extra) {
   const el = document.getElementById("appVersion");
@@ -3063,10 +3067,9 @@ let sessionsCache = [];
 let profilesCache = {};   // 名前 → 診断結果
 let customTagsCache = {}; // slug → 自分たちで足した/隠したタグ
 let ruleEditsCache = {};  // slug → 早見表の手直し
-let tagEditMode = false;
-let detailEditOpen = false;   // 詳細の「編集」パネル（ジャンル・メカニクス・タグをまとめて直す）
-let genreEditMode = false;
-let mechanicEditMode = false;
+let tagEditOpen = false;      // 詳細の「どんなゲーム？」右上の編集：ジャンル・メカニクス・ゲームタグ・表紙をその場で直す
+let pendingTagDelete = "";    // ×を1回押したタグ（2回目で消す）
+let secEdit = { setup: false, rules: false, quickref: false };   // 準備／ルール／早見表の編集フォーム表示
 let GENRE_VOCAB = new Set();      // データ読み込み後に埋める
 let MECHANIC_VOCAB = new Set();
 let moodScores = null;    // 「今日の気分」。保存せずその場限り
@@ -3724,7 +3727,7 @@ const GENRE_EQUIV = {
   "パズル": "パズル系",
   "ブラフ": "心理戦・ブラフ系",
   "ワード系": "ワード系",
-  "アクション": "アクション・バランス系"
+  "アクション": "アクション系"
 };
 
 function getGameTags(g) {
@@ -3948,110 +3951,6 @@ document.getElementById("genreSelect").addEventListener("change", e => {
 
 // ジャンル／メカニクスは間違っていることもあるので、その場で直せるようにする。
 // 検索が効かなくなると困るため、入力は既存の候補付き。
-function buildClassBox(g, kind) {
-  const slug = slugOf(g);
-  const t = getGameTags(g);
-  const { hidden } = getCustomTags(slug);
-  const isGenre = kind === "genre";
-  const label = isGenre ? "ジャンル" : "メカニクス（仕組み）";
-  const tags = isGenre ? t.genreTags : t.allMechanics;
-  const vocab = isGenre ? GENRE_VOCAB : MECHANIC_VOCAB;
-  const base = (isGenre ? genresData[slug] : mechanicsData[slug]) || [];
-  const hiddenHere = [...hidden].filter(x => base.includes(x) || vocab.has(x));
-  const editing = detailEditOpen || (isGenre ? genreEditMode : mechanicEditMode);
-  const listId = isGenre ? "genreVocab" : "mechanicVocab";
-
-  return `
-    <div class="class-box">
-      <div class="class-box-head">
-        <span class="class-box-label">${label}</span>
-        ${detailEditOpen ? "" : `<button type="button" class="link-btn" data-class-edit="${kind}">${editing ? "閉じる" : "直す"}</button>`}
-      </div>
-      <div class="tag-row">
-        ${tags.length
-          ? tags.map(x => editing
-              ? `<span class="tag-chip tag-chip-edit">${x}<button type="button" data-tag-drop="${x}">×</button></span>`
-              : `<button class="tag-chip" data-class-filter="${kind}" data-value="${x}">${x}</button>`).join("")
-          : `<span class="class-empty">未設定</span>`}
-      </div>
-      ${editing ? `
-      <select class="tag-pick" data-class-pick="${kind}" data-slug="${slug}" style="margin-top:10px;">
-        <option value="">${isGenre ? "ジャンル" : "メカニクス"}を選んで追加…</option>
-        ${[...vocab].filter(v => !tags.includes(v)).map(v => `<option value="${v}">${v}</option>`).join("")}
-      </select>
-      <form class="tag-add-form" style="margin-top:6px;" data-class-form="${kind}" data-slug="${slug}">
-        <input type="text" name="tag" list="${listId}" placeholder="または自由に入力" maxlength="20" required>
-        <button type="submit">追加</button>
-      </form>
-      <datalist id="${listId}">${[...vocab].map(v => `<option value="${v}">`).join("")}</datalist>
-      ${hiddenHere.length ? `
-        <div class="tag-edit-note">外したもの（タップで戻す）</div>
-        <div class="tag-row">${hiddenHere.map(x => `<button type="button" class="tag-chip tag-chip-hidden" data-tag-restore="${x}">${x} ↩</button>`).join("")}</div>
-      ` : ""}
-      ` : ""}
-    </div>
-  `;
-}
-
-function buildClassGrid(g) {
-  return `<div class="class-grid">${buildClassBox(g, "genre")}${buildClassBox(g, "mechanic")}</div>`;
-}
-
-function buildTagsAndPitch(g, forceEdit) {
-  const slug = slugOf(g);
-  const { audienceTags, customTags } = getGameTags(g);
-  const tagEditModeNow = forceEdit || tagEditMode;
-  const { hidden } = getCustomTags(slug);
-  const r = rulesData[slug];
-  const sellingPoints = r && r.sellingPoints;
-  const anyTags = audienceTags.length || customTags.length;
-
-  // 編集モードのときはタップで検索せず、×で外せるようにする
-  const tagChip = (t, own) => tagEditMode
-    ? `<span class="tag-chip ${own ? "tag-chip-own" : ""} tag-chip-edit">#${t}<button type="button" data-tag-drop="${t}" title="外す">×</button></span>`
-    : `<button class="tag-chip ${own ? "tag-chip-own" : ""}" data-tag-search="${t}">#${t}</button>`;
-
-  const vocab = Array.from(new Set(games.flatMap(x => getGameTags(x).all))).sort((a, b) => a.localeCompare(b, "ja"));
-  // プルダウン用：ジャンル・メカニクス以外（雰囲気タグ＋みんなが足したタグ）
-  // プルダウンは決めた語彙＋みんなが足したタグ（件数順）
-  const hashVocab = Array.from(new Set([...HASHTAG_VOCAB, ...vocab.filter(v => !GENRE_VOCAB.has(v) && !MECHANIC_VOCAB.has(v))]))
-    .sort((a, b) => (tagCounts()[b] || 0) - (tagCounts()[a] || 0) || a.localeCompare(b, "ja"));
-
-  return `
-    ${anyTags ? `
-    <div class="tag-section">
-      <div class="tag-row">
-        ${audienceTags.map(t => tagChip(t, false)).join("")}
-        ${customTags.map(t => tagChip(t, true)).join("")}
-      </div>
-    </div>` : ""}
-    ${forceEdit ? `<div class="class-box-label" style="margin-top:12px;">ハッシュタグ</div>` : `<div class="tag-edit-bar">
-      <button type="button" class="link-btn" data-tag-edit-toggle>${tagEditModeNow ? "編集をやめる" : "✏️ タグを編集"}</button>
-    </div>`}
-    ${tagEditModeNow ? `
-    <div class="tag-edit-card">
-      <select class="tag-pick" data-tag-pick="${slug}">
-        <option value="">ハッシュタグを選んで追加…</option>
-        ${hashVocab.filter(v => !getGameTags(g).all.includes(v)).map(v => `<option value="${v}">#${v}</option>`).join("")}
-      </select>
-      <form class="tag-add-form" style="margin-top:6px;" data-tag-form="${slug}">
-        <input type="text" name="tag" list="tagVocab" placeholder="または自由に入力（例: 初手が肝心）" maxlength="20" required>
-        <button type="submit">追加</button>
-      </form>
-      <datalist id="tagVocab">${vocab.map(v => `<option value="${v}">`).join("")}</datalist>
-      <div class="tag-edit-note">自分で足したタグは色付きで出ます。元からあるタグを外しても、他のゲームには影響しません。</div>
-      ${hidden.size ? `
-        <div class="tag-edit-note" style="margin-top:8px;">外したタグ（タップで戻す）</div>
-        <div class="tag-row">${[...hidden].map(t => `<button type="button" class="tag-chip tag-chip-hidden" data-tag-restore="${t}">#${t} ↩</button>`).join("")}</div>
-      ` : ""}
-    </div>` : ""}
-    ${!forceEdit && sellingPoints && sellingPoints.length ? `
-    <div class="pitch-card">
-      <div class="pitch-title">✨ おすすめポイント</div>
-      <ul class="pitch-list">${sellingPoints.map(p => `<li>${p}</li>`).join("")}</ul>
-    </div>` : ""}
-  `;
-}
 
 function fetchCollectionCache(collectionName, cacheKey) {
   if (!firebaseReady) {
@@ -4242,13 +4141,16 @@ const HASHTAG_RENAME = {
 function renameHashtag(t) {
   return t in HASHTAG_RENAME ? HASHTAG_RENAME[t] : t;
 }
+// ジャンル名の変更（アクション・バランス系を2つに分けた）
+const GENRE_RENAME = { "アクション・バランス系": "アクション系" };
+function renameGenre(t) { return t in GENRE_RENAME ? GENRE_RENAME[t] : t; }
 // 自分たちで足したタグ／消したタグ
 function getCustomTags(slug) {
   const list = customTagsCache[slug] || [];
   const add = list.filter(c => c.mode === "add");
   return {
     added: Array.from(new Set(add.filter(c => !c.kind || c.kind === "tag").map(c => renameHashtag(c.tag)).filter(Boolean))),
-    addedGenres: add.filter(c => c.kind === "genre").map(c => c.tag),
+    addedGenres: add.filter(c => c.kind === "genre").map(c => renameGenre(c.tag)),
     addedMechanics: add.filter(c => c.kind === "mechanic").map(c => renameMechanic(c.tag)).filter(Boolean),
     hidden: new Set(list.filter(c => c.mode === "hide").map(c => renameHashtag(renameMechanic(c.tag) || c.tag) || c.tag))
   };
@@ -5103,63 +5005,46 @@ function buildQuickRef(g) {
 }
 
 // 右上の「編集」で開く、このゲームの直せるもの全部
-function buildEditPanel(g) {
+// 準備／早見表の写真の並びと追加・削除
+function photoEdit(slug, kind, label) {
+  const list = getPhotos(slug, kind);
+  return `
+    <div class="edit-photos">
+      ${list.length ? `<div class="photo-strip">
+        ${list.map(p => `
+          <div class="photo-thumb">
+            <img src="${p.data}" alt="${label}" data-photo-view="${p.id}" data-photo-slug="${slug}">
+            <button type="button" class="photo-del ${pendingPhotoDelete === p.id ? "confirm" : ""}"
+                    data-photo-del="${p.id}" data-photo-slug="${slug}">${pendingPhotoDelete === p.id ? "消す？" : "×"}</button>
+          </div>`).join("")}
+      </div>` : ""}
+      <label class="photo-add">
+        <input type="file" accept="image/*" data-photo-add="${kind}" data-photo-slug="${slug}" hidden>
+        📷 ${label}の写真を追加${list.length ? `（${list.length}枚）` : ""}
+      </label>
+    </div>`;
+}
+// 準備／ルール／早見表それぞれの編集フォーム（各セクションの「編集」から開く）
+function buildSectionEditor(g, kind) {
   const slug = slugOf(g);
   const d = quickRefData(g);
-  const photoEdit = (kind, label) => {
-    const list = getPhotos(slug, kind);
-    return `
-      <div class="edit-photos">
-        ${list.length ? `<div class="photo-strip">
-          ${list.map(p => `
-            <div class="photo-thumb">
-              <img src="${p.data}" alt="${label}" data-photo-view="${p.id}" data-photo-slug="${slug}">
-              <button type="button" class="photo-del ${pendingPhotoDelete === p.id ? "confirm" : ""}"
-                      data-photo-del="${p.id}" data-photo-slug="${slug}">${pendingPhotoDelete === p.id ? "消す？" : "×"}</button>
-            </div>`).join("")}
-        </div>` : ""}
-        <label class="photo-add">
-          <input type="file" accept="image/*" data-photo-add="${kind}" data-photo-slug="${slug}" hidden>
-          📷 ${label}の写真を追加${list.length ? `（${list.length}枚）` : ""}
-        </label>
-      </div>`;
-  };
-  return `
-    <div class="review-card edit-panel">
-      <div class="review-title" style="margin-bottom:4px;">このゲームを編集</div>
-      <div class="review-count" style="margin-bottom:10px;">変えたところは、みんなの画面にも反映されます。</div>
-
-      <div class="edit-sec-title">表紙（箱の写真）</div>
-      <div class="cover-edit">
-        <img src="${coverSrc(slug)}" alt="表紙" onerror="this.src='${coverFallback(g, "card")}'">
-        <div class="cover-edit-body">
-          <div class="review-count">背景が白い「箱だけ」の写真だと棚がきれいに見えます。一覧・詳細・棚に反映されます。</div>
-          <label class="photo-add">
-            <input type="file" accept="image/*" data-cover-add="${slug}" hidden>
-            📷 ${coverOverride[slug] ? "別の写真に差し替える" : "箱の写真に差し替える"}
-          </label>
-          ${coverOverride[slug] ? `<button type="button" class="link-btn ${pendingPhotoDelete === "cover:" + slug ? "danger" : ""}" data-cover-reset="${slug}">${pendingPhotoDelete === "cover:" + slug ? "本当に元に戻す？" : "元の写真に戻す"}</button>` : ""}
-        </div>
-      </div>
-
-      <div class="edit-sec-title">ジャンル・メカニクス・ハッシュタグ</div>
-      ${buildClassGrid(g)}
-      ${buildTagsAndPitch(g, true)}
-
-      <div class="edit-sec-title">準備</div>
+  if (kind === "setup") return `
+    <div class="sec-editor">
       <form class="review-form" data-rule-form="setup" data-slug="${slug}">
         <textarea name="lines" rows="5" placeholder="1行に1項目">${d.setup.join("\n")}</textarea>
         <button type="submit">準備を保存</button>
       </form>
-      ${photoEdit("setup", "準備")}
-
-      <div class="edit-sec-title">ルール</div>
+      ${photoEdit(slug, "setup", "準備")}
+    </div>`;
+  if (kind === "rules") return `
+    <div class="sec-editor">
       <form class="review-form" data-rule-form="rules" data-slug="${slug}">
         <textarea name="lines" rows="6" placeholder="1行に1項目">${d.rules.join("\n")}</textarea>
         <button type="submit">ルールを保存</button>
       </form>
-
-      <div class="edit-sec-title">プレイ中の早見表</div>
+    </div>`;
+  return `
+    <div class="sec-editor">
       <form class="review-form quickref-form" data-quickref-slug="${slug}">
         <div class="review-form-field">
           <label>勝利条件</label>
@@ -5176,9 +5061,12 @@ function buildEditPanel(g) {
         <button type="submit">早見表を保存</button>
         ${d.edited ? `<button type="button" class="section-toggle-btn" data-quickref-reset style="margin-top:8px;">元の内容に戻す</button>` : ""}
       </form>
-      ${photoEdit("quickref", "早見表")}
-    </div>
-  `;
+      ${photoEdit(slug, "quickref", "早見表")}
+    </div>`;
+}
+// セクション見出しの右に置く小さな「編集」
+function secEditLink(kind) {
+  return `<button type="button" class="sec-edit-link" data-sec-edit="${kind}">${secEdit[kind] ? "閉じる" : "編集"}</button>`;
 }
 
 function buildPitchSection(g) {
@@ -5206,17 +5094,67 @@ function hashTagsOf(g) {
   return [...t.audienceTags.filter(x => !AUTO_TAG_SET.has(x)), ...t.customTags]
     .sort((a, b) => (c[b] || 0) - (c[a] || 0) || a.localeCompare(b, "ja"));   // 登録件数の多い順
 }
+// 編集モードのチップ：×を1回押すと「消す？」、もう1回で消える
+function editChip(label, tag) {
+  const pending = pendingTagDelete === tag;
+  return `<span class="tag-chip mini tag-chip-edit ${pending ? "confirm" : ""}">${label}<button type="button" data-tag-del="${tag}" title="外す">${pending ? "消す？" : "×"}</button></span>`;
+}
 function hashChips(g, mini) {
-  return hashTagsOf(g).map(x => `<button type="button" class="tag-chip ${mini ? "mini" : ""}" data-tag-search="${x}">#${x}</button>`).join("");
+  return hashTagsOf(g).map(x => tagEditOpen ? editChip("#" + x, x) : `<button type="button" class="tag-chip ${mini ? "mini" : ""}" data-tag-search="${x}">#${x}</button>`).join("");
+}
+// どんなゲーム？の編集欄：ジャンル・メカニクス・ゲームタグの追加と、表紙の差し替え
+function buildTagEditor(g) {
+  const slug = slugOf(g);
+  const t = getGameTags(g);
+  const pick = (kind, label, vocab, have) => `
+    <div class="tag-editor-row">
+      <span>${label}</span>
+      <div>
+        <select class="tag-pick" data-class-pick="${kind}" data-slug="${slug}">
+          <option value="">${label}を選んで追加…</option>
+          ${vocab.filter(v => !have.includes(v)).map(v => `<option value="${v}">${kind === "tag" ? "#" : ""}${v}</option>`).join("")}
+        </select>
+        <form class="tag-add-form" data-class-form="${kind}" data-slug="${slug}">
+          <input type="text" name="tag" placeholder="または自由に入力" maxlength="20" required>
+          <button type="submit">追加</button>
+        </form>
+      </div>
+    </div>`;
+  const allTags = Array.from(new Set(games.flatMap(x => getGameTags(x).all)));
+  const hashVocab = Array.from(new Set([...HASHTAG_VOCAB, ...allTags.filter(v => !GENRE_VOCAB.has(v) && !MECHANIC_VOCAB.has(v))]))
+    .sort((a, b) => (tagCounts()[b] || 0) - (tagCounts()[a] || 0) || a.localeCompare(b, "ja"));
+  const { hidden } = getCustomTags(slug);
+  return `
+    <div class="tag-editor">
+      <div class="review-count" style="margin-bottom:8px;">チップの × を2回押すと外せます。変えたところはみんなの画面にも反映されます。</div>
+      ${pick("genre", "ジャンル", [...GENRE_VOCAB], t.genreTags)}
+      ${pick("mechanic", "メカニクス", [...MECHANIC_VOCAB], t.allMechanics)}
+      ${pick("tag", "ゲームタグ", hashVocab, t.all)}
+      ${hidden.size ? `<div class="tag-editor-row"><span>外したもの</span><div class="tag-row">${[...hidden].map(x => `<button type="button" class="tag-chip mini tag-chip-hidden" data-tag-restore="${x}">${x} ↩</button>`).join("")}</div></div>` : ""}
+      <div class="tag-editor-row">
+        <span>表紙</span>
+        <div class="cover-edit">
+          <img src="${coverSrc(slug)}" alt="表紙" onerror="this.src='${coverFallback(g, "card")}'">
+          <div class="cover-edit-body">
+            <label class="photo-add">
+              <input type="file" accept="image/*" data-cover-add="${slug}" hidden>
+              📷 ${coverOverride[slug] ? "別の写真に差し替える" : "箱の写真に差し替える"}
+            </label>
+            ${coverOverride[slug] ? `<button type="button" class="link-btn ${pendingPhotoDelete === "cover:" + slug ? "danger" : ""}" data-cover-reset="${slug}">${pendingPhotoDelete === "cover:" + slug ? "本当に元に戻す？" : "元の写真に戻す"}</button>` : ""}
+          </div>
+        </div>
+      </div>
+    </div>`;
 }
 function buildWorldviewSection(g) {
   const slug = slugOf(g);
   const r = rulesData[slug];
   const chips = hashChips(g, true);
-  if ((!r || !r.worldview) && !chips) return "";
-  return `<div class="review-card"><div class="review-title" style="margin-bottom:6px;">どんなゲーム？</div>
+  return `<div class="review-card">
+    <div class="review-header" style="margin-bottom:6px;"><div class="review-title">どんなゲーム？</div><button type="button" class="sec-edit-link" data-tag-edit-toggle>${tagEditOpen ? "終了" : "編集"}</button></div>
     ${r && r.worldview ? `<p class="detail-worldview" style="margin:0;">${r.worldview}</p>` : ""}
-    ${chips ? `<div class="detail-tags-label">ゲームタグ</div><div class="tag-row detail-tags">${chips}</div>` : ""}
+    ${chips || tagEditOpen ? `<div class="detail-tags-label">ゲームタグ</div><div class="tag-row detail-tags">${chips || `<span class="class-empty">未設定</span>`}</div>` : ""}
+    ${tagEditOpen ? buildTagEditor(g) : ""}
   </div>`;
 }
 
@@ -5251,7 +5189,7 @@ function buildRuleBlock(slug, kind, label, lines) {
     <div class="rule-block">
       ${lines.length
         ? `<ol class="detail-list">${lines.map(x => `<li>${x}</li>`).join("")}</ol>`
-        : `<div class="review-count">まだ書かれていません。右上の「編集」から足せます。</div>`}
+        : `<div class="review-count">まだ書かれていません。「編集」から足せます。</div>`}
       ${photos.length ? `<div class="photo-strip">
         ${photos.map(p => `<div class="photo-thumb"><img src="${p.data}" alt="${label}" data-photo-view="${p.id}" data-photo-slug="${slug}"></div>`).join("")}
       </div>` : ""}
@@ -5264,6 +5202,7 @@ let lastDetailSlug = "";
 // ヘッダー右の「編集」ボタン。詳細ページのときだけ出す（件数と入れ替え）。
 // ジャンル／メカニクスのチップが3行以上に膨らんだら、2行に畳んで「＋N」で開く
 function collapseTagRows(root) {
+  if (tagEditOpen) return;   // 編集中は全部見せる（隠れたチップを外せないので）
   root.querySelectorAll(".hero-class .tag-row:not(.checked), .detail-tags:not(.checked)").forEach(row => {
     row.classList.add("checked");
     const chips = [...row.querySelectorAll(".tag-chip")];
@@ -5290,24 +5229,11 @@ function collapseTagRows(root) {
     }
   });
 }
-function setHeaderEdit(show) {
-  const btn = document.getElementById("headEdit");
-  btn.hidden = !show;
-  btn.classList.toggle("on", show && detailEditOpen);
-  btn.textContent = show && detailEditOpen ? "閉じる" : "編集";
-  document.querySelector("header").classList.toggle("detail-mode", show);
-}
-document.getElementById("headEdit").addEventListener("click", () => {
-  detailEditOpen = !detailEditOpen;
-  const g = currentDetailGame();
-  if (g) showDetail(g);
-});
-
 function showDetail(g) {
   // 同じゲームの再描画（タグ追加・評価保存など）ならスクロール位置を保つ。別のゲームなら先頭へ
   const sameGame = slugOf(g) === lastDetailSlug && document.getElementById("detailView").style.display === "block";
   const keepY = sameGame ? window.scrollY : null;
-  if (slugOf(g) !== lastDetailSlug) { detailEditOpen = false; pendingPhotoDelete = ""; lastDetailSlug = slugOf(g); if (pendingDetailSection !== "rating") { ratingMemoPrefill = ""; ratingFormOpen = false; } }
+  if (slugOf(g) !== lastDetailSlug) { tagEditOpen = false; pendingTagDelete = ""; secEdit = { setup: false, rules: false, quickref: false }; pendingPhotoDelete = ""; lastDetailSlug = slugOf(g); if (pendingDetailSection !== "rating") { ratingMemoPrefill = ""; ratingFormOpen = false; } }
   document.getElementById("controls").style.display = "none";
   document.getElementById("listView").style.display = "none";
   document.getElementById("playerView").style.display = "none";
@@ -5318,7 +5244,6 @@ function showDetail(g) {
   document.getElementById("quizView").style.display = "none";
   const dv = document.getElementById("detailView");
   dv.style.display = "block";
-  setHeaderEdit(true);
   // 描画後にジャンル・メカニクスの行数を見て、3行以上なら2行で畳む
   requestAnimationFrame(() => { collapseTagRows(dv); refineCoverImages(dv.querySelector(".hero")); });
 
@@ -5345,7 +5270,7 @@ function showDetail(g) {
         ${(() => {
           const t = getGameTags(g);
           const chips = (arr, kind) => arr.length
-            ? arr.map(x => `<button type="button" class="tag-chip mini" data-class-filter="${kind}" data-value="${x}">${x}</button>`).join("")
+            ? arr.map(x => tagEditOpen ? editChip(x, x) : `<button type="button" class="tag-chip mini" data-class-filter="${kind}" data-value="${x}">${x}</button>`).join("")
             : `<span class="class-empty">未設定</span>`;
           return `
             <div class="hero-class"><span>ジャンル</span><div class="tag-row">${chips(t.genreTags, "genre")}</div></div>
@@ -5353,7 +5278,6 @@ function showDetail(g) {
         })()}
       </div>
     </div>
-    ${detailEditOpen ? buildEditPanel(g) : ""}
     <div class="detail-act-row four plain">
       <button type="button" class="detail-act detail-act-today ${todayCount ? "on-today" : ""}" data-played="${slug}">今日やる！</button>
       <button type="button" class="detail-act ${mine != null ? "rated" : ""}" data-jump="detailRecord">${mine != null ? "評価済み" : "評価する"}</button>
@@ -5371,14 +5295,14 @@ function showDetail(g) {
       const d = quickRefData(g);
       const hasS = d.setup.length || getPhotos(slug, "setup").length;
       const hasR = d.rules.length || getPhotos(slug, "rules").length;
-      return collapsibleSection("prep", "🧩 準備", buildRuleBlock(slug, "setup", "ゲームの準備", d.setup), !!hasS)
-        + collapsibleSection("rules", "📕 ルール", buildRuleBlock(slug, "rules", "ルール", d.rules) + `
+      return collapsibleSection("prep", "🧩 準備", `<div class="sec-edit-bar">${secEditLink("setup")}</div>` + (secEdit.setup ? buildSectionEditor(g, "setup") : buildRuleBlock(slug, "setup", "ゲームの準備", d.setup)), !!hasS || secEdit.setup)
+        + collapsibleSection("rules", "📕 ルール", `<div class="sec-edit-bar">${secEditLink("rules")}</div>` + (secEdit.rules ? buildSectionEditor(g, "rules") : buildRuleBlock(slug, "rules", "ルール", d.rules)) + `
           <div class="tag-edit-bar" style="margin-top:8px;">
             <a class="link-btn" href="${ruleVideoUrl(g)}" target="_blank" rel="noopener">▶ 動画で確認</a>
             <a class="link-btn" href="${g.url}" target="_blank" rel="noopener" style="margin-left:12px;">ボドゲーマで見る</a>
-          </div>`, !!hasR);
+          </div>`, !!hasR || secEdit.rules);
     })()}
-    ${collapsibleSection("quickref", "🎯 プレイ中の早見表", buildQuickRef(g), false)}
+    ${collapsibleSection("quickref", "🎯 プレイ中の早見表", `<div class="sec-edit-bar">${secEditLink("quickref")}</div>` + (secEdit.quickref ? buildSectionEditor(g, "quickref") : buildQuickRef(g)), secEdit.quickref)}
     ${collapsibleSection("history", `🏆 戦績（${getHistory(slugOf(g)).length}件）`, buildHistorySection(g), false)}
   `;
   if (keepY != null && !pendingDetailSection) {
@@ -5483,10 +5407,10 @@ document.getElementById("detailView").addEventListener("submit", async e => {
     const tag = classForm.elements.tag.value.trim().replace(/^#/, "");
     if (!tag) return;
     const g = games.find(x => slugOf(x) === slug);
-    const cur = kind === "genre" ? getGameTags(g).genreTags : getGameTags(g).allMechanics;
+    const cur = kind === "genre" ? getGameTags(g).genreTags : kind === "mechanic" ? getGameTags(g).allMechanics : getGameTags(g).all;
     if (cur.includes(tag)) { alert("それはもう付いています。"); return; }
     classForm.querySelector("button").disabled = true;
-    await addCustomTag(slug, tag, getMyName() || "", kind);
+    await addCustomTag(slug, tag, getMyName() || "", kind === "tag" ? "" : kind);
     if (g) showDetail(g);
     renderTagCloud(); renderGenreOptions(); renderMechanicOptions(); renderSearchSuggest();
     return;
@@ -5680,28 +5604,44 @@ document.getElementById("detailView").addEventListener("click", async e => {
   }
 
   if (e.target.closest("[data-tag-edit-toggle]")) {
-    tagEditMode = !tagEditMode;
+    tagEditOpen = !tagEditOpen; pendingTagDelete = "";
     const g = currentDetailGame();
     if (g) showDetail(g);
     return;
   }
-  const classEdit = e.target.closest("[data-class-edit]");
-  if (classEdit) {
-    if (classEdit.dataset.classEdit === "genre") genreEditMode = !genreEditMode;
-    else mechanicEditMode = !mechanicEditMode;
+  const secBtn = e.target.closest("[data-sec-edit]");
+  if (secBtn) {
+    const k = secBtn.dataset.secEdit; secEdit[k] = !secEdit[k];
     const g = currentDetailGame();
     if (g) showDetail(g);
     return;
   }
-  const drop = e.target.closest("[data-tag-drop]");
-  const restore = e.target.closest("[data-tag-restore]");
-  if (drop || restore) {
+  // タグの×：1回目は「消す？」、2回目で外す
+  const del = e.target.closest("[data-tag-del]");
+  if (del) {
+    const tag = del.dataset.tagDel;
     const g = currentDetailGame();
     if (!g) return;
-    const name = getMyName() || "";
-    (drop || restore).disabled = true;
-    await (drop ? dropTag(slugOf(g), drop.dataset.tagDrop, name)
-                : restoreTag(slugOf(g), restore.dataset.tagRestore));
+    if (pendingTagDelete !== tag) {
+      pendingTagDelete = tag;
+      showDetail(g);
+      setTimeout(() => { if (pendingTagDelete === tag) { pendingTagDelete = ""; const g2 = currentDetailGame(); if (g2 && slugOf(g2) === slugOf(g)) showDetail(g2); } }, 4000);
+      return;
+    }
+    pendingTagDelete = "";
+    del.disabled = true;
+    await dropTag(slugOf(g), tag, getMyName() || "");
+    showDetail(g);
+    renderTagCloud(); renderGenreOptions(); renderMechanicOptions();
+    toast(`${tag} を外しました`);
+    return;
+  }
+  const restore = e.target.closest("[data-tag-restore]");
+  if (restore) {
+    const g = currentDetailGame();
+    if (!g) return;
+    restore.disabled = true;
+    await restoreTag(slugOf(g), restore.dataset.tagRestore);
     showDetail(g);
     renderTagCloud();
   }
@@ -5744,12 +5684,6 @@ document.getElementById("detailView").addEventListener("click", async e => {
     const g = currentDetailGame();
     if (g) showDetail(g);
     toast("元の写真に戻しました");
-    return;
-  }
-  if (e.target.closest("[data-detail-edit]")) {
-    detailEditOpen = !detailEditOpen;
-    const g = currentDetailGame();
-    if (g) showDetail(g);
     return;
   }
   const heroImg = e.target.closest("[data-photo-src]");
@@ -6822,7 +6756,7 @@ document.getElementById("detailView").addEventListener("change", async e => {
   if (classPick && classPick.value) {
     const kind = classPick.dataset.classPick, slug = classPick.dataset.slug, tag = classPick.value;
     classPick.disabled = true;
-    await addCustomTag(slug, tag, getMyName() || "", kind);
+    await addCustomTag(slug, tag, getMyName() || "", kind === "tag" ? "" : kind);
     const g = games.find(x => slugOf(x) === slug);
     if (g) showDetail(g);
     renderTagCloud(); renderGenreOptions(); renderMechanicOptions(); renderSearchSuggest();
@@ -7115,14 +7049,14 @@ function buildAxisChart(scores) {
 // 診断結果に合うゲームを、上位タイプのメカニクスから拾う
 // 各文字と相性のいいジャンル（結果の言語化に使う）
 const LETTER_GENRES = {
-  E: ["パーティ系", "ワード系", "アクション・バランス系"],
+  E: ["パーティ系", "ワード系", "アクション系", "バランス系"],
   I: ["推理系", "パズル系", "戦略系"],
   S: ["戦略系", "パズル系"],
   N: ["心理戦・ブラフ系", "正体隠匿系", "TRPG・物語系"],
   T: ["戦略系", "心理戦・ブラフ系", "2人用"],
   F: ["協力系", "チーム戦系"],
   J: ["戦略系", "レガシー・キャンペーン系"],
-  P: ["パーティ系", "アクション・バランス系"]
+  P: ["パーティ系", "アクション系", "バランス系", "ゴーアウト系"]
 };
 // プレイ時間の好み：じっくり・計画派ほど長めが合う。-1（短め）〜1（長め）
 function timeLeaning(scores) {
@@ -8029,7 +7963,7 @@ function buildTitleDefs() {
     "戦略系": "戦術家", "協力系": "頼れる仲間", "パーティ系": "盛り上げ役",
     "心理戦・ブラフ系": "嘘つき", "推理系": "推理狂", "正体隠匿系": "潜入者",
     "ワード系": "言葉遊び人", "パズル系": "パズラー",
-    "アクション・バランス系": "職人技", "TRPG・物語系": "語り部"
+    "アクション系": "職人技", "バランス系": "均衡の支配者", "ゴーアウト系": "出し切り名人", "TRPG・物語系": "語り部"
   };
   // 10/20/30/40/50 で段位が上がる。同じ名前が並ばないよう5段階すべて別名にする。
   const TIERS = [[10, ""], [20, "・二段"], [30, "・三段"], [40, "・四段"], [50, "・皆伝"]];
@@ -8819,7 +8753,6 @@ document.getElementById("playerView").addEventListener("change", e => {
 });
 
 function router() {
-  setHeaderEdit(false);
   const gameMatch = location.hash.match(/^#game\/(.+)$/);
   if (gameMatch) {
     const slug = decodeURIComponent(gameMatch[1]);
