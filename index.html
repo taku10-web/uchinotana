@@ -2594,7 +2594,8 @@
   .match-hero-name { font-size: 22px; font-weight: 800; margin: 2px 0 6px; }
   .match-hero-text { margin: 0; font-size: 13.5px; line-height: 1.7; text-align: left; }
   .match-kind { display: flex; flex-direction: column; align-items: center; gap: 2px; margin-top: 12px; }
-  .match-kind b { font-size: 17px; }
+  .match-kind b { font-size: 17px; display: flex; flex-direction: column; align-items: center; }
+  .match-kind b small { font-size: 12px; font-weight: 700; color: var(--accent); }
   .match-kind span { font-size: 12px; color: var(--text-sub); }
   .match-metric { padding: 8px 0; border-top: 1px solid var(--border); }
   .match-metric:first-of-type { border-top: none; }
@@ -3148,7 +3149,7 @@ try {
 // ── 自動更新 ───────────────────────────────
 // iPhoneはHTMLを長く握るので、新しい版が出ていたらURLを変えて読み直す。
 // （同じURLの再読み込みだとキャッシュが返ってきてしまうため）
-const APP_BUILD = "2026-09-13-2215";
+const APP_BUILD = "2026-09-13-2220";
 
 function markVersion(extra) {
   const el = document.getElementById("appVersion");
@@ -7387,6 +7388,41 @@ function patternOf(names) {
     return share >= 0.75 ? "S" : "D";
   }).join("");
 }
+// 16パターンをさらに細かく：卓全体でいちばん強く出ている傾向（色）と、いちばん割れている軸
+const MATCH_COLORS = {
+  E: { name: "ワイワイ色", text: "全体としてはにぎやかさが勝つ卓。ゲームの合間の雑談も含めて楽しい時間になりますが、静かなゲームは向きません。" },
+  I: { name: "じっくり色", text: "全体としては落ち着いた卓。長考が許され、じわじわ効いてくるゲームで真価が出ます。盛り上げ役は期待しないほうがいい。" },
+  S: { name: "堅実色", text: "全体としては手順と正確さを重んじる卓。ルールの穴を突くより、ルール通りに強い人が勝ちます。" },
+  N: { name: "直感色", text: "全体としてはひらめきと読みで動く卓。ブラフや正体隠匿が映えますが、細かい得点計算は誰かが泣きます。" },
+  T: { name: "勝負色", text: "全体としては勝ち負けに本気の卓。手加減なしが前提なので、負けた人のフォローだけは意識して。" },
+  F: { name: "調和色", text: "全体としては和を重んじる卓。勝敗より過程を楽しみ、協力系や創作系で一番いい顔をします。" },
+  J: { name: "計画色", text: "全体としては段取りのいい卓。準備が速く、ルールも守られますが、ルール裁判が長引くのが玉にきず。" },
+  P: { name: "即興色", text: "全体としては流れで動く卓。始まれば最高に盛り上がりますが、始まるまでと片付けが弱点です。" }
+};
+const MATCH_SPLITS = {
+  EI: { short: "空気感で割れる", text: "いちばん割れているのは空気感。話す人と聞く人の差が、そのまま発言量の差になります。手番が順番に回るゲームだと均等に参加できます。" },
+  SN: { short: "考え方で割れる", text: "いちばん割れているのは考え方。堅実派の手順どおりの説明が直感派には長く、直感派の「なんとなく」が堅実派には雑に見えます。" },
+  TF: { short: "勝負観で割れる", text: "いちばん割れているのは勝ち負けへの温度。勝負派の本気が調和派には攻撃に見える瞬間があります。チーム戦で同じ側に置くと消えます。" },
+  JP: { short: "進行のリズムで割れる", text: "いちばん割れているのは進め方。計画派が準備している横で即興派が別の箱を開ける光景が、この卓の日常です。" }
+};
+function colorOf(names) {
+  let best = null;
+  AXES.forEach(ax => {
+    const mean = names.reduce((sum, n) => sum + axisVal(n, ax.key), 0) / names.length;
+    if (!best || Math.abs(mean) > Math.abs(best.mean)) best = { ax, mean };
+  });
+  return MATCH_COLORS[best.mean > 0 ? best.ax.a : best.ax.b];
+}
+function splitOf(names, pattern) {
+  let best = null;
+  AXES.forEach((ax, i) => {
+    if (pattern[i] !== "D") return;
+    const vals = names.map(n => axisVal(n, ax.key));
+    const spread = Math.max(...vals) - Math.min(...vals);
+    if (!best || spread > best.spread) best = { ax, spread };
+  });
+  return best ? MATCH_SPLITS[best.ax.key] : null;
+}
 // 寄りの強さの言い方
 function leanWord(v) {
   const a = Math.abs(v);
@@ -7434,7 +7470,10 @@ function buildMatchResult(names) {
   const simAvg = avgPair(pairSimilarity);
   const overallLv = toLevel(baseAvg);
   const ov = MATCH_OVERALL[overallLv];
-  const pat = MATCH_PATTERNS[patternOf(names)];
+  const patKey = patternOf(names);
+  const pat = MATCH_PATTERNS[patKey];
+  const color = colorOf(names);
+  const split = splitOf(names, patKey);
   // 相性の内訳（総合の計算式と同じ4つの要素）
   const subs = [
     { label: "考え方の近さ", note: "堅実派／直感派が同じ側だと説明が早い", v: avgPair((a, b) => 1 - d(a, b, "SN")) },
@@ -7531,12 +7570,14 @@ function buildMatchResult(names) {
         <div class="match-pair">
           <span class="match-pair-names">${r.a} × ${r.b}</span>
           ${stars(r.lv)}
-          <span class="match-pair-name">${MATCH_OVERALL[r.lv].name}・${r.pp.name}</span>
+          <span class="match-pair-name">${MATCH_OVERALL[r.lv].name}・${r.pp.name}（${colorOf([r.a, r.b]).name}）</span>
         </div>`;
-  const pairBlock = pairRows.length <= 8
+  // ベストと同じ星のペアは全部、ワーストと同じ星のペアも全部（星が1種類しかなければ全部そのまま）
+  const maxLv = pairRows[0].lv, minLv = pairRows[pairRows.length - 1].lv;
+  const pairBlock = maxLv === minLv
     ? pairRows.map(pairRow).join("")
-    : `<div class="match-pair-head">相性のいいペア TOP5</div>${pairRows.slice(0, 5).map(pairRow).join("")}
-       <div class="match-pair-head" style="margin-top:10px;">むずかしいペア WORST3</div>${pairRows.slice(-3).reverse().map(pairRow).join("")}`;
+    : `<div class="match-pair-head">相性のいいペア ${stars(maxLv)}</div>${pairRows.filter(r => r.lv === maxLv).map(pairRow).join("")}
+       <div class="match-pair-head" style="margin-top:10px;">むずかしいペア ${stars(minLv)}</div>${pairRows.filter(r => r.lv === minLv).map(pairRow).join("")}`;
 
   return `
     <div class="review-card match-hero">
@@ -7544,8 +7585,9 @@ function buildMatchResult(names) {
       <div class="match-hero-stars">${stars(overallLv)}</div>
       <div class="match-hero-name">${ov.name}</div>
       <p class="match-hero-text">${ov.text}</p>
-      <div class="match-kind"><b>${pat.name}</b><span>合言葉「${pat.word}」・タイプの近さ ${Math.round(simAvg * 100)}%</span></div>
+      <div class="match-kind"><b>${pat.name}<small>${color.name}${split ? "・" + split.short : ""}</small></b><span>合言葉「${pat.word}」・タイプの近さ ${Math.round(simAvg * 100)}%</span></div>
       <p class="match-hero-text" style="margin-top:4px;">${pat.text}</p>
+      <p class="match-hero-text" style="margin-top:6px;">${color.text}${split ? " " + split.text : ""}</p>
       ${lucky ? `<div class="match-lucky">今日のラッキーゲーム <a href="#game/${encodeURIComponent(slugOf(lucky.g))}">${lucky.g.jp}</a></div>` : ""}
     </div>
 
