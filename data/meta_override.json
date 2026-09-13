@@ -4,5 +4,30 @@
   "timeMin": 15,
   "timeMax": 15,
   "timeRaw": "15分前後"
+ },
+ "ha-tte-iu-2": {
+  "playersMin": 3,
+  "playersMax": 8,
+  "playersRaw": "3～8人",
+  "timeMin": 15,
+  "timeMax": 15,
+  "timeRaw": "15分前後",
+  "age": 8,
+  "ageRaw": "8歳～"
+ },
+ "ha-tte-iu-4": {
+  "playersMin": 3,
+  "playersMax": 8,
+  "playersRaw": "3～8人",
+  "timeMin": 15,
+  "timeMax": 15,
+  "timeRaw": "15分前後",
+  "age": 8,
+  "ageRaw": "8歳～"
+ },
+ "dixit-harmonies": {
+  "timeMin": 30,
+  "timeMax": 30,
+  "timeRaw": "30分前後"
  }
 }
