@@ -2586,6 +2586,11 @@
   .match-genre { display: flex; align-items: center; gap: 10px; padding: 6px 0; }
   .match-genre .tag-chip { flex: 0 0 auto; min-width: 96px; text-align: center; }
   .match-weak { font-size: 12.5px; color: var(--text-sub); margin-top: 8px; display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+  .match-issue { padding: 8px 0; border-top: 1px solid var(--border); }
+  .match-issue:first-of-type { border-top: none; padding-top: 0; }
+  .match-issue b { font-size: 14px; color: #b7462b; }
+  .match-issue.none b { color: var(--accent); }
+  .match-issue p { margin: 3px 0 0; font-size: 13px; line-height: 1.65; }
   .match-pair { display: flex; align-items: baseline; gap: 10px; padding: 7px 0; border-top: 1px solid var(--border); flex-wrap: wrap; }
   .match-pair:first-of-type { border-top: none; }
   .match-pair-names { font-weight: 700; font-size: 14px; }
@@ -3090,7 +3095,7 @@ try {
 // ── 自動更新 ───────────────────────────────
 // iPhoneはHTMLを長く握るので、新しい版が出ていたらURLを変えて読み直す。
 // （同じURLの再読み込みだとキャッシュが返ってきてしまうため）
-const APP_BUILD = "2026-09-13-1653";
+const APP_BUILD = "2026-09-13-1708";
 
 function markVersion(extra) {
   const el = document.getElementById("appVersion");
@@ -4108,7 +4113,7 @@ function fetchProfiles() {
 
 function fetchAllReviews() {
   return Promise.all([
-    fetchCollectionCache("ratings", RATINGS_CACHE_KEY).then(c => { reviewsCache = c; }),
+    fetchCollectionCache("ratings", RATINGS_CACHE_KEY).then(c => { reviewsCache = c; crowdMeanCache = null; }),
     fetchCollectionCache("history", HISTORY_CACHE_KEY).then(c => { historyCache = c; }),
     fetchCollectionCache("interests", INTERESTS_CACHE_KEY).then(c => { interestsCache = c; }),
     fetchCollectionCache("customtags", CUSTOMTAGS_CACHE_KEY).then(c => { customTagsCache = c; tagCountCache = null; }),
@@ -4139,7 +4144,7 @@ function fetchSessions() {
 }
 
 const COLLECTION_TARGETS = {
-  ratings:    { key: RATINGS_CACHE_KEY,    set: c => { reviewsCache = c; } },
+  ratings:    { key: RATINGS_CACHE_KEY,    set: c => { reviewsCache = c; crowdMeanCache = null; } },
   history:    { key: HISTORY_CACHE_KEY,    set: c => { historyCache = c; } },
   interests:  { key: INTERESTS_CACHE_KEY,  set: c => { interestsCache = c; } },
   customtags: { key: CUSTOMTAGS_CACHE_KEY, set: c => { customTagsCache = c; tagCountCache = null; } },
@@ -6453,33 +6458,66 @@ function buildSessionLog() {
   `;
 }
 
-function getPlayerTagAffinity(name) {
+// その人の「タグごとの好み」。ジャンル・メカニクス・ゲームタグそれぞれについて、
+// そのタグが付いたゲームにつけた点の平均が、本人の平均点からどれだけズレているかを返す（件数が少ないタグは0へ縮める）。
+// 甘口・辛口の採点癖に左右されないように、絶対点ではなく本人平均との差で見る。
+// 評価がまだ無いタグは、タイプ診断の傾向で補う（評価が増えるほど診断の影響は薄くなる）。
+function getPlayerTaste(name) {
+  const ratings = getPlayerRatings(name).map(r => ({ slug: r.slug, v: r.level != null ? r.level : r.legacy })).filter(x => x.v != null);
+  // 本人の平均点。評価が少ないうちはみんなの平均に寄せる（1本だけ10点をつけた人の「平均10」を信じない）
+  const rawMean = ratings.length ? ratings.reduce((a, r) => a + r.v, 0) / ratings.length : crowdMean();
+  const mean = (ratings.length * rawMean + 3 * crowdMean()) / (ratings.length + 3);
   const acc = {};
-  const ratings = getPlayerRatings(name);
   ratings.forEach(pr => {
     const g = games.find(x => slugOf(x) === pr.slug);
     if (!g) return;
     getGameTags(g).all.forEach(t => {
       if (!acc[t]) acc[t] = { sum: 0, n: 0 };
-      acc[t].sum += pr.level != null ? pr.level : pr.legacy;
+      acc[t].sum += pr.v - mean;
       acc[t].n += 1;
     });
   });
-  const out = {};
-  Object.keys(acc).forEach(t => { out[t] = acc[t].sum / acc[t].n; });
-
-  // 診断結果は「実際の評価がまだ無いタグ」だけを埋める補助にする。
-  // 評価が増えるほど診断の影響を薄める（自己申告より実績のほうが正確なので）。
+  const dev = {}, count = {};
+  Object.keys(acc).forEach(t => { dev[t] = (acc[t].sum / acc[t].n) * (acc[t].n / (acc[t].n + 2)); count[t] = acc[t].n; });
   const prof = getProfile(name);
   if (isType16(prof)) {
     const w = 1 / (1 + ratings.length / 3);
     Object.entries(mechanicWeights(prof.scores)).forEach(([m, score]) => {
-      const affinity = 3.5 + score * 5.5;                                   // 0→3.5, 1→9.0
-      const shrunk = RATING_NEUTRAL + (affinity - RATING_NEUTRAL) * w;      // 評価が増えたら真ん中へ寄せる
-      if (out[m] == null) out[m] = shrunk;
+      if (dev[m] == null) dev[m] = (score - 0.5) * 4 * w;   // 寄り0→−2点、1→+2点
+    });
+    AXES.forEach(ax => {
+      const v = Math.max(-1, Math.min(1, prof.scores[ax.key] || 0));
+      [[ax.a, v], [ax.b, -v]].forEach(([letter, lean]) => {
+        LETTER_GENRES[letter].forEach(gname => { if (dev[gname] == null) dev[gname] = lean * 2 * w; });
+      });
     });
   }
-  return out;
+  return { mean, dev, count, n: ratings.length };
+}
+// ゲームに対する、その人の好みの当てはまり（本人平均からのズレ、点数単位）と根拠の数
+// タグが多いゲームで好みが薄まらないよう、ズレの大きいタグから順に重みをつけて平均する
+function tasteForGame(taste, tags) {
+  const vals = tags.map(t => taste.dev[t]).filter(v => v != null).sort((a, b) => Math.abs(b) - Math.abs(a)).slice(0, 4);
+  if (!vals.length) return { dev: 0, k: 0 };
+  const w = [1, 0.8, 0.6, 0.4];
+  let sum = 0, wsum = 0;
+  vals.forEach((v, i) => { sum += v * w[i]; wsum += w[i]; });
+  return { dev: sum / wsum, k: vals.length };
+}
+// みんなの評価の平均（全ゲーム）。「みんなの総合が高い」を相対的に見るための基準
+let crowdMeanCache = null;
+function crowdMean() {
+  if (crowdMeanCache != null) return crowdMeanCache;
+  const vals = games.map(g => averageScore(slugOf(g))).filter(v => v != null);
+  crowdMeanCache = vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : RATING_NEUTRAL;
+  return crowdMeanCache;
+}
+// みんなの評価がその基準からどれだけ高いか（点数単位、評価人数が少なければ縮める）
+function crowdDev(slug) {
+  const avg = averageScore(slug);
+  if (avg == null) return 0;
+  const n = getReviews(slug).filter(r => ratingAvg(r) != null).length;
+  return (avg - crowdMean()) * (n / (n + 1));
 }
 
 // 今日の気分は、その日だけゲームを後押しする加点として使う
@@ -6500,9 +6538,9 @@ function moodBonusFor(g) {
 // 選んだメンバーの好み・興味あり・過去の評価を合成しておすすめを作る。
 // 誰かが「苦手」「やりたくない」と評価したゲームは除外リストに回す。
 function buildRecommendations(members) {
-  const affinity = {}, rated = {}, interested = {};
+  const taste = {}, rated = {}, interested = {};
   members.forEach(m => {
-    affinity[m] = getPlayerTagAffinity(m);
+    taste[m] = getPlayerTaste(m);
     rated[m] = {};
     getPlayerRatings(m).forEach(pr => { rated[m][pr.slug] = pr.level != null ? pr.level : pr.legacy; });
     interested[m] = new Set();
@@ -6540,15 +6578,14 @@ function buildRecommendations(members) {
         if (lv <= RATING_VETO_MAX) vetoBy.push(m);
         else if (lv >= RATING_LOVE_MIN) reasons.push({ hot: false, text: `${m}が${ratingLabel(lv)}` });
       } else {
-        const ts = tags.map(t => affinity[m][t]).filter(v => v != null);
-        if (ts.length) {
-          s = ts.reduce((a, b) => a + b, 0) / ts.length;
-          k = ts.length;
-        }
+        // 本人の評価が無いゲームは、ジャンル・メカニクス・ゲームタグの好みから「本人ならこのくらい」を推定する
+        const tf = tasteForGame(taste[m], tags);
+        if (tf.k) { s = taste[m].mean + tf.dev; k = tf.k; }
       }
       evidence += k;
-      // 根拠が薄いものは「ふつう(3)」に引き戻す。タグ1個だけの一致で満点にしない
-      per.push(s == null ? RATING_NEUTRAL : (k * s + 2 * RATING_NEUTRAL) / (k + 2));
+      // 根拠が薄いものは本人の平均点に引き戻す。タグ1個だけの一致で満点にしない
+      const center = taste[m].n ? taste[m].mean : RATING_NEUTRAL;
+      per.push(s == null ? center : (k * s + 2 * center) / (k + 2));
     });
 
     if (vetoBy.length) {
@@ -6556,17 +6593,17 @@ function buildRecommendations(members) {
       return;
     }
 
-    // どのタグが効いたかを説明できるようにする
+    // どのタグが効いたかを説明できるようにする（本人平均より0.8点以上高いタグ）
     const tagHits = [];
     tags.forEach(t => {
-      const vals = members.map(m => affinity[m][t]).filter(v => v != null);
+      const vals = members.map(m => taste[m].dev[t]).filter(v => v != null);
       if (!vals.length) return;
       const avg = vals.reduce((a, b) => a + b, 0) / vals.length;
-      if (avg >= 7) tagHits.push({ t, avg, n: vals.length });
+      if (avg >= 0.8) tagHits.push({ t, avg, n: vals.length });
     });
     tagHits.sort((a, b) => b.avg - a.avg || b.n - a.n);
     tagHits.slice(0, 2).forEach(h => {
-      reasons.unshift({ hot: false, text: `#${h.t} が好み（★${Math.round(h.avg * 10) / 10}）` });
+      reasons.unshift({ hot: false, text: `#${h.t} が好み（+${Math.round(h.avg * 10) / 10}）` });
     });
 
     if (wantBy.length) {
@@ -6576,7 +6613,15 @@ function buildRecommendations(members) {
     const base = per.length ? per.reduce((a, b) => a + b, 0) / per.length : RATING_NEUTRAL;
     const mood = moodBonusFor(g);
     if (mood > 0.8) reasons.push({ hot: true, text: "🌡 今日の気分に合う" });
-    const score = base + wantBy.length * 1.6 + mood;
+    // みんなの評価も根拠に足す（自分たちの評価が無いゲームほど効く）
+    const avgAll = averageScore(slug);
+    let crowd = 0;
+    if (avgAll != null) {
+      crowd = crowdDev(slug) * 0.6;
+      if (crowd >= 0.5) reasons.push({ hot: false, text: `みんなの総合 ${avgAll}` });
+      evidence += 1;
+    }
+    const score = base + crowd + wantBy.length * 1.6 + mood;
     const entry = { g, slug, score, reasons };
 
     if (evidence || wantBy.length || mood > 0) scored.push(entry);
@@ -6922,28 +6967,6 @@ function pairBase(a, b) {
   const raw = sn * 0.3 + ei * 0.25 + tf * 0.25 + jp * 0.2;
   return Math.max(0, Math.min(1, (raw - 0.55) / 0.4));   // 実際に出る幅（0.57〜0.92あたり）を1〜5段階に広げる
 }
-// 実際の記録から見た2人：一緒に遊んだ回数・日数、共通で評価したゲーム、2人とも高評価のゲーム、評価のズレ
-function pairData(a, b) {
-  const all = Object.keys(historyCache).flatMap(slug => (historyCache[slug] || []).map(h => Object.assign({ slug }, h)));
-  const together = all.filter(h => { const ps = historyParticipants(h); return ps.includes(a) && ps.includes(b); });
-  const days = new Set(together.map(h => h.date).filter(Boolean)).size;
-  const rate = name => { const o = {}; getPlayerRatings(name).forEach(r => { const v = r.level != null ? r.level : r.legacy; if (v != null) o[r.slug] = v; }); return o; };
-  const ra = rate(a), rb = rate(b);
-  const shared = Object.keys(ra).filter(k => k in rb);
-  const bothLove = shared.filter(k => ra[k] >= 8 && rb[k] >= 8);
-  const split = shared.filter(k => Math.abs(ra[k] - rb[k]) >= 4);
-  const diff = shared.length ? shared.reduce((sum, k) => sum + Math.abs(ra[k] - rb[k]), 0) / shared.length : null;
-  const countBy = {};
-  together.forEach(h => { countBy[h.slug] = (countBy[h.slug] || 0) + 1; });
-  const favorite = Object.entries(countBy).sort((x, y) => y[1] - x[1])[0] || null;
-  return { plays: together.length, days, shared: shared.length, bothLove, split, diff, favorite, ra, rb };
-}
-function bondLevel(d) {
-  let lv = d.plays === 0 ? 1 : d.plays <= 2 ? 2 : d.plays <= 6 ? 3 : d.plays <= 14 ? 4 : 5;
-  if (d.diff != null && d.shared >= 3 && d.diff <= 1.5) lv += 1;
-  if (d.diff != null && d.shared >= 3 && d.diff >= 3) lv -= 1;
-  return Math.max(1, Math.min(5, lv));
-}
 const MATCH_OVERALL = [
   null,
   { name: "異種格闘技マッチ", text: "考え方がまるで違う組み合わせ。噛み合わないぶん、遊ぶたびに新しい発見がある卓です。ルールが単純で偶然が効くゲームを間に挟むと、温度差がほどけます。" },
@@ -7102,16 +7125,7 @@ function buildMatchResult(names) {
     : simAvg <= 0.45 ? { name: "正反対で補い合う", text: "軸の多くで逆側。ぶつかることもありますが、片方の弱点をもう片方が埋める組み合わせです。" }
     : { name: "半分似て、半分違う", text: "近い軸と遠い軸が半々。安心感と刺激の両方がある、いちばん長続きしやすい距離感です。" };
 
-  // ── 実データ（親密度）
-  const datas = pairs.map(([a, b]) => Object.assign({ a, b }, pairData(a, b)));
-  const bondLv = Math.round(datas.reduce((sum, d) => sum + bondLevel(d), 0) / datas.length);
-  const totalPlays = isPair ? datas[0].plays : groupPlayed(names).reduce((sum, x) => sum + x.c, 0);
-  const bondNote = isPair
-    ? (datas[0].plays
-        ? `一緒に遊んだ記録は${datas[0].plays}回（${datas[0].days}日）。${datas[0].shared ? `2人とも評価したゲームは${datas[0].shared}本で、点のズレは平均${datas[0].diff.toFixed(1)}点。` : "2人とも評価したゲームはまだありません。"}${datas[0].bothLove.length ? `どちらも8点以上をつけたのは${datas[0].bothLove.length}本。` : ""}${datas[0].split.length ? `逆に4点以上割れたのが${datas[0].split.length}本あります。` : ""}`
-        : "まだ一緒に遊んだ記録がありません。ここから先は、遊ぶたびに上がっていく数字です。")
-    : (totalPlays ? `全員そろって遊んだ記録は${totalPlays}回。ペアごとの親密度を平均しています。` : "全員そろって遊んだ記録はまだありません。ペアごとの記録から平均しています。");
-
+  const datas = pairs.map(([a, b]) => ({ a, b }));
   // ── 卓としての適性
   const L = l => groupLetter(names, l);
   const snSim = pairs.reduce((sum, [a, b]) => sum + (1 - Math.abs(axisVal(a, "SN") - axisVal(b, "SN")) / 2), 0) / pairs.length;
@@ -7145,6 +7159,37 @@ function buildMatchResult(names) {
     ? `${dupRole[0]}が${dupRole[1]}人。同じ役回りがかぶると、どちらかが手持ち無沙汰になります。かぶった人は意識して別の顔を出してみてください。`
     : "役回りがきれいに分かれています。誰かが欠けると卓の色が変わる、バランスのいい編成です。";
 
+  // ── 問題点：全員が同じ側に極端に寄っている軸、大きく割れている軸、役回りのかぶり、相性の低いペア、遊びたい長さのズレ
+  const issues = [];
+  const AXIS_ISSUES = {
+    EI: { allA: ["全員ワイワイ派", "ルール説明が最後まで聞かれず、途中で「それ知らなかった」が出やすい卓です。インストは1人が仕切り、質問は後でまとめて受けてください。"],
+          allB: ["全員じっくり派", "盛り上げ役がいないので、パーティ系は静かに終わりがち。無理に騒ぐより、推理系や協力系で真価を出しましょう。"],
+          split: ["発言量の偏り", "ワイワイ派が話し、じっくり派が聞くだけになりやすい。手番が順番に回るゲームや、全員が同時に出すゲームだと均等に参加できます。"] },
+    SN: { allA: ["全員堅実派", "ブラフ系で全員が正直すぎて読み合いにならないことがあります。心理戦を出すなら、運の要素があるものを。"],
+          allB: ["全員直感派", "細かい得点ルールを誰も覚えていない前提で。重量級は早見表を開きっぱなしにしておくと事故が減ります。"],
+          split: ["説明のかみ合わなさ", "堅実派の手順どおりの説明が、直感派には長く感じられます。直感派には「まず1回やってみる」方式が向いています。"] },
+    TF: { allA: ["全員勝負派", "負けた側の空気が重くなりやすい卓。短時間で何度も回せるゲームで、巻き返しの機会を作ってください。"],
+          allB: ["全員調和派", "接待プレイが始まって勝負がぼやけがち。協力系や、勝敗より完成を楽しむゲームのほうが満足度が高いです。"],
+          split: ["勝ち負けへの温度差", "勝負派の本気が、調和派には攻撃に見えることがあります。チーム戦で同じ側に置くか、協力ゲームを間に挟むと丸く収まります。"] },
+    JP: { allA: ["全員計画派", "ルール裁判が長引きがち。「今回はこう」と決めて先に進める係を1人決めておくと時間を守れます。"],
+          allB: ["全員即興派", "始まるまでが長い卓。箱を開ける係と、最初の1本を決める係を先に決めてください。"],
+          split: ["段取りへの不満", "計画派は準備を無視されると冷めます。最初の1本だけは計画派に選ばせる、が長続きのコツです。"] }
+  };
+  AXES.forEach(ax => {
+    const vals = names.map(n => axisVal(n, ax.key));
+    const na = vals.filter(v => v > 0).length;
+    const meanAbs = vals.reduce((sum, v) => sum + Math.abs(v), 0) / vals.length;
+    const spread = Math.max(...vals) - Math.min(...vals);
+    const iss = AXIS_ISSUES[ax.key];
+    if (na === names.length && meanAbs >= 0.5) issues.push({ title: iss.allA[0], text: iss.allA[1] });
+    else if (na === 0 && meanAbs >= 0.5) issues.push({ title: iss.allB[0], text: iss.allB[1] });
+    else if (spread >= 1.2) issues.push({ title: iss.split[0], text: iss.split[1] });
+  });
+  if (dupRole) issues.push({ title: `${dupRole[0]}が${dupRole[1]}人`, text: "同じ役回りがかぶると、どちらかが手持ち無沙汰になります。かぶった人は意識して別の顔を出してみてください。" });
+  const lean = names.map(n => timeLeaning(getProfile(n).scores));
+  if (Math.max(...lean) - Math.min(...lean) >= 1.0) issues.push({ title: "遊びたい長さが合わない", text: "重量級をやりたい人と、短いものを何本も回したい人が同席しています。長いゲームは1日1本にして、前後を軽いゲームで挟むのが無難です。" });
+  datas.forEach(d => { if (toLevel(pairBase(d.a, d.b)) <= 2) issues.push({ title: `${d.a}と${d.b}の相性が低め`, text: "考え方が離れている2人です。直接対決より、同じチームに入れるか、全員協力のゲームのほうが噛み合います。" }); });
+
   // ── ジャンル
   const genres = groupGenres(names);
   const strong = genres.slice(0, 4);
@@ -7152,9 +7197,7 @@ function buildMatchResult(names) {
 
   // ── ゲーム
   const avg = avgScoresOf(names);
-  let picks = sampleGamesForScores(avg, 12, false, null);
-  if (matchPickMode === "new") picks = picks.filter(x => !names.some(n => hasPlayed(slugOf(x.g), n)));
-  picks = picks.slice(0, 3);
+  const picks = sampleGamesForScores(avg, 3, matchPickMode === "new", names);
   const favs = groupFavorites(names);
   const played = groupPlayed(names);
 
@@ -7170,7 +7213,6 @@ function buildMatchResult(names) {
 
     <div class="review-card">
       <div class="review-header"><div class="review-title">卓としての適性</div></div>
-      ${metricRow("親密度（実際の記録から）", bondLv, bondNote)}
       ${metricRow("協力ゲームの息の合い方", coopLv, coopNote)}
       ${metricRow("真剣勝負の熱さ", versusLv, versusNote)}
       ${metricRow("パーティの盛り上がり", partyLv, partyNote)}
@@ -7180,6 +7222,13 @@ function buildMatchResult(names) {
     <div class="review-card">
       <div class="review-header"><div class="review-title">4つの軸で見る${who}</div></div>
       ${axisCards}
+    </div>
+
+    <div class="review-card">
+      <div class="review-header"><div class="review-title">相性の問題点</div></div>
+      ${issues.length
+        ? issues.map(x => `<div class="match-issue"><b>${x.title}</b><p>${x.text}</p></div>`).join("")
+        : `<div class="match-issue none"><b>特に問題なし</b><p>4つの軸のどれにも極端な偏りやズレがなく、役回りもかぶっていません。安心して何でも出せる卓です。</p></div>`}
     </div>
 
     <div class="review-card">
@@ -7216,7 +7265,7 @@ function buildMatchResult(names) {
         <div class="match-pair">
           <span class="match-pair-names">${d.a} × ${d.b}</span>
           ${stars(lv)}
-          <span class="match-pair-name">${MATCH_OVERALL[lv].name}${d.plays ? `・一緒に${d.plays}回` : ""}</span>
+          <span class="match-pair-name">${MATCH_OVERALL[lv].name}</span>
         </div>`; }).join("")}
     </div>` : ""}
 
@@ -7243,7 +7292,7 @@ function buildMatchResult(names) {
       <div class="player-game-list">${played.map(x => matchGameRow(x.g, `全員そろって${x.c}回`)).join("")}</div>
     </div>` : ""}
 
-    <p class="cta-note">タイプ診断の4軸と、みんなの評価・戦績の記録から占っています。遊ぶほど、評価するほど内容が変わります。</p>
+    <p class="cta-note">タイプ診断の4軸から占っています。おすすめのゲームは、みんなの評価・本人の評価・ジャンル・メカニクス・ゲームタグも合わせて選んでいます。</p>
   `;
 }
 
@@ -7500,29 +7549,59 @@ function buildTypeExplanation(scores) {
 
 // 診断結果に合うゲーム。メカニクスの相性にプレイ時間の好みを少し足す。
 // onlyUnplayed=true なら自分が遊んでいない（評価も戦績もない）ものだけ
+// 診断結果・本人の評価・みんなの評価・ジャンル・メカニクス・ゲームタグをまとめて点数にする。
+// who は1人（文字列）でも複数（配列）でもよい。拡張セットは単体で遊べないので常に外す。
+//  - タイプ相性：4軸から作ったメカニクス・ジャンルの重み
+//  - 本人の好み：その人が評価したゲームのタグ（ジャンル・メカニクス・ゲームタグ）ごとの平均点
+//  - みんなの評価：総合の平均
+//  - 本人がそのゲームにつけた点（未経験モードでは対象外）
 function sampleGamesForScores(scores, n, onlyUnplayed, who) {
-  const weight = {};
-  Object.entries(mechanicWeights(scores)).forEach(([m, w]) => { weight[m] = Math.max(0, (w - 0.5) * 2); });
-  const range = timePreferenceText(scores).range;
-  const me = who || getMyName();
+  const people = (Array.isArray(who) ? who : [who || getMyName()]).filter(Boolean);
+  const mechW = {};
+  Object.entries(mechanicWeights(scores || {})).forEach(([m, w]) => { mechW[m] = Math.max(0, (w - 0.5) * 2); });
+  const genreW = {};
+  if (scores) AXES.forEach(ax => {
+    const v = Math.max(-1, Math.min(1, scores[ax.key] || 0));
+    LETTER_GENRES[ax.a].forEach(g => { genreW[g] = Math.max(genreW[g] || 0, v); });
+    LETTER_GENRES[ax.b].forEach(g => { genreW[g] = Math.max(genreW[g] || 0, -v); });
+  });
+  const range = timePreferenceText(scores || {}).range;
+  const tastes = people.map(getPlayerTaste);
+  const rated = people.map(nm => { const o = {}; getPlayerRatings(nm).forEach(r => { const v = r.level != null ? r.level : r.legacy; if (v != null) o[r.slug] = v; }); return o; });
+
   const scored = games.map(g => {
+    const slug = slugOf(g);
     const t = getGameTags(g);
-    if (t.genreTags.includes("拡張")) return { g, s: 0 };  // 単体で遊べないので出さない
-    if (onlyUnplayed && me && hasPlayed(slugOf(g), me)) return { g, s: 0 };
+    if (t.genreTags.includes("拡張")) return { g, s: 0 };
+    if (onlyUnplayed && people.some(nm => hasPlayed(slug, nm))) return { g, s: 0 };
+    // 誰かが「遊びたくない」と評価しているものは出さない
+    if (rated.some(o => o[slug] != null && o[slug] <= RATING_VETO_MAX)) return { g, s: 0 };
+
+    // タイプ相性 0〜1
     const mech = t.allMechanics;
-    if (!mech.length) return { g, s: 0 };
-    const sum = mech.reduce((a, m) => a + (weight[m] || 0), 0);
-    let s = sum / Math.sqrt(mech.length);
+    let fit = mech.length ? mech.reduce((acc, m) => acc + (mechW[m] || 0), 0) / Math.sqrt(mech.length) : 0;
+    const gfit = t.genreTags.length ? Math.max(0, ...t.genreTags.map(x => genreW[x] || 0)) : 0;
+    fit = Math.min(1, fit * 0.6 + gfit * 0.4);
+
+    // 本人（たち）の好み：ジャンル・メカニクス・ゲームタグごとの、本人平均からのズレ（点数単位→おおよそ−1〜1）
+    let taste = 0, tasteN = 0;
+    tastes.forEach(ts => { const tf = tasteForGame(ts, t.all); if (tf.k) { taste += tf.dev / 1.2; tasteN += 1; } });
+    taste = tasteN ? taste / tasteN : 0;
+
+    // みんなの評価（全体平均との差、おおよそ−1〜1）
+    const avg = averageScore(slug);
+    const everyone = crowdDev(slug) / 2;
+
+    // 本人がそのゲームにつけた点（本人平均との差）。未経験モードでは遊んだものは既に除外されている
+    const owns = rated.map((o, i) => o[slug] != null ? (o[slug] - tastes[i].mean) / 2.5 : null).filter(v => v != null);
+    const ownS = owns.length ? owns.reduce((x, y) => x + y, 0) / owns.length : 0;
+
+    let sc = fit * 0.5 + taste * 1.0 + everyone * 0.8 + ownS * 0.8;
     const tm = g.timeMax || g.timeMin;
-    if (tm != null && tm >= range[0] && tm <= range[1]) s *= 1.15;   // 時間の好みに合えば少し加点
-    return { g, s };
+    if (tm != null && tm >= range[0] && tm <= range[1]) sc += 0.1;   // 時間の好みに合えば少し加点
+    return { g, s: sc, fit, taste, everyone, avg };
   }).filter(x => x.s > 0);
-  // 相性が十分に高いもの（最大値の6割以上）の中では、みんなの評価が高い順に出す
-  const maxS = Math.max(0, ...scored.map(x => x.s));
-  const strong = scored.filter(x => x.s >= maxS * 0.6);
-  const rest = scored.filter(x => x.s < maxS * 0.6);
-  const byRating = (a, b) => (averageScore(slugOf(b.g)) ?? -1) - (averageScore(slugOf(a.g)) ?? -1) || b.s - a.s;
-  return strong.sort(byRating).concat(rest.sort((a, b) => b.s - a.s)).slice(0, n);
+  return scored.sort((a, b) => b.s - a.s).slice(0, n);
 }
 let quizPickMode = "all";   // "all"=総合 / "new"=未経験
 function buildTypePicks(scores, who) {
