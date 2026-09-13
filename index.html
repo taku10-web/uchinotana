@@ -993,13 +993,21 @@
   .followup-body { font-size: 13.5px; line-height: 1.6; margin-bottom: 10px; }
   .followup-acts { display: flex; align-items: center; gap: 14px; }
   .followup-acts .detail-cta { flex: 1; }
+  /* 名前 → 結果 → ボタン の順に縦に積む（勝者が多い卓や長い名前でも崩れないように） */
   .log-row {
-    display: flex;
-    align-items: center;
-    gap: 8px;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    grid-template-areas: "name del" "res res" "btns btns";
+    column-gap: 8px;
+    row-gap: 6px;
+    align-items: start;
     border-bottom: 1px solid var(--border);
     padding: 10px 0;
   }
+  .log-row .log-row-name { grid-area: name; }
+  .log-row .log-row-res { grid-area: res; text-align: left; line-height: 1.5; }
+  .log-row .log-row-btns { grid-area: btns; flex-direction: row; flex-wrap: wrap; }
+  .log-row .review-item-del { grid-area: del; align-self: start; }
   /* 結果がまだ入っていない卓は目立たせる */
   .log-row.waiting {
     background: var(--pitch-bg);
@@ -3156,7 +3164,7 @@ try {
 // ── 自動更新 ───────────────────────────────
 // iPhoneはHTMLを長く握るので、新しい版が出ていたらURLを変えて読み直す。
 // （同じURLの再読み込みだとキャッシュが返ってきてしまうため）
-const APP_BUILD = "2026-09-13-2314";
+const APP_BUILD = "2026-09-14-0011";
 
 function markVersion(extra) {
   const el = document.getElementById("appVersion");
