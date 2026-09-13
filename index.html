@@ -3119,7 +3119,7 @@ try {
 // ── 自動更新 ───────────────────────────────
 // iPhoneはHTMLを長く握るので、新しい版が出ていたらURLを変えて読み直す。
 // （同じURLの再読み込みだとキャッシュが返ってきてしまうため）
-const APP_BUILD = "2026-09-13-1924";
+const APP_BUILD = "2026-09-13-1925";
 
 function markVersion(extra) {
   const el = document.getElementById("appVersion");
@@ -9417,7 +9417,6 @@ function buildPlayerPage(name) {
     ${isMe ? `<div class="acct-row">
       <button type="button" class="acct-btn" data-change-name><i>✎</i>名前を変更</button>
       <button type="button" class="acct-btn" data-switch-account><i>⇄</i>アカウント切替</button>
-      <button type="button" class="acct-btn" data-handoff><i>↗</i>引き継ぎリンク</button>
     </div>` : ""}
     <div class="detail-underline"></div>
     ${buildLevelCard(name, stats)}
