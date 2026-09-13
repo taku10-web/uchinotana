@@ -3023,7 +3023,7 @@ try {
 // ── 自動更新 ───────────────────────────────
 // iPhoneはHTMLを長く握るので、新しい版が出ていたらURLを変えて読み直す。
 // （同じURLの再読み込みだとキャッシュが返ってきてしまうため）
-const APP_BUILD = "2026-09-13-1336";
+const APP_BUILD = "2026-09-13-1347";
 
 function markVersion(extra) {
   const el = document.getElementById("appVersion");
@@ -7299,7 +7299,6 @@ function buildQuizView() {
       <div class="detail-underline"></div>
       ${existing ? `
         ${buildTypeHero(existing.type, existing.scores)}
-        <button type="button" class="section-toggle-btn" data-quiz-start style="margin:-4px 0 12px;">🧭 診断をやり直す（${QUIZ_QUESTIONS.length}問）</button>
         <div class="review-card">
           <div class="review-header"><div class="review-title">あなたの傾向</div></div>
           ${buildAxisChart(existing.scores)}
