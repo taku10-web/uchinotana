@@ -921,7 +921,7 @@
   .member-card-name { font-size: 18px; font-weight: 700; display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; min-width: 0; }
   .member-card.me { box-shadow: 0 0 0 2px var(--accent); }
   .member-card-type.me { background: var(--accent); color: #fff; }
-  .member-card-type { font-size: 12px; font-weight: 600; color: #dff0fb; background: rgba(255,255,255,0.14); border-radius: 999px; padding: 2px 9px; white-space: nowrap; }
+  .member-card-type { font-size: 12px; font-weight: 600; color: #dff0fb; background: rgba(255,255,255,0.14); border: none; border-radius: 999px; padding: 2px 9px; white-space: nowrap; font-family: inherit; cursor: pointer; }
   .member-card-stats { display: grid; grid-template-columns: 1fr 1fr 1.3fr; gap: 6px; margin-top: 9px; font-size: 11.5px; color: #c9dfec; white-space: nowrap; }
   .member-card-stats b { font-size: 16px; color: #fff; margin: 0 2px 0 4px; }
   .member-card-lv { font-size: 12px; opacity: .85; }
@@ -3020,7 +3020,7 @@ try {
 // ── 自動更新 ───────────────────────────────
 // iPhoneはHTMLを長く握るので、新しい版が出ていたらURLを変えて読み直す。
 // （同じURLの再読み込みだとキャッシュが返ってきてしまうため）
-const APP_BUILD = "2026-09-13-1302";
+const APP_BUILD = "2026-09-13-1313";
 
 function markVersion(extra) {
   const el = document.getElementById("appVersion");
@@ -5842,7 +5842,7 @@ function buildMembersTab() {
       return `
         <a class="member-card ${n === me ? "me" : ""}" href="#player/${encodeURIComponent(n)}">
           <div class="member-card-top">
-            <span class="member-card-name">${n}${n === me ? `<span class="member-card-type me">自分</span>` : ""}${f ? `<span class="member-card-type">${f.emoji} ${typeDisplay(p)}</span>` : ""}</span>
+            <span class="member-card-name">${n}${n === me ? `<span class="member-card-type me">自分</span>` : ""}${f ? `<button type="button" class="member-card-type" data-open-type="${n}">${f.emoji} ${typeDisplay(p)}</button>` : ""}</span>
             <span class="member-card-lv">Lv<b>${level.level}</b></span>
           </div>
           <div class="member-card-rank">${level.label}</div>
@@ -7156,11 +7156,11 @@ function buildTypeExplanation(scores) {
 
 // 診断結果に合うゲーム。メカニクスの相性にプレイ時間の好みを少し足す。
 // onlyUnplayed=true なら自分が遊んでいない（評価も戦績もない）ものだけ
-function sampleGamesForScores(scores, n, onlyUnplayed) {
+function sampleGamesForScores(scores, n, onlyUnplayed, who) {
   const weight = {};
   Object.entries(mechanicWeights(scores)).forEach(([m, w]) => { weight[m] = Math.max(0, (w - 0.5) * 2); });
   const range = timePreferenceText(scores).range;
-  const me = getMyName();
+  const me = who || getMyName();
   const scored = games.map(g => {
     const t = getGameTags(g);
     if (t.genreTags.includes("拡張")) return { g, s: 0 };  // 単体で遊べないので出さない
@@ -7181,9 +7181,9 @@ function sampleGamesForScores(scores, n, onlyUnplayed) {
   return strong.sort(byRating).concat(rest.sort((a, b) => b.s - a.s)).slice(0, n);
 }
 let quizPickMode = "all";   // "all"=総合 / "new"=未経験
-function buildTypePicks(scores) {
-  const picks = sampleGamesForScores(scores, 3, quizPickMode === "new");
-  const me = getMyName();
+function buildTypePicks(scores, who) {
+  const me = who || getMyName();
+  const picks = sampleGamesForScores(scores, 3, quizPickMode === "new", me);
   return `
     <div class="review-card" id="typePicks">
       <div class="review-header">
@@ -7210,7 +7210,32 @@ function buildTypePicks(scores) {
   `;
 }
 
+// ほかのメンバーのタイプページ（診断はできない。結果の説明と相性ゲームだけ）
+let typeViewName = "";
+function buildTypeView(name) {
+  const prof = getProfile(name);
+  if (!isType16(prof)) {
+    return `
+      <button type="button" class="detail-back" data-back>← 戻る</button>
+      <h1 class="detail-title">${name} さんのタイプ</h1>
+      <div class="detail-underline"></div>
+      <div class="review-card"><div class="review-count">${name} さんはまだ診断をしていません。</div></div>`;
+  }
+  return `
+    <button type="button" class="detail-back" data-back>← 戻る</button>
+    <h1 class="detail-title">${name} さんのタイプ</h1>
+    <div class="detail-underline"></div>
+    ${buildTypeHero(prof.type, prof.scores)}
+    <div class="review-card">
+      <div class="review-header"><div class="review-title">${name} さんの傾向</div></div>
+      ${buildAxisChart(prof.scores)}
+    </div>
+    ${buildTypeExplanation(prof.scores).replaceAll("あなた", name + " さん")}
+    ${buildTypePicks(prof.scores, name)}
+  `;
+}
 function buildQuizView() {
+  if (typeViewName) return buildTypeView(typeViewName);
   const myName = getMyName();
   // 称号だけ選んで診断はまだ、という人もいるので「診断済み」は type と scores で判定する
   const prof = myName ? getProfile(myName) : null;
@@ -7400,10 +7425,11 @@ document.getElementById("quizView").addEventListener("click", async e => {
   const pm = e.target.closest("[data-pick-mode]");
   if (pm) {
     quizPickMode = pm.dataset.pickMode;
-    const prof = getMyName() ? getProfile(getMyName()) : null;
-    const scores = quizAnswers.length === QUIZ_QUESTIONS.length ? scoreQuiz(quizAnswers, QUIZ_QUESTIONS) : (isType16(prof) ? prof.scores : null);
+    const who = typeViewName || getMyName();
+    const prof = who ? getProfile(who) : null;
+    const scores = (!typeViewName && quizAnswers.length === QUIZ_QUESTIONS.length) ? scoreQuiz(quizAnswers, QUIZ_QUESTIONS) : (isType16(prof) ? prof.scores : null);
     const box = document.getElementById("typePicks");
-    if (scores && box) box.outerHTML = buildTypePicks(scores);
+    if (scores && box) box.outerHTML = buildTypePicks(scores, typeViewName || "");
     return;
   }
   const cls = e.target.closest("[data-class-filter]");
@@ -8717,7 +8743,7 @@ function buildPlayerPage(name) {
       ${typeFam
         ? (isMe
           ? `<a class="type-chip-sm" href="#quiz">${typeFam.emoji} ${typeDisplay(prof)}</a>`
-          : `<button type="button" class="type-chip-sm" data-toggle-section="p-typequick">${typeFam.emoji} ${typeDisplay(prof)}</button>`)
+          : `<a class="type-chip-sm" href="#type/${encodeURIComponent(name)}">${typeFam.emoji} ${typeDisplay(prof)}</a>`)
         : (isMe ? `<a class="type-chip-sm type-chip-empty" href="#quiz">🧭 タイプ診断</a>` : "")}
     </div>
     ${isMe && !isType16(prof) ? `
@@ -8813,6 +8839,13 @@ function router() {
   }
   if (location.hash === "#today") {
     showTodayView();
+    return;
+  }
+  const typeMatch = location.hash.match(/^#type\/(.+)$/);
+  if (typeMatch) {
+    typeViewName = decodeURIComponent(typeMatch[1]);
+    showQuizView();
+    typeViewName = "";
     return;
   }
   if (location.hash === "#quiz") {
@@ -8915,6 +8948,12 @@ function goBackInApp() {
 
 document.addEventListener("click", e => {
   if (e.target.closest("[data-back]")) { e.preventDefault(); goBackInApp(); }
+  const typeBtn = e.target.closest("[data-open-type]");
+  if (typeBtn) {
+    e.preventDefault();
+    location.hash = `#type/${encodeURIComponent(typeBtn.dataset.openType)}`;
+    return;
+  }
   const shelfBtn = e.target.closest("[data-member-shelf]");
   if (shelfBtn) {
     e.preventDefault();
