@@ -3020,7 +3020,7 @@ try {
 // ── 自動更新 ───────────────────────────────
 // iPhoneはHTMLを長く握るので、新しい版が出ていたらURLを変えて読み直す。
 // （同じURLの再読み込みだとキャッシュが返ってきてしまうため）
-const APP_BUILD = "2026-09-13-1313";
+const APP_BUILD = "2026-09-13-1320";
 
 function markVersion(extra) {
   const el = document.getElementById("appVersion");
@@ -5771,6 +5771,14 @@ document.getElementById("detailView").addEventListener("click", async e => {
   }
   const jump = e.target.closest("[data-jump]");
   if (jump) {
+    if (jump.dataset.jump === "detailRecord") {
+      // 評価する／評価済み：フォームを開いた状態で評価欄へ（評価済みならそのまま直せる）
+      ratingFormOpen = true;
+      const g = currentDetailGame();
+      if (g) showDetail(g);
+      const form = document.querySelector("[data-rating-slug]");
+      if (form) { form.scrollIntoView({ behavior: "smooth", block: "center" }); return; }
+    }
     const el = document.getElementById(jump.dataset.jump);
     if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
     return;
@@ -7250,6 +7258,7 @@ function buildQuizView() {
       <div class="detail-underline"></div>
       ${existing ? `
         ${buildTypeHero(existing.type, existing.scores)}
+        <button type="button" class="section-toggle-btn" data-quiz-start style="margin:-4px 0 12px;">🧭 診断をやり直す（${QUIZ_QUESTIONS.length}問）</button>
         <div class="review-card">
           <div class="review-header"><div class="review-title">あなたの傾向</div></div>
           ${buildAxisChart(existing.scores)}
