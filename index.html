@@ -3037,7 +3037,7 @@ try {
 // ── 自動更新 ───────────────────────────────
 // iPhoneはHTMLを長く握るので、新しい版が出ていたらURLを変えて読み直す。
 // （同じURLの再読み込みだとキャッシュが返ってきてしまうため）
-const APP_BUILD = "2026-09-13-1509";
+const APP_BUILD = "2026-09-13-1527";
 
 function markVersion(extra) {
   const el = document.getElementById("appVersion");
@@ -3813,9 +3813,7 @@ function goToClassFilter(kind, value) {
   document.getElementById("mechanicSelect").value = state.mechanic;
   document.getElementById("controls").classList.remove("compact");
   location.hash = "";
-  showListView();
-  render();
-  window.scrollTo(0, 0);
+  showListView({ top: true });
 }
 
 const MINE_LABEL = { played: "遊んだゲーム", rated: "評価したゲーム", interest: "遊んでみたい" };
@@ -3833,21 +3831,17 @@ function goToMyList(kind, name) {
   document.getElementById("unplayedOnly").checked = false;
   document.getElementById("sort").value = state.sort;
   location.hash = "";
-  showListView();
-  render();
+  showListView({ top: true });
   renderUserBadge();
-  window.scrollTo(0, 0);
 }
 
 function goToTagSearch(tag) {
   state.mine = ""; state.mineName = "";
   state.q = tag;
   location.hash = "";
-  showListView();
   const searchInput = document.getElementById("search");
   if (searchInput) searchInput.value = tag;
-  render();
-  window.scrollTo(0, 0);
+  showListView({ top: true });
 }
 
 // 人気順のまま、閉じているときはCSSで2行分の高さに切る（タグ幅がまちまちでも崩れない）
@@ -5870,7 +5864,18 @@ document.getElementById("detailView").addEventListener("click", async e => {
   if (g) showDetail(g);
 });
 
-function showListView() {
+// 一覧から離れたときのスクロール位置。戻ってきたら同じ場所に着地させる
+let listScrollY = 0;
+function listVisible() {
+  return document.getElementById("listView").style.display !== "none";
+}
+function rememberListScroll() {
+  if (listVisible()) listScrollY = window.scrollY;
+}
+// 一覧は表示するたびに最新データで描き直す（評価・編集の反映、🔄更新の反映）
+// opts.top: 先頭に戻す（検索条件を変えて開いたとき）
+function showListView(opts = {}) {
+  const target = opts.top ? 0 : (listVisible() ? window.scrollY : listScrollY);
   document.getElementById("controls").style.display = "";
   document.getElementById("listView").style.display = "";
   document.getElementById("detailView").style.display = "none";
@@ -5880,6 +5885,9 @@ function showListView() {
   document.getElementById("todayView").style.display = "none";
   document.getElementById("logView").style.display = "none";
   document.getElementById("quizView").style.display = "none";
+  if (games.length) render();
+  window.scrollTo(0, target);
+  requestAnimationFrame(() => window.scrollTo(0, target));
 }
 
 // 記録中の卓（保存するまでは画面の中だけで持つ）
@@ -8902,6 +8910,7 @@ document.getElementById("playerView").addEventListener("change", e => {
 });
 
 function router() {
+  rememberListScroll();
   const gameMatch = location.hash.match(/^#game\/(.+)$/);
   if (gameMatch) {
     const slug = decodeURIComponent(gameMatch[1]);
