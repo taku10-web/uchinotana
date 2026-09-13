@@ -851,6 +851,14 @@
   .guide-dots i { width: 6px; height: 6px; border-radius: 50%; background: var(--border); }
   .guide-dots i.on { background: var(--accent); }
   .guide-btns { display: flex; align-items: center; gap: 12px; }
+  .acct-row { display: flex; gap: 8px; margin: 10px 0 10px; }
+  .acct-btn {
+    flex: 1; min-width: 0; display: flex; align-items: center; justify-content: center; gap: 4px;
+    border: 1px solid var(--border); background: var(--card-bg); color: var(--text);
+    border-radius: 10px; padding: 9px 4px; font-size: 12px; font-weight: 600; font-family: inherit; cursor: pointer; white-space: nowrap;
+  }
+  .acct-btn i { font-style: normal; color: var(--accent); font-size: 13px; }
+  .acct-btn:active { opacity: .7; }
   .line-banner {
     position: fixed; left: 10px; right: 10px; bottom: 74px; z-index: 95;
     background: #1f3a4d; color: #fff; border-radius: 12px; padding: 10px 12px;
@@ -3111,7 +3119,7 @@ try {
 // ── 自動更新 ───────────────────────────────
 // iPhoneはHTMLを長く握るので、新しい版が出ていたらURLを変えて読み直す。
 // （同じURLの再読み込みだとキャッシュが返ってきてしまうため）
-const APP_BUILD = "2026-09-13-1920";
+const APP_BUILD = "2026-09-13-1924";
 
 function markVersion(extra) {
   const el = document.getElementById("appVersion");
@@ -9406,7 +9414,11 @@ function buildPlayerPage(name) {
     ${buildTitleStrip(name, isMe, shownTitles, earned.length)}
     ${isMe && earned.length ? buildTitlePicker(name, earned) : ""}
     ${buildTypeQuick(prof)}
-    ${isMe ? `<div class="tag-edit-bar"><button type="button" class="link-btn" data-change-name>名前を変更</button><button type="button" class="link-btn" data-switch-account style="margin-left:14px;">アカウント切り替え</button><button type="button" class="link-btn" data-handoff style="margin-left:14px;">別のブラウザに引き継ぐ</button></div>` : ""}
+    ${isMe ? `<div class="acct-row">
+      <button type="button" class="acct-btn" data-change-name><i>✎</i>名前を変更</button>
+      <button type="button" class="acct-btn" data-switch-account><i>⇄</i>アカウント切替</button>
+      <button type="button" class="acct-btn" data-handoff><i>↗</i>引き継ぎリンク</button>
+    </div>` : ""}
     <div class="detail-underline"></div>
     ${buildLevelCard(name, stats)}
     ${collapsibleSection("p-titles", `🏅 称号（${earned.length} / ${TITLE_DEFS.length}）`, buildTitlesCard(name, isMe), false)}
