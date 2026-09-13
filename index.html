@@ -850,6 +850,15 @@
   .guide-dots i { width: 6px; height: 6px; border-radius: 50%; background: var(--border); }
   .guide-dots i.on { background: var(--accent); }
   .guide-btns { display: flex; align-items: center; gap: 12px; }
+  .line-banner {
+    position: fixed; left: 10px; right: 10px; bottom: 74px; z-index: 95;
+    background: #1f3a4d; color: #fff; border-radius: 12px; padding: 10px 12px;
+    display: flex; align-items: center; gap: 10px; font-size: 12.5px; line-height: 1.5;
+    box-shadow: 0 6px 18px rgba(0,0,0,0.25);
+  }
+  .line-banner span { flex: 1; }
+  .line-banner a { color: #fff; font-weight: 700; white-space: nowrap; background: var(--accent); padding: 6px 10px; border-radius: 999px; text-decoration: none; }
+  .line-banner button { background: none; border: none; color: #fff; font-size: 18px; padding: 0 2px; cursor: pointer; }
   .onboard-card {
     background: var(--accent-soft);
     border: 1px solid var(--accent);
@@ -3095,7 +3104,7 @@ try {
 // ── 自動更新 ───────────────────────────────
 // iPhoneはHTMLを長く握るので、新しい版が出ていたらURLを変えて読み直す。
 // （同じURLの再読み込みだとキャッシュが返ってきてしまうため）
-const APP_BUILD = "2026-09-13-1824";
+const APP_BUILD = "2026-09-13-1829";
 
 function markVersion(extra) {
   const el = document.getElementById("appVersion");
@@ -3449,6 +3458,31 @@ const MOOD_QUESTIONS = [
 // データを差し替えたのに古い内容が表示され続ける事故を防げる。
 const NO_CACHE = { cache: "no-cache" };
 
+// ── 名前の引き継ぎ ──────────────────────────
+// 名前は端末のブラウザごとに覚えている（LINEのブラウザ・Safari・ホーム画面のアプリは別々）。
+// 同じ人だと分かるように、?me=名前 付きのリンクで開いたらその名前をこのブラウザにも覚えさせる。
+let handoffName = "";
+(function readHandoff() {
+  try {
+    const u = new URL(location.href);
+    const me = u.searchParams.get("me");
+    if (!me) return;
+    handoffName = normalizeName(me);
+    if (handoffName) localStorage.setItem(MY_NAME_KEY, handoffName);
+    u.searchParams.delete("me");
+    u.searchParams.delete("openExternalBrowser");
+    history.replaceState(null, "", u.pathname + (u.search || "") + u.hash);
+  } catch (e) { /* URLが読めない環境では何もしない */ }
+})();
+const IS_LINE_BROWSER = /\bLine\//i.test(navigator.userAgent);
+function appBaseUrl() {
+  return location.origin + location.pathname;
+}
+// 別のブラウザ・端末で同じ名前を使うためのリンク（LINEで開かれたら外のブラウザに出す指定も付ける）
+function handoffUrl(name) {
+  return `${appBaseUrl()}?me=${encodeURIComponent(name)}&openExternalBrowser=1`;
+}
+
 Promise.all([
   fetch("data/games.json", NO_CACHE).then(r => r.json()),
   fetch("data/rules.json", NO_CACHE).then(r => r.ok ? r.json() : {}).catch(() => ({})),
@@ -3474,10 +3508,94 @@ Promise.all([
   MECHANIC_VOCAB = new Set(Object.values(mechanicsData).flat().sort((a, b) => a.localeCompare(b, "ja")));
   render();
   router();
-  initGuide();
+  if (handoffName) {
+    registerNameOnServer(handoffName);
+    toast(`${handoffName} として開きました`);
+  }
+  if (!getMyName() && getAllKnownNames().length) openWhoAmI();   // 名前が無ければ、まず「あなたはだれ？」
+  else initGuide();
+  initLineBanner();
   checkForUpdate();
   cleanupEmptySessions();
 });
+
+// ── あなたはだれ？（名前が未設定のブラウザで開いたとき）─────────────
+// 別のブラウザで使っていた名前を選べば、評価や戦績がそのままつながる
+function openWhoAmI() {
+  let el = document.getElementById("whoami");
+  if (!el) {
+    el = document.createElement("div");
+    el.id = "whoami";
+    el.className = "guide-veil";
+    document.body.appendChild(el);
+  }
+  const names = getAllKnownNames();
+  el.innerHTML = `
+    <div class="guide-box">
+      <div class="guide-lead">あなたはだれ？</div>
+      <div class="guide-step"><h3>名前を選んでください</h3>
+        <p>名前はブラウザごとに覚えています（LINEのブラウザ・Safari・ホーム画面のアプリは別々）。前に使った名前を選べば、評価や戦績がそのままつながります。</p></div>
+      <div class="rec-pick-grid" style="margin:14px 0;">
+        ${names.map(n => `<button type="button" class="rec-pick" data-whoami-pick="${n}">${n}</button>`).join("")}
+      </div>
+      <div class="guide-btns">
+        <button type="button" class="link-btn" data-whoami-later>あとで</button>
+        <button type="button" class="detail-cta detail-cta-primary" data-whoami-new style="margin:0;flex:1;">新しい名前で登録</button>
+      </div>
+    </div>`;
+  el.style.display = "flex";
+}
+function closeWhoAmI() {
+  const el = document.getElementById("whoami");
+  if (el) el.style.display = "none";
+  initGuide();
+}
+document.addEventListener("click", e => {
+  const pick = e.target.closest("[data-whoami-pick]");
+  if (pick) {
+    const name = pick.dataset.whoamiPick;
+    localStorage.setItem(MY_NAME_KEY, name);
+    renderUserBadge();
+    render();
+    toast(`${name} として使います`);
+    closeWhoAmI();
+    return;
+  }
+  if (e.target.closest("[data-whoami-new]")) {
+    const name = normalizeName(prompt(`表示名を入力してください（全角${NAME_MAX_WIDTH}文字まで）`));
+    if (!name) return;
+    localStorage.setItem(MY_NAME_KEY, name);
+    registerNameOnServer(name);
+    renderUserBadge();
+    render();
+    closeWhoAmI();
+    return;
+  }
+  if (e.target.closest("[data-whoami-later]")) closeWhoAmI();
+  if (e.target.closest("[data-line-dismiss]")) { const b = document.getElementById("lineBanner"); if (b) b.remove(); sessionStorage.setItem("bg_line_banner", "1"); }
+  const share = e.target.closest("[data-handoff]");
+  if (share) {
+    const name = getMyName();
+    if (!name) return;
+    const url = handoffUrl(name);
+    const text = `うちのボードゲーム棚を「${name}」として開くリンク`;
+    if (navigator.share) navigator.share({ title: "うちのボードゲーム棚", text, url }).catch(() => {});
+    else if (navigator.clipboard) navigator.clipboard.writeText(url).then(() => toast("引き継ぎリンクをコピーしました")).catch(() => prompt("このリンクを別のブラウザで開いてください", url));
+    else prompt("このリンクを別のブラウザで開いてください", url);
+  }
+});
+
+// LINEの中のブラウザは名前を覚えていられないことがあるので、外のブラウザで開くことをすすめる
+function initLineBanner() {
+  if (!IS_LINE_BROWSER || sessionStorage.getItem("bg_line_banner")) return;
+  const name = getMyName();
+  const url = name ? handoffUrl(name) : `${appBaseUrl()}?openExternalBrowser=1`;
+  const b = document.createElement("div");
+  b.id = "lineBanner";
+  b.className = "line-banner";
+  b.innerHTML = `<span>LINEのブラウザで開いています。Safariで開くと名前や設定が消えません。</span><a href="${url}">Safariで開く</a><button type="button" data-line-dismiss aria-label="閉じる">×</button>`;
+  document.body.appendChild(b);
+}
 
 document.getElementById("search").addEventListener("input", e => {
   state.q = e.target.value.trim();
@@ -5525,7 +5643,7 @@ function applyPendingDetailSection() {
 function ensureMyName() {
   let name = getMyName();
   if (name) return name;
-  name = normalizeName(prompt(`表示名を入力してください（全角${NAME_MAX_WIDTH}文字まで）`));
+  name = normalizeName(prompt(`表示名を入力してください（全角${NAME_MAX_WIDTH}文字まで）\n前に使った名前と同じにすると、評価や戦績がつながります`));
   if (!name) return null;
   localStorage.setItem(MY_NAME_KEY, name);
   renderUserBadge();
@@ -9191,7 +9309,7 @@ function buildPlayerPage(name) {
     ${buildTitleStrip(name, isMe, shownTitles, earned.length)}
     ${isMe && earned.length ? buildTitlePicker(name, earned) : ""}
     ${buildTypeQuick(prof)}
-    ${isMe ? `<div class="tag-edit-bar"><button type="button" class="link-btn" data-change-name>名前を変更</button></div>` : ""}
+    ${isMe ? `<div class="tag-edit-bar"><button type="button" class="link-btn" data-change-name>名前を変更</button><button type="button" class="link-btn" data-handoff style="margin-left:14px;">別のブラウザに引き継ぐ</button></div>` : ""}
     <div class="detail-underline"></div>
     ${buildLevelCard(name, stats)}
     ${collapsibleSection("p-titles", `🏅 称号（${earned.length} / ${TITLE_DEFS.length}）`, buildTitlesCard(name, isMe), false)}
