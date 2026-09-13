@@ -52,6 +52,9 @@
     align-items: baseline;
     justify-content: space-between;
     gap: 10px;
+    position: sticky;
+    top: 0;
+    z-index: 90;
   }
   /* 画面下のタブバー。親指で届く位置に置く。 */
   .tab-bar {
@@ -145,7 +148,18 @@
     background: var(--card-bg);
     border-bottom: 1px solid var(--border);
     padding: 12px 16px;
+    position: sticky;
+    top: var(--head-h, 47px);
+    z-index: 85;
+    transition: padding .15s ease;
   }
+  /* 下にスクロールしたら検索窓だけ残して畳む。上に戻すか検索窓を触ると開く */
+  /* 固定ヘッダーの下に隠れないよう、飛び先には余白を持たせる */
+  #detailRecord, .collapse-block, .review-card, .rating-form, .shelf, .followup, .collapse-head { scroll-margin-top: calc(var(--head-h, 47px) + 10px); }
+  .controls.scrolled { padding: 6px 16px; box-shadow: 0 2px 8px rgba(20,40,60,0.08); }
+  .controls.scrolled .quick-row, .controls.scrolled #filterArea, .controls.scrolled .active-chips:empty { display: none !important; }
+  .controls.scrolled .active-chips { margin-top: 6px; }
+  .controls.scrolled .search-box { padding-top: 8px; padding-bottom: 8px; font-size: 14px; }
   .controls-topline {
     display: flex;
     gap: 8px;
@@ -3023,7 +3037,7 @@ try {
 // ── 自動更新 ───────────────────────────────
 // iPhoneはHTMLを長く握るので、新しい版が出ていたらURLを変えて読み直す。
 // （同じURLの再読み込みだとキャッシュが返ってきてしまうため）
-const APP_BUILD = "2026-09-13-1352";
+const APP_BUILD = "2026-09-13-1509";
 
 function markVersion(extra) {
   const el = document.getElementById("appVersion");
@@ -3437,9 +3451,27 @@ document.getElementById("mechanicSelect").addEventListener("change", e => {
   applyFilterChange();
 });
 
+// ヘッダーの高さを CSS 変数に入れて、検索欄がその下にぴったり貼り付くようにする
+function syncHeaderHeight() {
+  document.documentElement.style.setProperty("--head-h", document.querySelector("header").offsetHeight + "px");
+}
+syncHeaderHeight();
+window.addEventListener("resize", syncHeaderHeight);
+
+let lastScrollY = 0, controlsHold = false;
 window.addEventListener("scroll", () => {
-  document.getElementById("backToTop").classList.toggle("show", window.scrollY > 400);
+  const y = window.scrollY;
+  document.getElementById("backToTop").classList.toggle("show", y > 400);
+  const c = document.getElementById("controls");
+  if (!controlsHold) {
+    if (y > 140 && y > lastScrollY + 4) c.classList.add("scrolled");          // 下へ：畳む
+    else if (y < 40 || y < lastScrollY - 24) c.classList.remove("scrolled");   // 上へ／先頭：開く
+  }
+  lastScrollY = y;
 }, { passive: true });
+// 検索窓を触っている間は畳まない
+document.getElementById("search").addEventListener("focus", () => { controlsHold = true; document.getElementById("controls").classList.remove("scrolled"); });
+document.getElementById("search").addEventListener("blur", () => { controlsHold = false; });
 
 document.getElementById("backToTop").addEventListener("click", () => {
   window.scrollTo({ top: 0, behavior: "smooth" });
@@ -5796,8 +5828,7 @@ document.getElementById("detailView").addEventListener("click", async e => {
     ratingFormOpen = true;
     const g = games.find(x => slugOf(x) === editRating.dataset.editSlug);
     if (g) showDetail(g);
-    const form = document.querySelector("[data-rating-slug]");
-    if (form) form.scrollIntoView({ behavior: "smooth", block: "center" });
+    setTimeout(() => { const form = document.querySelector("[data-rating-slug]"); if (form) form.scrollIntoView({ behavior: "smooth", block: "start" }); }, 60);
     return;
   }
   const jumpOpen = e.target.closest("[data-jump-open]");
@@ -5817,8 +5848,9 @@ document.getElementById("detailView").addEventListener("click", async e => {
       ratingFormOpen = true;
       const g = currentDetailGame();
       if (g) showDetail(g);
-      const form = document.querySelector("[data-rating-slug]");
-      if (form) { form.scrollIntoView({ behavior: "smooth", block: "center" }); return; }
+      // showDetail は同じゲームだとスクロール位置を戻すので、その後に動かす
+      setTimeout(() => { const form = document.querySelector("[data-rating-slug]"); if (form) form.scrollIntoView({ behavior: "smooth", block: "start" }); }, 60);
+      return;
     }
     const el = document.getElementById(jump.dataset.jump);
     if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
