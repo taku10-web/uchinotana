@@ -524,6 +524,13 @@
     margin: 10px 0 8px;
   }
   .quick-row .recommend-btn { flex: 1; margin: 0; }
+  .quick-flags { display: flex; gap: 8px; margin: 0 0 8px; }
+  .quick-flag {
+    flex: 1; border: 1px solid var(--border); background: var(--card-bg); color: var(--text);
+    border-radius: 999px; padding: 7px 10px; font-size: 13px; font-weight: 600; font-family: inherit; cursor: pointer;
+  }
+  .quick-flag.on { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .controls.scrolled .quick-flags { display: none !important; }
   .filter-toggle {
     flex-shrink: 0;
     display: inline-flex;
@@ -1852,7 +1859,7 @@
   }
   .card-row { display: flex; gap: 12px; align-items: flex-start; margin-top: 8px; }
   .card-avg-label { font-size: 11px; font-weight: 700; color: var(--text-sub); margin: 8px 0 4px; }
-  .unrated-badge { font-style: normal; font-size: 10px; font-weight: 700; color: #c0392b; background: #fdecea; border-radius: 999px; padding: 1px 7px; margin-left: 6px; vertical-align: middle; }
+  .unrated-badge { font-style: normal; font-size: 10px; font-weight: 700; color: #c0392b; background: #fdecea; border-radius: 999px; padding: 1px 7px; margin-left: 6px; vertical-align: middle; white-space: nowrap; display: inline-block; }
   .rs-pill.total i { font-style: normal; font-size: 9px; opacity: .6; margin-left: 1px; }
   .rating-summary thead th i { font-style: normal; font-size: 9px; font-weight: 600; opacity: .7; }
   .card .rs-strip { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; margin: 0; }
@@ -2973,6 +2980,10 @@
     <a href="#today" class="recommend-btn">🎲 今日はなにする？</a>
     <button type="button" class="filter-toggle" id="filterToggle">絞り込む<span class="collapse-mark">＋</span></button>
   </div>
+  <div class="quick-flags">
+    <button type="button" class="quick-flag" id="quickUnplayed">🗄️ 未プレイ</button>
+    <button type="button" class="quick-flag" id="quickUnrated">✍️ 未評価</button>
+  </div>
   <div class="active-chips" id="activeChips"></div>
   <div id="filterArea" style="display:none;">
   <div class="tagcloud-fold">
@@ -3025,10 +3036,7 @@
       </select>
     </div>
   </div>
-  <label class="unplayed-toggle">
-    <input type="checkbox" id="unplayedOnly">
-    <span>🗄️ 未プレイのみ表示（評価も戦績もないもの）</span>
-  </label>
+  <input type="checkbox" id="unplayedOnly" hidden>
   <button type="button" id="resetFilterBtn" class="reset-btn">↺ 条件をリセット</button>
   </div>
 </div>
@@ -3122,7 +3130,7 @@ try {
 // ── 自動更新 ───────────────────────────────
 // iPhoneはHTMLを長く握るので、新しい版が出ていたらURLを変えて読み直す。
 // （同じURLの再読み込みだとキャッシュが返ってきてしまうため）
-const APP_BUILD = "2026-09-13-2010";
+const APP_BUILD = "2026-09-13-2023";
 
 function markVersion(extra) {
   const el = document.getElementById("appVersion");
@@ -3177,10 +3185,25 @@ let GENRE_VOCAB = new Set();      // データ読み込み後に埋める
 let MECHANIC_VOCAB = new Set();
 let moodScores = null;    // 「今日の気分」。保存せずその場限り
 let state = { q: "", players: "", time: "", genre: "", mechanic: "", sort: "rating_desc",
-              unplayedOnly: false, mine: "", mineName: "" };
+              unplayedOnly: false, unratedOnly: false, mine: "", mineName: "" };
 
 // 絞り込みを変えたら必ず先頭から見せる（途中から表示されると探しづらいため）
+function syncQuickFlags() {
+  const a = document.getElementById("quickUnplayed"), b = document.getElementById("quickUnrated");
+  if (a) a.classList.toggle("on", !!state.unplayedOnly);
+  if (b) b.classList.toggle("on", !!state.unratedOnly);
+}
+document.getElementById("quickUnplayed").addEventListener("click", () => {
+  state.unplayedOnly = !state.unplayedOnly;
+  document.getElementById("unplayedOnly").checked = state.unplayedOnly;
+  applyFilterChange();
+});
+document.getElementById("quickUnrated").addEventListener("click", () => {
+  state.unratedOnly = !state.unratedOnly;
+  applyFilterChange();
+});
 function applyFilterChange() {
+  syncQuickFlags();
   render();
   window.scrollTo(0, 0);
 }
@@ -3704,13 +3727,14 @@ document.getElementById("activeChips").addEventListener("click", e => {
   if (k === "genre") { state.genre = ""; document.getElementById("genreSelect").value = ""; }
   if (k === "mechanic") { state.mechanic = ""; document.getElementById("mechanicSelect").value = ""; }
   if (k === "unplayedOnly") { state.unplayedOnly = false; document.getElementById("unplayedOnly").checked = false; }
+  if (k === "unratedOnly") { state.unratedOnly = false; }
   if (k === "mine") { state.mine = ""; state.mineName = ""; }
   applyFilterChange();
 });
 
 document.getElementById("resetFilterBtn").addEventListener("click", () => {
   state.q = ""; state.players = ""; state.time = "";
-  state.genre = ""; state.mechanic = ""; state.unplayedOnly = false;
+  state.genre = ""; state.mechanic = ""; state.unplayedOnly = false; state.unratedOnly = false;
   state.mine = ""; state.mineName = "";
   document.getElementById("search").value = "";
   document.getElementById("playersSelect").value = "";
@@ -3759,6 +3783,9 @@ function matches(g) {
   }
   if (state.unplayedOnly) {
     if (!isUnplayedByMe(slugOf(g))) return false;
+  }
+  if (state.unratedOnly) {
+    if (myFullRating(slugOf(g))) return false;   // 3項目そろった自分の評価があるものを外す
   }
   // マイページの数字をタップして来たとき（その人の記録だけを見る）
   if (state.mine && state.mineName) {
@@ -3848,7 +3875,7 @@ function renderActiveChips() {
   if (state.time) chips.push(["time", "時間", TIME_LABEL[state.time] || state.time]);
   if (state.genre) chips.push(["genre", "ジャンル", state.genre]);
   if (state.mechanic) chips.push(["mechanic", "メカニクス", state.mechanic]);
-  if (state.unplayedOnly) chips.push(["unplayedOnly", "", "未プレイのみ"]);
+  // 未プレイ／未評価はすぐ上のボタンの色で分かるので、チップには出さない
   if (state.mine) chips.push(["mine", state.mineName, MINE_LABEL[state.mine]]);
   box.innerHTML = chips.map(([k, label, v]) =>
     `<button type="button" class="active-chip" data-chip-clear="${k}">${label ? `<b>${label}</b>` : ""}${v} ×</button>`
@@ -4035,7 +4062,7 @@ const MINE_LABEL = { played: "遊んだゲーム", rated: "評価したゲーム
 // マイページの数字から、その中身を一覧で見る
 function goToMyList(kind, name) {
   state.q = ""; state.genre = ""; state.mechanic = "";
-  state.players = ""; state.time = ""; state.unplayedOnly = false;
+  state.players = ""; state.time = ""; state.unplayedOnly = false; state.unratedOnly = false;
   state.mine = kind; state.mineName = name;
   state.sort = kind === "rated" ? "myrating_desc" : "rating_desc";
   ["search"].forEach(id => { const el = document.getElementById(id); if (el) el.value = ""; });
