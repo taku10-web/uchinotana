@@ -3156,7 +3156,7 @@ try {
 // ── 自動更新 ───────────────────────────────
 // iPhoneはHTMLを長く握るので、新しい版が出ていたらURLを変えて読み直す。
 // （同じURLの再読み込みだとキャッシュが返ってきてしまうため）
-const APP_BUILD = "2026-09-13-2238";
+const APP_BUILD = "2026-09-13-2314";
 
 function markVersion(extra) {
   const el = document.getElementById("appVersion");
@@ -6272,7 +6272,8 @@ function getDayTables(date) {
   Object.keys(historyCache).forEach(slug => {
     (historyCache[slug] || []).forEach(h => { if (h.date === date) out.push(h); });
   });
-  return out.sort((a, b) => (a.createdAt?.seconds || 0) - (b.createdAt?.seconds || 0));
+  const key = h => h.order || (h.createdAt && h.createdAt.seconds) || 0;
+  return out.sort((a, b) => key(a) - key(b));
 }
 
 // 記録のある日付すべて（戦績とセッションの両方から）
@@ -6513,7 +6514,7 @@ function buildTableRow(h, i, sess, tables) {
         : ""}
       <div class="log-row-btns">
         ${done
-          ? `<button type="button" class="log-again" data-log-again="${h.id}">もう1回</button>`
+          ? `<button type="button" class="log-again" data-log-again="${h.id}">もう1回</button><button type="button" class="log-again" data-table-edit="${h.id}">編集</button>`
           : `<button type="button" class="log-again primary" data-table-edit="${h.id}">結果を入れる</button>`}
         <button type="button" class="log-again ${myRating(h.slug) == null ? "" : "rated"}" data-log-rate="${h.slug}">
           ${myRating(h.slug) == null ? "評価する" : `評価 ${myRating(h.slug)}`}
@@ -6529,7 +6530,8 @@ function buildTableRow(h, i, sess, tables) {
 // 結果の入力。前回そのゲームでどう遊んだかを引き継いで、選ぶ手間を減らす。
 function buildTableEditor(h, name, sess) {
   const t = editDraft;
-  const pool = [...new Set([...(sess.members || []), ...t.members, ...historyParticipants(h)])];
+  // その日のメンバー・いまの選択・当時の参加者を先頭に、あとは登録済みの全員（過去の卓に人を足せるように）
+  const pool = [...new Set([...t.members, ...(sess.members || []), ...historyParticipants(h), ...getAllKnownNames()])];
   const winnerLabel = t.mode === "solo" ? "勝った人（1人）"
     : t.mode === "team" ? "勝ったチームの人"
     : "勝った人（選ばなかった人は負け）";
@@ -6589,7 +6591,7 @@ function tableMissing(t) {
 }
 
 function tableSaveLabel(t) {
-  return tableMissing(t) || "この結果で記録する";
+  return tableMissing(t) || (t.editing ? "この内容で上書きする" : "この結果で記録する");
 }
 
 function tableReady(t) {
@@ -8590,7 +8592,8 @@ document.getElementById("logView").addEventListener("click", async e => {
       mode: h.mode || lastModeFor(h.slug),
       winners: (h.winners || []).slice(),
       coopResult: h.coopResult || "",
-      memo: h.memo || ""
+      memo: h.memo || "",
+      editing: historyHasResult(h)   // 結果入りの卓の編集（保存後の案内を変える）
     };
     expandedPickers.clear();
     rerenderLog();
@@ -8659,13 +8662,15 @@ document.getElementById("logView").addEventListener("click", async e => {
       losers: t.mode === "coop" ? [] : t.members.filter(n => !t.winners.includes(n)),
       players: t.members.slice(),
       coopResult: t.mode === "coop" ? t.coopResult : "",
-      guests: "", memo: (t.memo || "").trim()
+      guests: "", memo: (t.memo || "").trim(),
+      order: h.order || (h.createdAt && h.createdAt.seconds) || 0   // 入れ直しても、その日の中での並び順を保つ
     }));
     await deleteHistory(h.slug, h.id);
+    const wasEdit = !!t.editing;
     editingId = ""; editDraft = null;
-    logFollowUp = { slug: h.slug, date: sess.date, memo: (t.memo || "").trim() };
+    if (!wasEdit) logFollowUp = { slug: h.slug, date: sess.date, memo: (t.memo || "").trim() };
     rerenderLog();
-    toast("記録しました");
+    toast(wasEdit ? "記録を書き換えました" : "記録しました");
     return;
   }
 
