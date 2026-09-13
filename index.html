@@ -2593,8 +2593,8 @@
   .match-hero-stars .match-stars { font-size: 26px; letter-spacing: 3px; }
   .match-hero-name { font-size: 22px; font-weight: 800; margin: 2px 0 6px; }
   .match-hero-text { margin: 0; font-size: 13.5px; line-height: 1.7; text-align: left; }
-  .match-kind { display: flex; justify-content: center; gap: 10px; align-items: baseline; margin-top: 10px; }
-  .match-kind b { font-size: 15px; }
+  .match-kind { display: flex; flex-direction: column; align-items: center; gap: 2px; margin-top: 12px; }
+  .match-kind b { font-size: 17px; }
   .match-kind span { font-size: 12px; color: var(--text-sub); }
   .match-metric { padding: 8px 0; border-top: 1px solid var(--border); }
   .match-metric:first-of-type { border-top: none; }
@@ -2628,6 +2628,19 @@
   .match-issue b { font-size: 14px; color: #b7462b; }
   .match-issue.none b { color: var(--accent); }
   .match-issue p { margin: 3px 0 0; font-size: 13px; line-height: 1.65; }
+  .match-lucky { margin-top: 12px; font-size: 13px; color: var(--text-sub); }
+  .match-lucky a { font-weight: 800; color: var(--accent); text-decoration: none; margin-left: 6px; font-size: 15px; }
+  .match-lead { margin: 0 0 6px; font-size: 14px; font-weight: 700; line-height: 1.6; }
+  .match-scenes { margin: 0; padding-left: 1.2em; font-size: 13.5px; line-height: 1.7; }
+  .match-scenes li { margin-bottom: 4px; }
+  .match-standing { display: flex; gap: 5px; flex-wrap: wrap; margin-top: 4px; }
+  .match-standing i { font-style: normal; font-size: 11px; font-weight: 700; color: var(--accent); background: var(--accent-soft); border-radius: 999px; padding: 2px 8px; }
+  .match-scene-pick { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-top: 1px solid var(--border); text-decoration: none; color: var(--text); }
+  .match-scene-pick:first-of-type { border-top: none; }
+  .match-scene-label { flex: 0 0 132px; font-size: 12.5px; font-weight: 700; color: var(--text-sub); }
+  .match-scene-pick img { width: 44px; height: 44px; object-fit: contain; border-radius: 6px; background: #fff; }
+  .match-scene-name { font-size: 14px; font-weight: 700; display: flex; flex-direction: column; min-width: 0; }
+  .match-scene-name small { font-size: 11.5px; font-weight: 500; color: var(--text-sub); }
   .match-pair { display: flex; align-items: baseline; gap: 10px; padding: 7px 0; border-top: 1px solid var(--border); flex-wrap: wrap; }
   .match-pair:first-of-type { border-top: none; }
   .match-pair-names { font-weight: 700; font-size: 14px; }
@@ -3133,7 +3146,7 @@ try {
 // ── 自動更新 ───────────────────────────────
 // iPhoneはHTMLを長く握るので、新しい版が出ていたらURLを変えて読み直す。
 // （同じURLの再読み込みだとキャッシュが返ってきてしまうため）
-const APP_BUILD = "2026-09-13-2149";
+const APP_BUILD = "2026-09-13-2200";
 
 function markVersion(extra) {
   const el = document.getElementById("appVersion");
@@ -7344,25 +7357,85 @@ function buildMatchView() {
   return head + picker + buildMatchResult(picked);
 }
 
+// 4軸それぞれ「同じ側(S)か違う側(D)か」の16パターン。組み合わせの名前と、そのチームの性格
+const MATCH_PATTERNS = {
+  SSSS: { name: "鏡写しの卓", word: "以心伝心", text: "4つの軸すべてで同じ側。説明いらずで話が早く、好きなゲームも一致します。弱点は、苦手なジャンルまで同じで視野が広がらないこと。二人（全員）が避けているジャンルにあえて挑む日を作ると、いちばん伸びる卓です。" },
+  SSSD: { name: "同じ目線、違うテンポ", word: "適材適所", text: "感じ方も勝負観も同じで、段取りだけが違う組み合わせ。計画派が準備してルールを整え、即興派が場を回す。役割が自然に分かれる実は最強の分業ですが、計画派が「段取りを無視された」と感じた瞬間だけ空気が冷えます。" },
+  SSDS: { name: "温度差のある同志", word: "和して同ぜず", text: "考え方も進め方も同じなのに、勝負への熱だけが違う。協力ゲームでは最高の相棒になりますが、対戦になると勝負派が本気を出しすぎて、調和派が引いてしまう場面が出ます。チーム戦で同じ側に立たせると、その熱が武器に変わります。" },
+  SSDD: { name: "同じ言葉を話すライバル", word: "好敵手", text: "空気と考え方が同じで、勝負観とテンポが違う。読み合いがよく噛み合うので心理戦・ブラフ系がとにかく盛り上がります。負けた側がむきになる関係でもあるので、最後の1本は協力系で締めると後味がいい。" },
+  SDSS: { name: "現実派と夢想家の相棒", word: "温故知新", text: "空気・熱・テンポは同じで、情報の取り方だけが違う。堅実派がルールと得点計算を、直感派が発想と読みを担当すると、抜群のバランスになります。ただしルール解釈で意見が割れたとき、どちらも譲らないのが玉にきず。" },
+  SDSD: { name: "補い合う二枚看板", word: "相互補完", text: "空気と熱は同じ、考え方とテンポは逆。得意なゲームがはっきり分かれるので、交互に選ぶと長く続きます。片方が選んだゲームでもう片方が置いていかれる回があるのは織り込み済みで。" },
+  SDDS: { name: "ぶつかって伸びる卓", word: "切磋琢磨", text: "空気とテンポは同じで、考え方と勝負観が逆。議論が起きやすい組み合わせですが、その議論がゲームを深くします。チーム戦で同じ側に立つと、直感と堅実、攻めと守りがそろって死角がなくなります。" },
+  SDDD: { name: "空気だけ同じ卓", word: "同床異夢", text: "盛り上がり方だけが一致していて、あとは全部違う。それでも同じ卓にいられるのは、その空気の相性が良いから。パーティ系・ワード系が安全地帯で、重量級や心理戦になると温度差が出ます。" },
+  DSSS: { name: "話す人と聞く人", word: "静中動あり", text: "空気以外は全部同じ。ワイワイ派が場を回し、じっくり派が要所で締める理想の配置です。読みが同じなので協力系で力を発揮します。弱点は、じっくり派の長考中にワイワイ派が退屈すること。" },
+  DSSD: { name: "静と動の同志", word: "動静一如", text: "考え方と勝負観が同じで、空気とテンポが逆。じっくり計画派が土台を作り、ワイワイ即興派が花火を上げる構図になりやすい。土台側が「準備したのに」と思う回と、花火側が「重い」と思う回が交互に来ます。" },
+  DSDS: { name: "同じ頭、違う心", word: "異体同心", text: "考え方とテンポは同じで、空気と勝負観が逆。ルールの理解は早く、段取りも噛み合います。ただ勝ち負けの受け止め方が違うので、対戦の終盤で片方が静かになる。協力系や、勝敗がぼやけるゲームが無難です。" },
+  DSDD: { name: "考え方だけ同じ卓", word: "一点共鳴", text: "情報の取り方だけが同じ。説明は一発で通じるのに、遊び方の好みはバラバラという不思議な関係です。得意分野を持ち寄って順番に出し合う形が合います。" },
+  DDSS: { name: "熱と段取りの同志", word: "目的一致", text: "勝負観とテンポが同じで、空気と考え方が逆。作戦会議は噛み合わないのに、始まると同じ方向を向く卓です。チーム戦で一緒になると強い一方、協力ゲームでは方針の説明でもたつきます。" },
+  DDSD: { name: "勝負観だけ握手", word: "真剣勝負", text: "勝ち負けの温度だけが同じで、他は全部違う。対戦系だけが共通言語です。2人用や陣取りで本気で殴り合うのが一番相性が良く、パーティ系だと「何が楽しいのか」でズレます。" },
+  DDDS: { name: "テンポだけ同じ卓", word: "同時進行", text: "進め方だけが一致。準備と片付けの相性は良いので、始まってしまえば意外と回ります。ゲーム中の会話は噛み合わない前提で、同時進行系や紙ペンなど、各自が黙々と遊ぶゲームが向いています。" },
+  DDDD: { name: "正反対の鏡", word: "呉越同舟", text: "4つの軸すべてが逆。噛み合わないぶん、相手の一手が毎回新鮮です。対戦すると読み合いが成立しにくいのに、チームを組むと死角がなくなる。組ませるか、戦わせるかで別のゲームになります。" }
+};
+function patternOf(names) {
+  return AXES.map(ax => { const sides = names.map(n => axisVal(n, ax.key) > 0); return sides.every(x => x === sides[0]) ? "S" : "D"; }).join("");
+}
+// 寄りの強さの言い方
+function leanWord(v) {
+  const a = Math.abs(v);
+  return a >= 0.75 ? "はっきり" : a >= 0.4 ? "" : "少し";
+}
+// この卓で起きがちな場面。条件に合うものを強い順に出す
+const MATCH_SCENES = [
+  { t: "インスト中に全員がしゃべり出して、誰もルールを最後まで聞いていない", s: n => groupLetter(n, "E") - 0.55 },
+  { t: "無言でカードを出し合い、終わってから「あそこ悩んだよね」で盛り上がる", s: n => groupLetter(n, "I") - 0.55 },
+  { t: "じっくり派の長考中、ワイワイ派がスマホを見始める", s: n => Math.min(groupLetter(n, "E"), groupLetter(n, "I")) - 0.3 },
+  { t: "得点計算が正確すぎて、同点の処理まで完璧にこなす", s: n => groupLetter(n, "S") - 0.6 },
+  { t: "ルールをうろ覚えのまま始めて、途中で「あれ、これ違くない？」となる", s: n => groupLetter(n, "N") - 0.55 },
+  { t: "直感派の「なんとなくこれ」が当たって、堅実派が本気で悔しがる", s: n => Math.min(groupLetter(n, "S"), groupLetter(n, "N")) - 0.3 },
+  { t: "接戦の終盤、誰も口をきかなくなる", s: n => groupLetter(n, "T") - 0.6 },
+  { t: "勝った人が申し訳なさそうにしている", s: n => groupLetter(n, "F") - 0.6 },
+  { t: "勝負派が本気で妨害して、調和派が一瞬固まる", s: n => Math.min(groupLetter(n, "T"), groupLetter(n, "F")) - 0.3 },
+  { t: "ルールブックを確認している時間のほうが、プレイ時間より長い", s: n => groupLetter(n, "J") - 0.6 },
+  { t: "「じゃあ何やる？」で30分経つ", s: n => groupLetter(n, "P") - 0.6 },
+  { t: "計画派が準備している横で、即興派がもう別の箱を開けている", s: n => Math.min(groupLetter(n, "J"), groupLetter(n, "P")) - 0.3 },
+  { t: "煽り合いが始まって、ゲームより口が動いている", s: n => Math.min(groupLetter(n, "E"), groupLetter(n, "T")) - 0.5 },
+  { t: "協力ゲームなのに、仕切る人が決まらず全員が譲り合う", s: n => Math.min(groupLetter(n, "I"), groupLetter(n, "F")) - 0.5 },
+  { t: "ブラフを誰も見抜けず、正直者が総取りする", s: n => Math.min(groupLetter(n, "S"), groupLetter(n, "F")) - 0.5 },
+  { t: "「もう1回」が止まらず、気づいたら同じゲームを5回やっている", s: n => Math.min(groupLetter(n, "E"), groupLetter(n, "P")) - 0.5 }
+];
+// 日替わりで変わる「ラッキーゲーム」用の小さなハッシュ
+function dailyIndex(seed, n) {
+  let h = 0;
+  const str = seed + todayStr();
+  for (let i = 0; i < str.length; i++) h = (h * 31 + str.charCodeAt(i)) >>> 0;
+  return n ? h % n : 0;
+}
+
 function buildMatchResult(names) {
   const pairs = [];
   for (let i = 0; i < names.length; i++) for (let j = i + 1; j < names.length; j++) pairs.push([names[i], names[j]]);
   const isPair = names.length === 2;
   const who = isPair ? `${names[0]}と${names[1]}` : `この${names.length}人`;
+  const d = (a, b, k) => Math.abs(axisVal(a, k) - axisVal(b, k)) / 2;
+  const avgPair = f => pairs.reduce((sum, [a, b]) => sum + f(a, b), 0) / pairs.length;
 
-  // ── 総合（タイプだけから）
-  const baseAvg = pairs.reduce((sum, [a, b]) => sum + pairBase(a, b), 0) / pairs.length;
-  const simAvg = pairs.reduce((sum, [a, b]) => sum + pairSimilarity(a, b), 0) / pairs.length;
+  // ── 総合とパターン
+  const baseAvg = avgPair(pairBase);
+  const simAvg = avgPair(pairSimilarity);
   const overallLv = toLevel(baseAvg);
   const ov = MATCH_OVERALL[overallLv];
-  const kind = simAvg >= 0.72 ? { name: "似た者同士", text: "4つの軸のほとんどで同じ側に寄っています。以心伝心で話が早いぶん、苦手なジャンルも共通。" }
-    : simAvg <= 0.45 ? { name: "正反対で補い合う", text: "軸の多くで逆側。ぶつかることもありますが、片方の弱点をもう片方が埋める組み合わせです。" }
-    : { name: "半分似て、半分違う", text: "近い軸と遠い軸が半々。安心感と刺激の両方がある、いちばん長続きしやすい距離感です。" };
+  const pat = MATCH_PATTERNS[patternOf(names)];
+  // 相性の内訳（総合の計算式と同じ4つの要素）
+  const subs = [
+    { label: "考え方の近さ", note: "堅実派／直感派が同じ側だと説明が早い", v: avgPair((a, b) => 1 - d(a, b, "SN")) },
+    { label: "勝負観の近さ", note: "勝ち負けへの温度がそろうほど後味がいい", v: avgPair((a, b) => 1 - d(a, b, "TF")) },
+    { label: "空気のバランス", note: "話す人と聞く人がいるのが理想", v: avgPair((a, b) => 1 - Math.abs(d(a, b, "EI") - 0.5) * 2) },
+    { label: "役割の補い合い", note: "計画派と即興派が混ざるほど分業できる", v: avgPair((a, b) => d(a, b, "JP")) }
+  ];
 
-  const datas = pairs.map(([a, b]) => ({ a, b }));
   // ── 卓としての適性
   const L = l => groupLetter(names, l);
-  const snSim = pairs.reduce((sum, [a, b]) => sum + (1 - Math.abs(axisVal(a, "SN") - axisVal(b, "SN")) / 2), 0) / pairs.length;
+  const snSim = avgPair((a, b) => 1 - d(a, b, "SN"));
   const coop = L("F") * 0.4 + snSim * 0.35 + L("I") * 0.25;
   const versus = L("T") * 0.5 + L("E") * 0.25 + L("J") * 0.25;
   const party = L("E") * 0.5 + L("P") * 0.3 + L("F") * 0.2;
@@ -7372,19 +7445,24 @@ function buildMatchResult(names) {
   const versusNote = versusLv >= 4 ? "手加減なしの真剣勝負が成立する卓。戦略系・陣取り・トリックテイキングで本気を出し合ってください。" : versusLv === 3 ? "対戦は盛り上がりますが、負けが続く人が出ると空気が変わります。短時間で何度も回せるゲームで巻き返しの機会を。" : "勝ち負けにこだわる人が少ない卓。対戦するなら運の要素が強いものか、勝敗がぼやけるパーティ系を。";
   const partyNote = partyLv >= 4 ? "放っておいても盛り上がる卓。ワード系・お絵かき・大喜利系はハズレなし。むしろ静かに考えるゲームは向きません。" : partyLv === 3 ? "パーティ系は盛り上げ役がいれば問題なし。人数が増えるほど楽しい組み合わせです。" : "全員が控えめな卓。大声を出すパーティ系より、静かに笑える推理系や協力系が合います。";
   const staminaNote = staminaLv >= 4 ? "90分超えの重量級でも集中が切れない卓。テラフォーミングマーズやワイナリーの四季に挑む日を作ってください。" : staminaLv === 3 ? "30〜60分の中量級がベスト。重量級は1日1本まで。" : "テンポ重視の卓。15分前後のゲームを何本も回すほうが満足度が高く、長考が始まるとダレます。";
+  const best = [["協力", coopLv], ["真剣勝負", versusLv], ["パーティ", partyLv]].sort((x, y) => y[1] - x[1]);
+  const teamStyle = best[0][1] === best[1][1]
+    ? `${best[0][0]}でも${best[1][0]}でも同じくらい強い、器用な卓`
+    : `いちばん輝くのは${best[0][0]}、いちばん向かないのは${best[2][0]}`;
 
-  // ── 軸ごとの見立て
+  // ── どんなチームになるか（軸ごとの見立てを、良いところと危ういところ込みで）
   const axisCards = AXES.map((ax, i) => {
     const r = axisReading(names, ax);
     return `
       <div class="match-axis">
         <div class="match-axis-title">${["①", "②", "③", "④"][i]} ${r.title}<span class="match-axis-sub">${ax.aLabel} ／ ${ax.bLabel}</span></div>
-        <div class="match-axis-people">${r.sides.map(x => `<span class="match-side ${x.a ? "a" : "b"}">${x.n}<small>${x.a ? ax.aLabel : ax.bLabel}</small></span>`).join("")}</div>
+        <div class="match-axis-people">${r.sides.map(x => { const v = axisVal(x.n, ax.key); return `<span class="match-side ${x.a ? "a" : "b"}">${x.n}<small>${leanWord(v)}${x.a ? ax.aLabel : ax.bLabel}</small></span>`; }).join("")}</div>
         <p>${r.text}</p>
       </div>`;
   }).join("");
+  const scenes = MATCH_SCENES.map(sc => ({ t: sc.t, v: sc.s(names) })).filter(x => x.v > 0).sort((x, y) => y.v - x.v).slice(0, 4);
 
-  // ── 役回り
+  // ── 役回りと、この卓での立ち位置（軸ごとに「いちばん〜」を出す）
   const roles = names.map(n => ({ n, r: roleOf(n), f: typeInfo(getProfile(n)), p: getProfile(n) }));
   const roleCounts = {};
   roles.forEach(x => { roleCounts[x.r.name] = (roleCounts[x.r.name] || 0) + 1; });
@@ -7392,37 +7470,25 @@ function buildMatchResult(names) {
   const roleNote = dupRole
     ? `${dupRole[0]}が${dupRole[1]}人。同じ役回りがかぶると、どちらかが手持ち無沙汰になります。かぶった人は意識して別の顔を出してみてください。`
     : "役回りがきれいに分かれています。誰かが欠けると卓の色が変わる、バランスのいい編成です。";
-
-  // ── 問題点：全員が同じ側に極端に寄っている軸、大きく割れている軸、役回りのかぶり、相性の低いペア、遊びたい長さのズレ
-  const issues = [];
-  const AXIS_ISSUES = {
-    EI: { allA: ["全員ワイワイ派", "ルール説明が最後まで聞かれず、途中で「それ知らなかった」が出やすい卓です。インストは1人が仕切り、質問は後でまとめて受けてください。"],
-          allB: ["全員じっくり派", "盛り上げ役がいないので、パーティ系は静かに終わりがち。無理に騒ぐより、推理系や協力系で真価を出しましょう。"],
-          split: ["発言量の偏り", "ワイワイ派が話し、じっくり派が聞くだけになりやすい。手番が順番に回るゲームや、全員が同時に出すゲームだと均等に参加できます。"] },
-    SN: { allA: ["全員堅実派", "ブラフ系で全員が正直すぎて読み合いにならないことがあります。心理戦を出すなら、運の要素があるものを。"],
-          allB: ["全員直感派", "細かい得点ルールを誰も覚えていない前提で。重量級は早見表を開きっぱなしにしておくと事故が減ります。"],
-          split: ["説明のかみ合わなさ", "堅実派の手順どおりの説明が、直感派には長く感じられます。直感派には「まず1回やってみる」方式が向いています。"] },
-    TF: { allA: ["全員勝負派", "負けた側の空気が重くなりやすい卓。短時間で何度も回せるゲームで、巻き返しの機会を作ってください。"],
-          allB: ["全員調和派", "接待プレイが始まって勝負がぼやけがち。協力系や、勝敗より完成を楽しむゲームのほうが満足度が高いです。"],
-          split: ["勝ち負けへの温度差", "勝負派の本気が、調和派には攻撃に見えることがあります。チーム戦で同じ側に置くか、協力ゲームを間に挟むと丸く収まります。"] },
-    JP: { allA: ["全員計画派", "ルール裁判が長引きがち。「今回はこう」と決めて先に進める係を1人決めておくと時間を守れます。"],
-          allB: ["全員即興派", "始まるまでが長い卓。箱を開ける係と、最初の1本を決める係を先に決めてください。"],
-          split: ["段取りへの不満", "計画派は準備を無視されると冷めます。最初の1本だけは計画派に選ばせる、が長続きのコツです。"] }
-  };
-  AXES.forEach(ax => {
-    const vals = names.map(n => axisVal(n, ax.key));
-    const na = vals.filter(v => v > 0).length;
-    const meanAbs = vals.reduce((sum, v) => sum + Math.abs(v), 0) / vals.length;
-    const spread = Math.max(...vals) - Math.min(...vals);
-    const iss = AXIS_ISSUES[ax.key];
-    if (na === names.length && meanAbs >= 0.5) issues.push({ title: iss.allA[0], text: iss.allA[1] });
-    else if (na === 0 && meanAbs >= 0.5) issues.push({ title: iss.allB[0], text: iss.allB[1] });
-    else if (spread >= 1.2) issues.push({ title: iss.split[0], text: iss.split[1] });
-  });
-  if (dupRole) issues.push({ title: `${dupRole[0]}が${dupRole[1]}人`, text: "同じ役回りがかぶると、どちらかが手持ち無沙汰になります。かぶった人は意識して別の顔を出してみてください。" });
-  const lean = names.map(n => timeLeaning(getProfile(n).scores));
-  if (Math.max(...lean) - Math.min(...lean) >= 1.0) issues.push({ title: "遊びたい長さが合わない", text: "重量級をやりたい人と、短いものを何本も回したい人が同席しています。長いゲームは1日1本にして、前後を軽いゲームで挟むのが無難です。" });
-  datas.forEach(d => { if (toLevel(pairBase(d.a, d.b)) <= 2) issues.push({ title: `${d.a}と${d.b}の相性が低め`, text: "考え方が離れている2人です。直接対決より、同じチームに入れるか、全員協力のゲームのほうが噛み合います。" }); });
+  const standing = {};
+  names.forEach(n => { standing[n] = []; });
+  if (!isPair) {
+    AXES.forEach(ax => {
+      const sorted = names.slice().sort((x, y) => axisVal(y, ax.key) - axisVal(x, ax.key));
+      const top = sorted[0], bottom = sorted[sorted.length - 1];
+      if (axisVal(top, ax.key) - axisVal(bottom, ax.key) < 0.3) return;
+      standing[top].push(`いちばんの${ax.aLabel}`);
+      standing[bottom].push(`いちばんの${ax.bLabel}`);
+    });
+  } else {
+    AXES.forEach(ax => {
+      const [x, y] = names;
+      const dx = axisVal(x, ax.key) - axisVal(y, ax.key);
+      if (Math.abs(dx) < 0.3) return;
+      standing[dx > 0 ? x : y].push(`${ax.aLabel}寄り`);
+      standing[dx > 0 ? y : x].push(`${ax.bLabel}寄り`);
+    });
+  }
 
   // ── ジャンル
   const genres = groupGenres(names);
@@ -7431,10 +7497,20 @@ function buildMatchResult(names) {
 
   // ── ゲーム
   const avg = avgScoresOf(names);
-  const picksAll = sampleGamesForScores(avg, 40, false, names);
-  const picks = (matchPickMode === "play"
-    ? picksAll.filter(x => (x.g.playersMin == null || x.g.playersMin <= names.length) && (x.g.playersMax == null || x.g.playersMax >= names.length))
-    : picksAll).slice(0, 3);
+  const picksAll = sampleGamesForScores(avg, 60, false, names);
+  const fitsCount = x => (x.g.playersMin == null || x.g.playersMin <= names.length) && (x.g.playersMax == null || x.g.playersMax >= names.length);
+  const picks = (matchPickMode === "play" ? picksAll.filter(fitsCount) : picksAll).slice(0, 3);
+  const playable = picksAll.filter(fitsCount);
+  const usedScene = new Set();
+  const sceneGame = (pred) => { const hit = playable.find(x => !usedScene.has(slugOf(x.g)) && pred(getGameTags(x.g), x.g)); if (hit) usedScene.add(slugOf(hit.g)); return hit; };
+  const scenePicks = [
+    ["🤝 協力するなら", sceneGame(t => t.genreTags.includes("協力系") || t.allMechanics.includes("協力"))],
+    ["🃏 騙し合うなら", sceneGame(t => t.allMechanics.includes("ブラフ") || t.allMechanics.includes("正体隠匿"))],
+    ["🎉 騒ぐなら", sceneGame(t => t.genreTags.includes("パーティ系") || t.genreTags.includes("ワード系"))],
+    ["♟ 本気で殴り合うなら", sceneGame(t => t.genreTags.includes("戦略系") || t.allMechanics.includes("陣取り"))],
+    ["🧩 静かに考えるなら", sceneGame(t => t.genreTags.includes("パズル系") || t.genreTags.includes("推理系"))]
+  ].filter(x => x[1]);
+  const lucky = playable.slice(0, 6)[dailyIndex(names.join("|"), Math.min(6, playable.length))];
   const favs = groupFavorites(names);
   const played = groupPlayed(names);
 
@@ -7444,12 +7520,19 @@ function buildMatchResult(names) {
       <div class="match-hero-stars">${stars(overallLv)}</div>
       <div class="match-hero-name">${ov.name}</div>
       <p class="match-hero-text">${ov.text}</p>
-      <div class="match-kind"><b>${kind.name}</b><span>タイプの近さ ${Math.round(simAvg * 100)}%</span></div>
-      <p class="match-hero-text" style="margin-top:4px;">${kind.text}</p>
+      <div class="match-kind"><b>${pat.name}</b><span>合言葉「${pat.word}」・タイプの近さ ${Math.round(simAvg * 100)}%</span></div>
+      <p class="match-hero-text" style="margin-top:4px;">${pat.text}</p>
+      ${lucky ? `<div class="match-lucky">今日のラッキーゲーム <a href="#game/${encodeURIComponent(slugOf(lucky.g))}">${lucky.g.jp}</a></div>` : ""}
     </div>
 
     <div class="review-card">
-      <div class="review-header"><div class="review-title">卓としての適性</div></div>
+      <div class="review-header"><div class="review-title">相性の内訳</div></div>
+      ${subs.map(x => metricRow(x.label, toLevel(x.v), x.note)).join("")}
+    </div>
+
+    <div class="review-card">
+      <div class="review-header"><div class="review-title">どんなチームになるか</div></div>
+      <p class="match-lead">${teamStyle}。</p>
       ${metricRow("協力ゲームの息の合い方", coopLv, coopNote)}
       ${metricRow("真剣勝負の熱さ", versusLv, versusNote)}
       ${metricRow("パーティの盛り上がり", partyLv, partyNote)}
@@ -7461,12 +7544,11 @@ function buildMatchResult(names) {
       ${axisCards}
     </div>
 
+    ${scenes.length ? `
     <div class="review-card">
-      <div class="review-header"><div class="review-title">相性の問題点</div></div>
-      ${issues.length
-        ? issues.map(x => `<div class="match-issue"><b>${x.title}</b><p>${x.text}</p></div>`).join("")
-        : `<div class="match-issue none"><b>特に問題なし</b><p>4つの軸のどれにも極端な偏りやズレがなく、役回りもかぶっていません。安心して何でも出せる卓です。</p></div>`}
-    </div>
+      <div class="review-header"><div class="review-title">この卓で起きがちな名場面</div></div>
+      <ul class="match-scenes">${scenes.map(x => `<li>${x.t}</li>`).join("")}</ul>
+    </div>` : ""}
 
     <div class="review-card">
       <div class="review-header"><div class="review-title">卓での役回り</div></div>
@@ -7478,6 +7560,7 @@ function buildMatchResult(names) {
               <b>${x.n}<small>${x.f.emoji} ${typeDisplay(x.p)}</small></b>
               <span class="match-role-name">${x.r.name}</span>
               <span class="match-role-text">${x.r.text}</span>
+              ${standing[x.n].length ? `<span class="match-standing">${standing[x.n].map(t => `<i>${t}</i>`).join("")}</span>` : ""}
             </span>
           </a>`).join("")}
       </div>
@@ -7498,11 +7581,11 @@ function buildMatchResult(names) {
     ${pairs.length > 1 ? `
     <div class="review-card">
       <div class="review-header"><div class="review-title">ペアごとの相性</div></div>
-      ${datas.map(d => { const lv = toLevel(pairBase(d.a, d.b)); return `
+      ${pairs.map(([a, b]) => { const lv = toLevel(pairBase(a, b)); const pp = MATCH_PATTERNS[patternOf([a, b])]; return `
         <div class="match-pair">
-          <span class="match-pair-names">${d.a} × ${d.b}</span>
+          <span class="match-pair-names">${a} × ${b}</span>
           ${stars(lv)}
-          <span class="match-pair-name">${MATCH_OVERALL[lv].name}</span>
+          <span class="match-pair-name">${MATCH_OVERALL[lv].name}・${pp.name}</span>
         </div>`; }).join("")}
     </div>` : ""}
 
@@ -7517,6 +7600,17 @@ function buildMatchResult(names) {
       ${picks.length ? `<div class="player-game-list">${picks.map(x => matchGameRow(x.g, getGameTags(x.g).allMechanics.slice(0, 3).map(m => "#" + m).join(" "))).join("")}</div>` : `<div class="review-count">該当するゲームがありません。</div>`}
     </div>
 
+    ${scenePicks.length ? `
+    <div class="review-card">
+      <div class="review-header"><div class="review-title">シーン別のおすすめ（${names.length}人で遊べるもの）</div></div>
+      ${scenePicks.map(([label, x]) => `
+        <a class="match-scene-pick" href="#game/${encodeURIComponent(slugOf(x.g))}">
+          <span class="match-scene-label">${label}</span>
+          <img src="${gameImg(x.g, "mini")}" alt="${x.g.jp}" data-fb="${coverFallback(x.g, "mini")}" onerror="if(this.dataset.fb){this.src=this.dataset.fb;this.dataset.fb='';}else{this.style.visibility='hidden';}">
+          <span class="match-scene-name">${x.g.jp}<small>${x.g.playersRaw || ""} ・ ${x.g.timeRaw || ""}</small></span>
+        </a>`).join("")}
+    </div>` : ""}
+
     ${favs.length ? `
     <div class="review-card">
       <div class="review-header"><div class="review-title">全員が高評価の鉄板</div></div>
@@ -7529,7 +7623,7 @@ function buildMatchResult(names) {
       <div class="player-game-list">${played.map(x => matchGameRow(x.g, `全員そろって${x.c}回`)).join("")}</div>
     </div>` : ""}
 
-    <p class="cta-note">タイプ診断の4軸から占っています。おすすめのゲームは、みんなの評価・本人の評価・ジャンル・メカニクス・ゲームタグも合わせて選んでいます。</p>
+    <p class="cta-note">タイプ診断の4軸から占っています。おすすめのゲームは、みんなの評価・本人の評価・ジャンル・メカニクス・ゲームタグも合わせて選んでいます。ラッキーゲームは日替わりです。</p>
   `;
 }
 
