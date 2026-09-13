@@ -3111,7 +3111,7 @@ try {
 // ── 自動更新 ───────────────────────────────
 // iPhoneはHTMLを長く握るので、新しい版が出ていたらURLを変えて読み直す。
 // （同じURLの再読み込みだとキャッシュが返ってきてしまうため）
-const APP_BUILD = "2026-09-13-1914";
+const APP_BUILD = "2026-09-13-1920";
 
 function markVersion(extra) {
   const el = document.getElementById("appVersion");
@@ -3528,7 +3528,9 @@ Promise.all([
 
 // ── あなたはだれ？（名前が未設定のブラウザで開いたとき）─────────────
 // 別のブラウザで使っていた名前を選べば、評価や戦績がそのままつながる
-function openWhoAmI() {
+let whoAmIFromMenu = false;   // マイページの「アカウント切り替え」から開いたか（初回案内は出さない）
+function openWhoAmI(fromMenu) {
+  whoAmIFromMenu = !!fromMenu;
   let el = document.getElementById("whoami");
   if (!el) {
     el = document.createElement("div");
@@ -3537,16 +3539,17 @@ function openWhoAmI() {
     document.body.appendChild(el);
   }
   const names = getAllKnownNames();
+  const me = getMyName();
   el.innerHTML = `
     <div class="guide-box">
-      <div class="guide-lead">あなたはだれ？</div>
-      <div class="guide-step"><h3>名前を選んでください</h3>
-        <p>名前はブラウザごとに覚えています（LINEのブラウザ・Safari・ホーム画面のアプリは別々）。前に使った名前を選べば、評価や戦績がそのままつながります。</p></div>
+      <div class="guide-lead">${fromMenu ? "アカウント切り替え" : "あなたはだれ？"}</div>
+      <div class="guide-step"><h3>${fromMenu ? "誰として使いますか？" : "名前を選んでください"}</h3>
+        <p>${fromMenu ? "このブラウザで使う名前を切り替えます。評価や戦績は名前ごとに残っているので、戻せばそのまま続きから使えます。" : "名前はブラウザごとに覚えています（LINEのブラウザ・Safari・ホーム画面のアプリは別々）。前に使った名前を選べば、評価や戦績がそのままつながります。"}</p></div>
       <div class="rec-pick-grid" style="margin:14px 0;">
-        ${names.map(n => `<button type="button" class="rec-pick" data-whoami-pick="${n}">${n}</button>`).join("")}
+        ${names.map(n => `<button type="button" class="rec-pick ${n === me ? "on" : ""}" data-whoami-pick="${n}">${n}</button>`).join("")}
       </div>
       <div class="guide-btns">
-        <button type="button" class="link-btn" data-whoami-later>あとで</button>
+        <button type="button" class="link-btn" data-whoami-later>${fromMenu ? "とじる" : "あとで"}</button>
         <button type="button" class="detail-cta detail-cta-primary" data-whoami-new style="margin:0;flex:1;">新しい名前で登録</button>
       </div>
     </div>`;
@@ -3555,17 +3558,24 @@ function openWhoAmI() {
 function closeWhoAmI() {
   const el = document.getElementById("whoami");
   if (el) el.style.display = "none";
-  initGuide();
+  if (!whoAmIFromMenu) initGuide();
+}
+// 切り替え後は、その人のマイページを開き直す（すでにマイページなら描き直し）
+function afterSwitchAccount(name) {
+  renderUserBadge();
+  render();
+  const target = `#player/${encodeURIComponent(name)}`;
+  if (location.hash === target) router(); else location.hash = target;
 }
 document.addEventListener("click", e => {
   const pick = e.target.closest("[data-whoami-pick]");
   if (pick) {
     const name = pick.dataset.whoamiPick;
     localStorage.setItem(MY_NAME_KEY, name);
-    renderUserBadge();
-    render();
     toast(`${name} として使います`);
+    const fromMenu = whoAmIFromMenu;
     closeWhoAmI();
+    if (fromMenu) afterSwitchAccount(name); else { renderUserBadge(); render(); }
     return;
   }
   if (e.target.closest("[data-whoami-new]")) {
@@ -3573,11 +3583,12 @@ document.addEventListener("click", e => {
     if (!name) return;
     localStorage.setItem(MY_NAME_KEY, name);
     registerNameOnServer(name);
-    renderUserBadge();
-    render();
+    const fromMenu = whoAmIFromMenu;
     closeWhoAmI();
+    if (fromMenu) afterSwitchAccount(name); else { renderUserBadge(); render(); }
     return;
   }
+  if (e.target.closest("[data-switch-account]")) { openWhoAmI(true); return; }
   if (e.target.closest("[data-whoami-later]")) closeWhoAmI();
   if (e.target.closest("[data-line-dismiss]")) { const b = document.getElementById("lineBanner"); if (b) b.remove(); sessionStorage.setItem("bg_line_banner", "1"); }
   const share = e.target.closest("[data-handoff]");
@@ -9395,7 +9406,7 @@ function buildPlayerPage(name) {
     ${buildTitleStrip(name, isMe, shownTitles, earned.length)}
     ${isMe && earned.length ? buildTitlePicker(name, earned) : ""}
     ${buildTypeQuick(prof)}
-    ${isMe ? `<div class="tag-edit-bar"><button type="button" class="link-btn" data-change-name>名前を変更</button><button type="button" class="link-btn" data-handoff style="margin-left:14px;">別のブラウザに引き継ぐ</button></div>` : ""}
+    ${isMe ? `<div class="tag-edit-bar"><button type="button" class="link-btn" data-change-name>名前を変更</button><button type="button" class="link-btn" data-switch-account style="margin-left:14px;">アカウント切り替え</button><button type="button" class="link-btn" data-handoff style="margin-left:14px;">別のブラウザに引き継ぐ</button></div>` : ""}
     <div class="detail-underline"></div>
     ${buildLevelCard(name, stats)}
     ${collapsibleSection("p-titles", `🏅 称号（${earned.length} / ${TITLE_DEFS.length}）`, buildTitlesCard(name, isMe), false)}
