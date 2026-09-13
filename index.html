@@ -3090,7 +3090,7 @@ try {
 // ── 自動更新 ───────────────────────────────
 // iPhoneはHTMLを長く握るので、新しい版が出ていたらURLを変えて読み直す。
 // （同じURLの再読み込みだとキャッシュが返ってきてしまうため）
-const APP_BUILD = "2026-09-13-1643";
+const APP_BUILD = "2026-09-13-1653";
 
 function markVersion(extra) {
   const el = document.getElementById("appVersion");
@@ -6707,6 +6707,170 @@ function buildRecommendView() {
       </div>
     </div>` : ""}
   `;
+}
+
+// 「今日やる！」は入り切り。もう一度押したら誤タップとみなして取り消す。
+async function toggleTodayTable(slug, me) {
+  const sess = sessionsCache.find(x => x.date === todayStr());
+  const mine = getDayTables(todayStr()).filter(h => h.slug === slug);
+  const undoable = mine.filter(h => !historyHasResult(h));
+  if (undoable.length) {
+    const h = undoable[undoable.length - 1];
+    await deleteHistory(h.slug, h.id);
+    return "removed";
+  }
+  if (mine.length) return "hasResult";   // 結果が入っているものは消さない
+  const ok = await ensureTodayTable(slug, me);
+  return ok ? "added" : null;
+}
+
+// 今日の会を用意して、そこに卓を1つ足す（結果は後から入れる）
+async function ensureTodayTable(slug, me) {
+  const today = todayStr();
+  let sess = sessionsCache.find(x => x.date === today);
+  if (!sess) {
+    const id = await createSession({ date: today, members: [me], createdBy: me });
+    if (!id) return null;
+    sess = getSession(id) || { id, date: today, members: [me] };
+  }
+  await addTableToSession(sess, slug, (sess.members || [me]).slice(), me);
+  return sess;
+}
+
+// 今日の記録を開いた状態で みんな/ゲーム記録 へ移動する
+function openTodayLog() {
+  logDate = "";                 // 常に今日から見せる
+  editingId = ""; editDraft = null;
+  const sess = sessionOf(todayStr());
+  logMembersOpen = (sess && (sess.members || []).length < 2) ? todayStr() : "";
+  location.hash = "#log";
+}
+
+// その場に留まる操作は、何が起きたか分からないと不安なので短く知らせる
+function toast(msg) {
+  let el = document.getElementById("toast");
+  if (!el) {
+    el = document.createElement("div");
+    el.id = "toast";
+    el.className = "toast";
+    document.body.appendChild(el);
+  }
+  el.textContent = msg;
+  el.classList.add("on");
+  clearTimeout(toast._t);
+  toast._t = setTimeout(() => el.classList.remove("on"), 2200);
+}
+
+// 写真を選んだら、その場で縮めて保存する
+document.getElementById("detailView").addEventListener("change", async e => {
+  const classPick = e.target.closest("[data-class-pick]");
+  if (classPick && classPick.value) {
+    const kind = classPick.dataset.classPick, slug = classPick.dataset.slug, tag = classPick.value;
+    classPick.disabled = true;
+    await addCustomTag(slug, tag, getMyName() || "", kind === "tag" ? "" : kind);
+    const g = games.find(x => slugOf(x) === slug);
+    if (g) showDetail(g);
+    renderTagCloud(); renderGenreOptions(); renderMechanicOptions(); renderSearchSuggest();
+    toast(`${tag} を追加しました`);
+    return;
+  }
+  const tagPick = e.target.closest("[data-tag-pick]");
+  if (tagPick && tagPick.value) {
+    const slug = tagPick.dataset.tagPick, tag = tagPick.value;
+    tagPick.disabled = true;
+    await addCustomTag(slug, tag, getMyName() || "");
+    const g = games.find(x => slugOf(x) === slug);
+    if (g) showDetail(g);
+    renderTagCloud(); renderGenreOptions();
+    toast(`#${tag} を追加しました`);
+    return;
+  }
+  const coverInput = e.target.closest("[data-cover-add]");
+  if (coverInput && coverInput.files && coverInput.files[0]) {
+    const file = coverInput.files[0];
+    const slug = coverInput.dataset.coverAdd;
+    const name = ensureMyName();
+    coverInput.value = "";
+    if (!name) return;
+    toast("写真を用意しています…");
+    try {
+      let data = await shrinkImage(file, 800);
+      // 白い余白は保存前に落としておく（棚や一覧で箱が小さく見えないように）
+      try {
+        const im = await new Promise((res, rej) => { const x = new Image(); x.onload = () => res(x); x.onerror = rej; x.src = data; });
+        const o = trimWhiteImage(im);
+        if (o) data = o.toDataURL("image/jpeg", 0.85);
+      } catch (e) { /* 失敗しても元の画像で続ける */ }
+      const oldId = coverOverrideId[slug];
+      const id = await addPhoto(slug, "cover", data, name);
+      if (id) {
+        coverOverride[slug] = data; coverOverrideId[slug] = id;
+        if (oldId) await deletePhoto(slug, oldId);   // 先に足してから古いほうを消す
+        toast("表紙を差し替えました");
+      }
+      const g = currentDetailGame();
+      if (g) showDetail(g);
+    } catch (err) {
+      console.error("表紙の処理に失敗", err);
+      toast(err.message || "この写真は使えませんでした");
+    }
+    return;
+  }
+  const input = e.target.closest("[data-photo-add]");
+  if (!input || !input.files || !input.files[0]) return;
+  const file = input.files[0];
+  const slug = input.dataset.photoSlug;
+  const kind = input.dataset.photoAdd;
+  const name = ensureMyName();
+  input.value = "";
+  if (!name) return;
+  toast("写真を用意しています…");
+  try {
+    const data = await shrinkImage(file);
+    const id = await addPhoto(slug, kind, data, name);
+    const g = currentDetailGame();
+    if (g) showDetail(g);
+    if (id) toast("写真を追加しました");
+  } catch (err) {
+    console.error("写真の処理に失敗", err);
+    toast(err.message || "この写真は使えませんでした");
+  }
+});
+
+// 写真は原寸で見られるようにする
+function openLightbox(src) {
+  let el = document.getElementById("lightbox");
+  if (!el) {
+    el = document.createElement("div");
+    el.id = "lightbox";
+    el.className = "lightbox";
+    el.addEventListener("click", () => el.classList.remove("on"));
+    document.body.appendChild(el);
+  }
+  el.innerHTML = `<img src="${src}" alt="写真"><div class="lightbox-hint">タップで閉じる</div>`;
+  el.classList.add("on");
+}
+
+// スライダーの数字と言葉、平均をその場で更新する
+document.getElementById("detailView").addEventListener("input", e => {
+  if (!e.target.classList.contains("rating-slider")) return;
+  const form = e.target.closest("form");
+  const words = AXIS_WORDS[e.target.name] || {};
+  const v = parseInt(e.target.value, 10);
+  const out = form.querySelector(`[data-val-for="${e.target.name}"]`);
+  if (out) out.innerHTML = `<b style="color:${ratingColor(v)}">${v}</b>${words[v] || ""}`;
+  const tot = form.querySelector("[data-rating-total]");
+  if (tot) tot.textContent = Math.round(RATING_AXES.reduce((a, ax) => a + parseInt(form.elements[ax.key].value, 10), 0) / RATING_AXES.length * 10) / 10;
+});
+
+// 卓が無いまま日付をまたいだ会は残す意味が無いので、起動時に片付ける
+function cleanupEmptySessions() {
+  if (!firebaseReady) return Promise.resolve();
+  const today = todayStr();
+  const empty = sessionsCache.filter(x => x.date && x.date < today && !getDayTables(x.date).length);
+  if (!empty.length) return Promise.resolve();
+  return Promise.all(empty.map(x => db.collection("sessions").doc(x.id).delete().catch(() => {})))
+    .then(() => fetchSessions().then(c => { sessionsCache = c; }));
 }
 
 function hideAllViews() {
