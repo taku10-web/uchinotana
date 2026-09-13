@@ -305,6 +305,7 @@
     margin-top: 8px;
     color: var(--navy);
   }
+  .type-hero .type-sub { font-size: 0.72em; font-weight: 700; opacity: .85; }
   .type-hero .catch {
     font-size: 14.5px;
     color: var(--text-sub);
@@ -3019,7 +3020,7 @@ try {
 // ── 自動更新 ───────────────────────────────
 // iPhoneはHTMLを長く握るので、新しい版が出ていたらURLを変えて読み直す。
 // （同じURLの再読み込みだとキャッシュが返ってきてしまうため）
-const APP_BUILD = "2026-09-13-1254";
+const APP_BUILD = "2026-09-13-1302";
 
 function markVersion(extra) {
   const el = document.getElementById("appVersion");
@@ -4228,6 +4229,25 @@ function isType16(prof) {
 }
 function typeInfo(prof) {
   return isType16(prof) ? TYPE16[prof.type] : null;
+}
+// 「〇〇型」：いちばん強く出た軸の側を型名にする。どの軸も弱ければバランス型
+const SUBTYPE_WORD = { E: "ワイワイ型", I: "じっくり型", S: "堅実型", N: "直感型", T: "勝負型", F: "調和型", J: "計画型", P: "即興型" };
+function subtypeOf(scores) {
+  if (!scores || !("EI" in scores)) return "";
+  let best = null;
+  AXES.forEach(ax => {
+    const v = scores[ax.key] || 0;
+    if (!best || Math.abs(v) > Math.abs(best.v)) best = { v, ax };
+  });
+  if (!best || Math.abs(best.v) < 0.5) return "バランス型";
+  return SUBTYPE_WORD[best.v > 0 ? best.ax.a : best.ax.b];
+}
+// 「詐欺師タイプ・直感型」の形にした表示名
+function typeDisplay(prof) {
+  const f = typeInfo(prof);
+  if (!f) return "";
+  const sub = subtypeOf(prof.scores);
+  return `${f.name}タイプ${sub ? "・" + sub : ""}`;
 }
 // 4軸の値から、メカニクスごとの相性 0〜1 を作る（両側の文字に入っているものは高いほう）
 function mechanicWeights(scores) {
@@ -5822,7 +5842,7 @@ function buildMembersTab() {
       return `
         <a class="member-card ${n === me ? "me" : ""}" href="#player/${encodeURIComponent(n)}">
           <div class="member-card-top">
-            <span class="member-card-name">${n}${n === me ? `<span class="member-card-type me">自分</span>` : ""}${f ? `<span class="member-card-type">${f.emoji} ${f.name}タイプ</span>` : ""}</span>
+            <span class="member-card-name">${n}${n === me ? `<span class="member-card-type me">自分</span>` : ""}${f ? `<span class="member-card-type">${f.emoji} ${typeDisplay(p)}</span>` : ""}</span>
             <span class="member-card-lv">Lv<b>${level.level}</b></span>
           </div>
           <div class="member-card-rank">${level.label}</div>
@@ -6961,13 +6981,14 @@ document.getElementById("recommendView").addEventListener("click", e => {
 let quizAnswers = [];
 let quizStarted = false;
 
-function buildTypeHero(code) {
+function buildTypeHero(code, scores) {
   const f = TYPE16[code];
   if (!f) return "";
+  const sub = subtypeOf(scores);
   return `
     <div class="type-hero">
       <div class="emoji">${f.emoji}</div>
-      <div class="name">${f.name}タイプ</div>
+      <div class="name">${f.name}タイプ${sub ? `<span class="type-sub">・${sub}</span>` : ""}</div>
       <div class="catch">${f.catch}</div>
     </div>
   `;
@@ -7117,7 +7138,7 @@ function buildTypeExplanation(scores) {
   return `
     <div class="review-card type-explain">
       <div class="review-header"><div class="review-title">👍 向いていそう</div></div>
-      <p><b>${styleWords}</b>のあなたには、${hint[strong[0]]}ゲームが合いそうです。</p>
+      <p><b>${TYPE16[code].name}タイプ・${subtypeOf(scores)}</b>（${styleWords}）のあなたには、${hint[strong[0]]}ゲームが合いそうです。</p>
       <div class="explain-row"><span>ジャンル</span><div class="tag-row">${goodGenres.map(gChip).join("")}</div></div>
       <div class="explain-row"><span>メカニクス</span><div class="tag-row">${goodMech.map(mChip).join("")}</div></div>
       <div class="explain-row"><span>プレイ時間</span><div>${time.good}</div></div>
@@ -7203,7 +7224,7 @@ function buildQuizView() {
       <h1 class="detail-title">ボドゲタイプ診断</h1>
       <div class="detail-underline"></div>
       ${existing ? `
-        ${buildTypeHero(existing.type)}
+        ${buildTypeHero(existing.type, existing.scores)}
         <div class="review-card">
           <div class="review-header"><div class="review-title">あなたの傾向</div></div>
           ${buildAxisChart(existing.scores)}
@@ -7241,7 +7262,7 @@ function buildQuizView() {
     <button type="button" class="detail-back" data-back>← 戻る</button>
     <h1 class="detail-title">診断結果</h1>
     <div class="detail-underline"></div>
-    ${buildTypeHero(type)}
+    ${buildTypeHero(type, scores)}
     <div class="review-card">
       <div class="review-header"><div class="review-title">あなたの傾向</div></div>
       ${buildAxisChart(scores)}
@@ -8281,7 +8302,7 @@ function buildTypeQuick(prof) {
     </button>`;
   return `
     <div data-section="p-typequick" style="display:none;" class="typequick-box">
-      ${f ? `<div class="typequick-head">${f.emoji} ${f.name}タイプ<i>${f.catch}</i></div>` : ""}
+      ${f ? `<div class="typequick-head">${f.emoji} ${typeDisplay(prof)}<i>${f.catch}</i></div>` : ""}
       <div class="tag-edit-note" style="margin:0 0 6px;">向いていそうなメカニクス</div>
       <div class="pref-list">${good.map(x => row(x, true)).join("")}</div>
       <div class="tag-edit-note" style="margin:10px 0 6px;">あまり向かないかも</div>
@@ -8695,8 +8716,8 @@ function buildPlayerPage(name) {
       <h1 class="detail-title">${isMe ? "マイページ" : name}</h1>
       ${typeFam
         ? (isMe
-          ? `<a class="type-chip-sm" href="#quiz">${typeFam.emoji} ${typeFam.name}タイプ</a>`
-          : `<button type="button" class="type-chip-sm" data-toggle-section="p-typequick">${typeFam.emoji} ${typeFam.name}タイプ</button>`)
+          ? `<a class="type-chip-sm" href="#quiz">${typeFam.emoji} ${typeDisplay(prof)}</a>`
+          : `<button type="button" class="type-chip-sm" data-toggle-section="p-typequick">${typeFam.emoji} ${typeDisplay(prof)}</button>`)
         : (isMe ? `<a class="type-chip-sm type-chip-empty" href="#quiz">🧭 タイプ診断</a>` : "")}
     </div>
     ${isMe && !isType16(prof) ? `
