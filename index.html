@@ -2641,6 +2641,8 @@
   .match-scene-pick img { width: 44px; height: 44px; object-fit: contain; border-radius: 6px; background: #fff; }
   .match-scene-name { font-size: 14px; font-weight: 700; display: flex; flex-direction: column; min-width: 0; }
   .match-scene-name small { font-size: 11.5px; font-weight: 500; color: var(--text-sub); }
+  .match-axis-count { font-size: 12px; color: var(--text-sub); margin: 4px 0 6px; }
+  .match-pair-head { font-size: 12px; font-weight: 700; color: var(--text-sub); letter-spacing: .04em; }
   .match-pair { display: flex; align-items: baseline; gap: 10px; padding: 7px 0; border-top: 1px solid var(--border); flex-wrap: wrap; }
   .match-pair:first-of-type { border-top: none; }
   .match-pair-names { font-weight: 700; font-size: 14px; }
@@ -3146,7 +3148,7 @@ try {
 // ── 自動更新 ───────────────────────────────
 // iPhoneはHTMLを長く握るので、新しい版が出ていたらURLを変えて読み直す。
 // （同じURLの再読み込みだとキャッシュが返ってきてしまうため）
-const APP_BUILD = "2026-09-13-2200";
+const APP_BUILD = "2026-09-13-2210";
 
 function markVersion(extra) {
   const el = document.getElementById("appVersion");
@@ -7173,6 +7175,7 @@ function hideAllViews() {
 // タイプ診断（16タイプ）をした人同士の相性。4軸の寄り具合と、実際に一緒に遊んだ記録の両方から占う。
 // 恋愛の相性ではなく「一緒に卓を囲むメンバーとして」の見立て。
 let matchPick = [];
+let matchNamesOpen = false;   // 4つの軸の「だれがどっち」を開いているか
 let matchPickMode = "play";   // 相性ゲーム：play=この人数で遊べるもの / fit=人数を問わず相性のいいもの
 
 function typedNames() {
@@ -7456,7 +7459,7 @@ function buildMatchResult(names) {
     return `
       <div class="match-axis">
         <div class="match-axis-title">${["①", "②", "③", "④"][i]} ${r.title}<span class="match-axis-sub">${ax.aLabel} ／ ${ax.bLabel}</span></div>
-        <div class="match-axis-people">${r.sides.map(x => { const v = axisVal(x.n, ax.key); return `<span class="match-side ${x.a ? "a" : "b"}">${x.n}<small>${leanWord(v)}${x.a ? ax.aLabel : ax.bLabel}</small></span>`; }).join("")}</div>
+        ${matchNamesOpen ? `<div class="match-axis-people">${r.sides.map(x => { const v = axisVal(x.n, ax.key); return `<span class="match-side ${x.a ? "a" : "b"}">${x.n}<small>${leanWord(v)}${x.a ? ax.aLabel : ax.bLabel}</small></span>`; }).join("")}</div>` : `<div class="match-axis-count">${ax.aLabel} ${r.na}人 ／ ${ax.bLabel} ${names.length - r.na}人</div>`}
         <p>${r.text}</p>
       </div>`;
   }).join("");
@@ -7514,6 +7517,20 @@ function buildMatchResult(names) {
   const favs = groupFavorites(names);
   const played = groupPlayed(names);
 
+  const card = (title, inner) => `<div class="review-card"><div class="review-header"><div class="review-title">${title}</div></div>${inner}</div>`;
+  const fold = (key, title, inner, open) => inner ? collapsibleSection(key, title, inner, open) : "";
+  const pairRows = pairs.map(([a, b]) => ({ a, b, lv: toLevel(pairBase(a, b)), v: pairBase(a, b), pp: MATCH_PATTERNS[patternOf([a, b])] })).sort((x, y) => y.v - x.v);
+  const pairRow = r => `
+        <div class="match-pair">
+          <span class="match-pair-names">${r.a} × ${r.b}</span>
+          ${stars(r.lv)}
+          <span class="match-pair-name">${MATCH_OVERALL[r.lv].name}・${r.pp.name}</span>
+        </div>`;
+  const pairBlock = pairRows.length <= 8
+    ? pairRows.map(pairRow).join("")
+    : `<div class="match-pair-head">相性のいいペア TOP5</div>${pairRows.slice(0, 5).map(pairRow).join("")}
+       <div class="match-pair-head" style="margin-top:10px;">むずかしいペア WORST3</div>${pairRows.slice(-3).reverse().map(pairRow).join("")}`;
+
   return `
     <div class="review-card match-hero">
       <div class="match-hero-label">${who}の相性</div>
@@ -7525,33 +7542,22 @@ function buildMatchResult(names) {
       ${lucky ? `<div class="match-lucky">今日のラッキーゲーム <a href="#game/${encodeURIComponent(slugOf(lucky.g))}">${lucky.g.jp}</a></div>` : ""}
     </div>
 
-    <div class="review-card">
-      <div class="review-header"><div class="review-title">相性の内訳</div></div>
-      ${subs.map(x => metricRow(x.label, toLevel(x.v), x.note)).join("")}
-    </div>
+    ${scenes.length ? card("この卓で起きがちな名場面", `<ul class="match-scenes">${scenes.map(x => `<li>${x.t}</li>`).join("")}</ul>`) : ""}
 
-    <div class="review-card">
-      <div class="review-header"><div class="review-title">どんなチームになるか</div></div>
+    ${card("どんなチームになるか", `
       <p class="match-lead">${teamStyle}。</p>
       ${metricRow("協力ゲームの息の合い方", coopLv, coopNote)}
       ${metricRow("真剣勝負の熱さ", versusLv, versusNote)}
       ${metricRow("パーティの盛り上がり", partyLv, partyNote)}
-      ${metricRow("長期戦への耐久力", staminaLv, staminaNote)}
-    </div>
+      ${metricRow("長期戦への耐久力", staminaLv, staminaNote)}`)}
 
-    <div class="review-card">
-      <div class="review-header"><div class="review-title">4つの軸で見る${who}</div></div>
-      ${axisCards}
-    </div>
+    ${fold("m-sub", "相性の内訳", subs.map(x => metricRow(x.label, toLevel(x.v), x.note)).join(""), false)}
 
-    ${scenes.length ? `
-    <div class="review-card">
-      <div class="review-header"><div class="review-title">この卓で起きがちな名場面</div></div>
-      <ul class="match-scenes">${scenes.map(x => `<li>${x.t}</li>`).join("")}</ul>
-    </div>` : ""}
+    ${fold("m-axis", `4つの軸で見る${who}`, `
+      <button type="button" class="section-toggle-btn" data-match-names style="margin:0 0 8px;">${matchNamesOpen ? "だれがどっちかを隠す" : "だれがどっちかを見る"}</button>
+      ${axisCards}`, false)}
 
-    <div class="review-card">
-      <div class="review-header"><div class="review-title">卓での役回り</div></div>
+    ${fold("m-roles", "卓での役回り", `
       <div class="match-roles">
         ${roles.map(x => `
           <a class="match-role" href="#type/${encodeURIComponent(x.n)}">
@@ -7564,30 +7570,18 @@ function buildMatchResult(names) {
             </span>
           </a>`).join("")}
       </div>
-      <p class="match-metric-note" style="margin-top:8px;">${roleNote}</p>
-    </div>
+      <p class="match-metric-note" style="margin-top:8px;">${roleNote}</p>`, false)}
 
-    <div class="review-card">
-      <div class="review-header"><div class="review-title">${who}の得意ジャンル</div></div>
+    ${fold("m-genre", `${who}の得意ジャンル`, `
       ${strong.map(x => `
         <div class="match-genre">
           <button type="button" class="tag-chip mini" data-class-filter="genre" data-value="${x.g}">${x.g}</button>
           <div class="match-bar slim"><i style="width:${toLevel(x.w) * 20}%"></i></div>
           ${stars(toLevel(x.w))}
         </div>`).join("")}
-      <div class="match-weak">苦手かも：${weak.map(x => `<button type="button" class="tag-chip mini" data-class-filter="genre" data-value="${x.g}">${x.g}</button>`).join(" ")}</div>
-    </div>
+      <div class="match-weak">苦手かも：${weak.map(x => `<button type="button" class="tag-chip mini" data-class-filter="genre" data-value="${x.g}">${x.g}</button>`).join(" ")}</div>`, false)}
 
-    ${pairs.length > 1 ? `
-    <div class="review-card">
-      <div class="review-header"><div class="review-title">ペアごとの相性</div></div>
-      ${pairs.map(([a, b]) => { const lv = toLevel(pairBase(a, b)); const pp = MATCH_PATTERNS[patternOf([a, b])]; return `
-        <div class="match-pair">
-          <span class="match-pair-names">${a} × ${b}</span>
-          ${stars(lv)}
-          <span class="match-pair-name">${MATCH_OVERALL[lv].name}・${pp.name}</span>
-        </div>`; }).join("")}
-    </div>` : ""}
+    ${pairs.length > 1 ? fold("m-pairs", "ペアごとの相性", pairBlock, false) : ""}
 
     <div class="review-card">
       <div class="review-header">
@@ -7600,28 +7594,16 @@ function buildMatchResult(names) {
       ${picks.length ? `<div class="player-game-list">${picks.map(x => matchGameRow(x.g, getGameTags(x.g).allMechanics.slice(0, 3).map(m => "#" + m).join(" "))).join("")}</div>` : `<div class="review-count">該当するゲームがありません。</div>`}
     </div>
 
-    ${scenePicks.length ? `
-    <div class="review-card">
-      <div class="review-header"><div class="review-title">シーン別のおすすめ（${names.length}人で遊べるもの）</div></div>
-      ${scenePicks.map(([label, x]) => `
+    ${fold("m-scene", `シーン別のおすすめ（${names.length}人で遊べるもの）`, scenePicks.length ? scenePicks.map(([label, x]) => `
         <a class="match-scene-pick" href="#game/${encodeURIComponent(slugOf(x.g))}">
           <span class="match-scene-label">${label}</span>
           <img src="${gameImg(x.g, "mini")}" alt="${x.g.jp}" data-fb="${coverFallback(x.g, "mini")}" onerror="if(this.dataset.fb){this.src=this.dataset.fb;this.dataset.fb='';}else{this.style.visibility='hidden';}">
           <span class="match-scene-name">${x.g.jp}<small>${x.g.playersRaw || ""} ・ ${x.g.timeRaw || ""}</small></span>
-        </a>`).join("")}
-    </div>` : ""}
+        </a>`).join("") : "", false)}
 
-    ${favs.length ? `
-    <div class="review-card">
-      <div class="review-header"><div class="review-title">全員が高評価の鉄板</div></div>
-      <div class="player-game-list">${favs.map(x => matchGameRow(x.g, `${names.length}人の平均 ${x.avg.toFixed(1)}点`)).join("")}</div>
-    </div>` : ""}
+    ${fold("m-favs", "全員が高評価の鉄板", favs.length ? `<div class="player-game-list">${favs.map(x => matchGameRow(x.g, `${names.length}人の平均 ${x.avg.toFixed(1)}点`)).join("")}</div>` : "", false)}
 
-    ${played.length ? `
-    <div class="review-card">
-      <div class="review-header"><div class="review-title">${who}でいちばん遊んだゲーム</div></div>
-      <div class="player-game-list">${played.map(x => matchGameRow(x.g, `全員そろって${x.c}回`)).join("")}</div>
-    </div>` : ""}
+    ${fold("m-played", `${who}でいちばん遊んだゲーム`, played.length ? `<div class="player-game-list">${played.map(x => matchGameRow(x.g, `全員そろって${x.c}回`)).join("")}</div>` : "", false)}
 
     <p class="cta-note">タイプ診断の4軸から占っています。おすすめのゲームは、みんなの評価・本人の評価・ジャンル・メカニクス・ゲームタグも合わせて選んでいます。ラッキーゲームは日替わりです。</p>
   `;
@@ -7653,6 +7635,29 @@ document.getElementById("matchView").addEventListener("click", e => {
     const y = window.scrollY;
     showMatchView();
     window.scrollTo(0, y);
+    return;
+  }
+  if (e.target.closest("[data-match-names]")) {
+    matchNamesOpen = !matchNamesOpen;
+    const y = window.scrollY;
+    showMatchView();
+    window.scrollTo(0, y);
+    // 開いたまま見えるように、畳んであった軸のセクションを開く
+    const head = document.querySelector('[data-toggle-section="m-axis"]');
+    const body = head && head.parentElement.querySelector('[data-section="m-axis"]');
+    if (body) { body.style.display = ""; head.setAttribute("aria-expanded", "true"); const mk = head.querySelector(".collapse-mark"); if (mk) mk.textContent = "−"; }
+    return;
+  }
+  const toggle = e.target.closest("[data-toggle-section]");
+  if (toggle) {
+    const key = toggle.dataset.toggleSection;
+    const target = toggle.parentElement.querySelector(`[data-section="${key}"]`);
+    if (target) {
+      const open = target.style.display === "none";
+      target.style.display = open ? "" : "none";
+      toggle.setAttribute("aria-expanded", open ? "true" : "false");
+      const mk = toggle.querySelector(".collapse-mark"); if (mk) mk.textContent = open ? "−" : "＋";
+    }
     return;
   }
   const cls = e.target.closest("[data-class-filter]");
