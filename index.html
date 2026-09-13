@@ -3023,7 +3023,7 @@ try {
 // ── 自動更新 ───────────────────────────────
 // iPhoneはHTMLを長く握るので、新しい版が出ていたらURLを変えて読み直す。
 // （同じURLの再読み込みだとキャッシュが返ってきてしまうため）
-const APP_BUILD = "2026-09-13-1347";
+const APP_BUILD = "2026-09-13-1352";
 
 function markVersion(extra) {
   const el = document.getElementById("appVersion");
@@ -7029,6 +7029,7 @@ document.getElementById("recommendView").addEventListener("click", e => {
 
 let quizAnswers = [];
 let quizStarted = false;
+let quizSaved = false;   // 最後の回答で自動保存できたか
 
 function buildTypeHero(code, scores) {
   const f = TYPE16[code];
@@ -7344,10 +7345,10 @@ function buildQuizView() {
     ${buildTypeExplanation(scores)}
     ${buildTypePicks(scores)}
     <div class="review-card">
-      <div class="review-count">${getMyName()
-        ? `<strong>${getMyName()}</strong> の結果として保存すると、マイページに表示され、おすすめの精度も上がります。`
-        : "名前を登録すると結果を保存できます。"}</div>
-      <button type="button" class="section-toggle-btn section-toggle-btn-primary" data-quiz-save>結果を保存する</button>
+      <div class="review-count">${quizSaved
+        ? `<strong>${getMyName()}</strong> の結果として保存しました。マイページやみんなのカードに表示され、おすすめにも使われます。`
+        : "名前が未登録のため保存されていません。名前を登録してからもう一度どうぞ。"}</div>
+      ${quizSaved ? `<a class="section-toggle-btn section-toggle-btn-primary" href="#player/${encodeURIComponent(getMyName())}" style="display:block;text-align:center;text-decoration:none;">マイページを見る</a>` : `<button type="button" class="section-toggle-btn section-toggle-btn-primary" data-quiz-save>名前を登録して保存する</button>`}
       <button type="button" class="section-toggle-btn" data-quiz-retry>もう一度やる</button>
     </div>
   `;
@@ -7489,6 +7490,15 @@ document.getElementById("quizView").addEventListener("click", async e => {
   const pick = e.target.closest("[data-quiz-pick]");
   if (pick) {
     quizAnswers.push(parseInt(pick.dataset.quizPick, 10));
+    // 最後の1問に答えたら、その場で自動保存（名前が無ければここで聞く）
+    if (quizAnswers.length === QUIZ_QUESTIONS.length) {
+      const name = ensureMyName();
+      quizSaved = false;
+      if (name) {
+        await saveProfile(name, scoreQuiz(quizAnswers, QUIZ_QUESTIONS));
+        quizSaved = true;
+      }
+    }
     showQuizView();
     return;
   }
