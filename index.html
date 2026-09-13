@@ -3037,7 +3037,7 @@ try {
 // ── 自動更新 ───────────────────────────────
 // iPhoneはHTMLを長く握るので、新しい版が出ていたらURLを変えて読み直す。
 // （同じURLの再読み込みだとキャッシュが返ってきてしまうため）
-const APP_BUILD = "2026-09-13-1527";
+const APP_BUILD = "2026-09-13-1556";
 
 function markVersion(extra) {
   const el = document.getElementById("appVersion");
@@ -3087,7 +3087,7 @@ let customTagsCache = {}; // slug → 自分たちで足した/隠したタグ
 let ruleEditsCache = {};  // slug → 早見表の手直し
 let tagEditOpen = false;      // 詳細の「どんなゲーム？」右上の編集：ジャンル・メカニクス・ゲームタグ・表紙をその場で直す
 let pendingTagDelete = "";    // ×を1回押したタグ（2回目で消す）
-let secEdit = { setup: false, rules: false, quickref: false };   // 準備／ルール／早見表の編集フォーム表示
+let secEdit = { setup: false, rules: false, quickref: false, fun: false };   // 準備／ルール／早見表／おもしろポイントの編集フォーム表示
 let GENRE_VOCAB = new Set();      // データ読み込み後に埋める
 let MECHANIC_VOCAB = new Set();
 let moodScores = null;    // 「今日の気分」。保存せずその場限り
@@ -4979,6 +4979,8 @@ function quickRefData(g) {
     rules: Array.isArray(e.rules) && e.rules.length ? e.rules : (r.rules || []),
     exceptions: Array.isArray(e.exceptions) ? e.exceptions : (r.exceptions || []),   // 例外処理（みんなで書き足す欄）
     worldview: r.worldview || "",
+    story: r.story || "",   // 世界観（物語風）。無ければ worldview を使う
+    fun: Array.isArray(e.fun) ? e.fun : (r.sellingPoints || []),   // おもしろポイント（みんなで書き換えられる）
     scoreNote: e.scoreNote !== undefined && e.scoreNote !== "" ? e.scoreNote : "",
     scoreTable: e.scoreNote ? null : (r.scoreTable || null),
     scoreFormula: e.scoreNote ? "" : (r.scoreFormula || ""),
@@ -5093,6 +5095,13 @@ function photoEdit(slug, kind, label) {
 function buildSectionEditor(g, kind) {
   const slug = slugOf(g);
   const d = quickRefData(g);
+  if (kind === "fun") return `
+    <div class="sec-editor">
+      <form class="review-form" data-rule-form="fun" data-slug="${slug}">
+        <textarea name="lines" rows="4" maxlength="600" placeholder="1行に1つ。ひとつの文章でもOK">${d.fun.join("\n")}</textarea>
+        <button type="submit">保存する</button>
+      </form>
+    </div>`;
   if (kind === "setup") return `
     <div class="sec-editor">
       <form class="review-form" data-rule-form="setup" data-slug="${slug}">
@@ -5145,11 +5154,18 @@ function secEditLink(kind) {
   return `<button type="button" class="sec-edit-link" data-sec-edit="${kind}">${secEdit[kind] ? "閉じる" : "編集"}</button>`;
 }
 
+// おもしろポイント。1行なら文章として、複数行なら箇条書きで出す
 function buildPitchSection(g) {
-  const r = rulesData[slugOf(g)];
-  const pts = (r && r.sellingPoints) || [];
-  if (!pts.length) return "";
-  return `<div class="review-card"><div class="review-title" style="margin-bottom:6px;">✨ おすすめポイント</div><ul class="pitch-list" style="margin:0;">${pts.map(p => `<li>${p}</li>`).join("")}</ul></div>`;
+  const d = quickRefData(g);
+  const pts = d.fun;
+  if (!pts.length && !secEdit.fun) return "";
+  const body = secEdit.fun ? buildSectionEditor(g, "fun")
+    : pts.length === 1 ? `<p class="detail-worldview" style="margin:0;">${pts[0]}</p>`
+    : `<ul class="pitch-list" style="margin:0;">${pts.map(p => `<li>${p}</li>`).join("")}</ul>`;
+  return `<div class="review-card">
+    <div class="review-header" style="margin-bottom:6px;"><div class="review-title">✨ おもしろポイント</div>${secEditLink("fun")}</div>
+    ${body}
+  </div>`;
 }
 
 // ゲームタグの語彙（24種類）。ゲームごとの付与は data/rules.json の audienceTags
@@ -5270,7 +5286,7 @@ function buildRulesBody(g, d) {
   const empty = `<div class="review-count">まだ書かれていません。「編集」から足せます。</div>`;
   return `
     <div class="rule-block">
-      ${part(1, "世界観", d.worldview ? `<p class="detail-worldview" style="margin:0;">${d.worldview}</p>` : empty)}
+      ${part(1, "世界観", (d.story || d.worldview) ? `<p class="detail-worldview" style="margin:0;">${d.story || d.worldview}</p>` : empty)}
       ${part(2, "終了条件（決着のつき方）", d.winCondition ? `<div class="quickref-win">${d.winCondition}</div>` : empty)}
       ${part(3, "基本ルール", d.rules.length ? `<ol class="detail-list">${d.rules.map(x => `<li>${x}</li>`).join("")}</ol>` : empty)}
       ${part(4, "例外処理・迷いやすいところ", d.exceptions.length ? `<ul class="quickref-list">${d.exceptions.map(x => `<li>${x}</li>`).join("")}</ul>` : `<div class="review-count">まだ書かれていません。遊んでいて迷ったことを「編集」から残しておくと次が楽です。</div>`)}
@@ -5326,7 +5342,7 @@ function showDetail(g) {
   // 同じゲームの再描画（タグ追加・評価保存など）ならスクロール位置を保つ。別のゲームなら先頭へ
   const sameGame = slugOf(g) === lastDetailSlug && document.getElementById("detailView").style.display === "block";
   const keepY = sameGame ? window.scrollY : null;
-  if (slugOf(g) !== lastDetailSlug) { tagEditOpen = false; pendingTagDelete = ""; secEdit = { setup: false, rules: false, quickref: false }; pendingPhotoDelete = ""; lastDetailSlug = slugOf(g); if (pendingDetailSection !== "rating") { ratingMemoPrefill = ""; ratingFormOpen = false; } }
+  if (slugOf(g) !== lastDetailSlug) { tagEditOpen = false; pendingTagDelete = ""; secEdit = { setup: false, rules: false, quickref: false, fun: false }; pendingPhotoDelete = ""; lastDetailSlug = slugOf(g); if (pendingDetailSection !== "rating") { ratingMemoPrefill = ""; ratingFormOpen = false; } }
   document.getElementById("controls").style.display = "none";
   document.getElementById("listView").style.display = "none";
   document.getElementById("playerView").style.display = "none";
@@ -5464,7 +5480,8 @@ document.getElementById("detailView").addEventListener("submit", async e => {
       scoreNote: qrForm.elements.scoreNote.value.trim(),
       setup: cur0.setup,
       rules: qrForm.elements.rules.value.split("\n").map(x => x.trim()).filter(Boolean),
-      exceptions: cur0.exceptions
+      exceptions: cur0.exceptions,
+      fun: cur0.fun
     }, getMyName() || "");
     secEdit.quickref = false;
     const g = games.find(x => slugOf(x) === slug);
@@ -5482,8 +5499,9 @@ document.getElementById("detailView").addEventListener("submit", async e => {
     const toLines = v => (v || "").split("\n").map(x => x.trim()).filter(Boolean);
     ruleForm.querySelector("button[type=submit]").disabled = true;
     const cur = quickRefData(games.find(x => slugOf(x) === slug));
-    const data = { winCondition: cur.winCondition, scoreNote: cur.scoreNote, setup: cur.setup, rules: cur.rules, exceptions: cur.exceptions };
+    const data = { winCondition: cur.winCondition, scoreNote: cur.scoreNote, setup: cur.setup, rules: cur.rules, exceptions: cur.exceptions, fun: cur.fun };
     if (kind === "setup") data.setup = toLines(ruleForm.elements.lines.value);
+    if (kind === "fun") data.fun = toLines(ruleForm.elements.lines.value);
     if (kind === "rules") {
       data.winCondition = (ruleForm.elements.winCondition.value || "").trim();
       data.rules = toLines(ruleForm.elements.rules.value);
@@ -5493,7 +5511,7 @@ document.getElementById("detailView").addEventListener("submit", async e => {
     secEdit[kind] = false;
     const g = games.find(x => slugOf(x) === slug);
     if (g) showDetail(g);
-    toast(kind === "setup" ? "準備を保存しました" : "ルールを保存しました");
+    toast(kind === "setup" ? "準備を保存しました" : kind === "fun" ? "おもしろポイントを保存しました" : "ルールを保存しました");
     return;
   }
 
