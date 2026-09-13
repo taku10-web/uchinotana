@@ -1846,7 +1846,7 @@
   }
   .card-sec-body { font-size: 13px; line-height: 1.55; color: var(--text); }
   .card-sec .card-about { margin: 0; }
-  .card-genres { gap: 5px; margin-top: 1px; }
+  .card-genres { gap: 5px; margin-top: 1px; max-height: 26px; overflow: hidden; }   /* ジャンルは1行まで */
   .card-tags { gap: 5px; margin: 0; max-height: 54px; overflow: hidden; }
   .detail-tags-label { font-size: 10.5px; font-weight: 700; color: var(--text-sub); letter-spacing: .04em; margin: 12px 0 5px; padding-top: 10px; border-top: 1px solid var(--border); }
   .detail-tags { gap: 5px; margin: 0; }
@@ -2019,7 +2019,7 @@
     line-height: 1.55;
     color: var(--text);
     display: -webkit-box;
-    -webkit-line-clamp: 2;
+    -webkit-line-clamp: 3;
     -webkit-box-orient: vertical;
     overflow: hidden;
   }
@@ -3037,7 +3037,7 @@ try {
 // ── 自動更新 ───────────────────────────────
 // iPhoneはHTMLを長く握るので、新しい版が出ていたらURLを変えて読み直す。
 // （同じURLの再読み込みだとキャッシュが返ってきてしまうため）
-const APP_BUILD = "2026-09-13-1556";
+const APP_BUILD = "2026-09-13-1610";
 
 function markVersion(extra) {
   const el = document.getElementById("appVersion");
@@ -3695,12 +3695,12 @@ function render() {
             ${ratingStrip(slug)}
           </div>
         </div>
-        ${genreTags.length ? `<div class="card-sec"><span class="card-sec-label">ジャンル</span><div class="card-sec-body tag-row card-genres">
-          ${genreTags.map(t => `<button type="button" class="tag-chip mini" data-class-filter="genre" data-value="${t}">${t}</button>`).join("")}
-        </div></div>` : ""}
         ${worldview ? `<div class="card-sec"><span class="card-sec-label">どんなゲーム？</span><div class="card-sec-body">
           <p class="card-about ${expandedCards.has(slug) ? "open" : ""}">${worldview}</p>
-          ${worldview.length > 46 ? `<button type="button" class="card-more-about" data-toggle-about="${slug}">${expandedCards.has(slug) ? "たたむ" : "つづきを読む"}</button>` : ""}
+          <button type="button" class="card-more-about" data-toggle-about="${slug}">${expandedCards.has(slug) ? "たたむ" : "つづきを読む"}</button>
+        </div></div>` : ""}
+        ${genreTags.length ? `<div class="card-sec"><span class="card-sec-label">ジャンル</span><div class="card-sec-body tag-row card-genres">
+          ${genreTags.map(t => `<button type="button" class="tag-chip mini" data-class-filter="genre" data-value="${t}">${t}</button>`).join("")}
         </div></div>` : ""}
         ${cardTags ? `<div class="card-sec"><span class="card-sec-label">ゲームタグ</span><div class="card-sec-body"><div class="tag-row card-tags">${cardTags}</div></div></div>` : ""}
         ${wanters.length ? `<div class="card-sec"><span class="card-sec-label">遊びたい人</span><div class="card-sec-body card-wanters">${wanters.map(w => `<b>${w.name}</b>`).join("")}</div></div>` : ""}
@@ -3712,6 +3712,11 @@ function render() {
     </div>
   `;
   }).join("");
+  // 3行に収まっている説明には「つづきを読む」を出さない
+  list.querySelectorAll(".card-about:not(.open)").forEach(p => {
+    const btn = p.nextElementSibling;
+    if (btn && p.scrollHeight <= p.clientHeight + 1) btn.remove();
+  });
   refineCoverImages(list);
 }
 
@@ -5396,20 +5401,18 @@ function showDetail(g) {
         : `<button type="button" class="detail-act want ${iLike ? "rated" : ""}" data-toggle-interest="${slug}">遊んでみたい</button>`}
     </div>
     ${buildWorldviewSection(g)}
+    ${buildPitchSection(g)}
     <div id="detailRecord"></div>
     ${buildRatingSection(g)}
-    ${buildPitchSection(g)}
     <div id="detailRules"></div>
     ${(() => {
       const d = quickRefData(g);
-      const hasS = d.setup.length || getPhotos(slug, "setup").length;
-      const hasR = d.rules.length || getPhotos(slug, "rules").length;
-      return collapsibleSection("prep", "🧩 準備", `<div class="sec-edit-bar">${secEditLink("setup")}</div>` + (secEdit.setup ? buildSectionEditor(g, "setup") : buildRuleBlock(slug, "setup", "ゲームの準備", d.setup)), !!hasS || secEdit.setup)
+      return collapsibleSection("prep", "🧩 準備", `<div class="sec-edit-bar">${secEditLink("setup")}</div>` + (secEdit.setup ? buildSectionEditor(g, "setup") : buildRuleBlock(slug, "setup", "ゲームの準備", d.setup)), secEdit.setup)
         + collapsibleSection("rules", "📕 ルール", `<div class="sec-edit-bar">${secEditLink("rules")}</div>` + (secEdit.rules ? buildSectionEditor(g, "rules") : buildRulesBody(g, d)) + `
           <div class="tag-edit-bar" style="margin-top:8px;">
             <a class="link-btn" href="${ruleVideoUrl(g)}" target="_blank" rel="noopener">▶ 動画で確認</a>
             <a class="link-btn" href="${g.url}" target="_blank" rel="noopener" style="margin-left:12px;">ボドゲーマで見る</a>
-          </div>`, !!hasR || secEdit.rules);
+          </div>`, secEdit.rules);
     })()}
     ${collapsibleSection("quickref", "🎯 プレイ中の早見表", `<div class="sec-edit-bar">${secEditLink("quickref")}</div>` + (secEdit.quickref ? buildSectionEditor(g, "quickref") : buildQuickRef(g)), secEdit.quickref)}
     ${collapsibleSection("history", `🏆 戦績（${getHistory(slugOf(g)).length}件）`, buildHistorySection(g), false)}
