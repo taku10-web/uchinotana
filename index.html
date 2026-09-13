@@ -3164,7 +3164,7 @@ try {
 // ── 自動更新 ───────────────────────────────
 // iPhoneはHTMLを長く握るので、新しい版が出ていたらURLを変えて読み直す。
 // （同じURLの再読み込みだとキャッシュが返ってきてしまうため）
-const APP_BUILD = "2026-09-14-0011";
+const APP_BUILD = "2026-09-14-0048";
 
 function markVersion(extra) {
   const el = document.getElementById("appVersion");
@@ -3564,9 +3564,12 @@ Promise.all([
   fetch("data/genres.json", NO_CACHE).then(r => r.ok ? r.json() : {}).catch(() => ({})),
   fetch("data/mechanics.json", NO_CACHE).then(r => r.ok ? r.json() : {}).catch(() => ({})),
   fetchAllReviews(),
-  fetch("data/cover_pick.json", NO_CACHE).then(r => r.ok ? r.json() : {}).catch(() => ({}))
-]).then(([gamesData, rules, genres, mechanics, _r, coverPick]) => {
+  fetch("data/cover_pick.json", NO_CACHE).then(r => r.ok ? r.json() : {}).catch(() => ({})),
+  fetch("data/meta_override.json", NO_CACHE).then(r => r.ok ? r.json() : {}).catch(() => ({}))
+]).then(([gamesData, rules, genres, mechanics, _r, coverPick, metaOverride]) => {
   coverPickData = coverPick || {};
+  // ボドゲーマの人数・時間が実態と違うものは data/meta_override.json で上書きする
+  gamesData.forEach(g => { const o = (metaOverride || {})[slugOf(g)]; if (o) Object.assign(g, o); });
   games = gamesData;
   rulesData = rules;
   genresData = genres;

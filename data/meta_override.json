@@ -1,0 +1,8 @@
+{
+ "_note": "ボドゲーマの表記が実態と違うゲームの手直し。slug → 上書きしたい項目（timeMin/timeMax/timeRaw/playersMin/playersMax/playersRaw）",
+ "linq3": {
+  "timeMin": 15,
+  "timeMax": 15,
+  "timeRaw": "15分前後"
+ }
+}
