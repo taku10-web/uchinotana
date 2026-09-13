@@ -655,6 +655,9 @@
   .lightbox img { max-width: 100%; max-height: 84vh; border-radius: 10px; }
   .lightbox-hint { color: #cfe2ef; font-size: 13px; }
   .rule-block { margin-bottom: 22px; }
+  .rule-part { margin-bottom: 14px; }
+  .rule-part-title { font-size: 13px; font-weight: 700; color: var(--navy); margin-bottom: 5px; display: flex; align-items: center; gap: 7px; }
+  .rule-part-title b { display: inline-flex; width: 20px; height: 20px; border-radius: 50%; background: var(--accent); color: #fff; font-size: 11.5px; align-items: center; justify-content: center; }
   .detail-section-title-sm .link-btn { float: right; }
 
   .recent-day { margin-bottom: 14px; }
@@ -3020,7 +3023,7 @@ try {
 // ── 自動更新 ───────────────────────────────
 // iPhoneはHTMLを長く握るので、新しい版が出ていたらURLを変えて読み直す。
 // （同じURLの再読み込みだとキャッシュが返ってきてしまうため）
-const APP_BUILD = "2026-09-13-1320";
+const APP_BUILD = "2026-09-13-1336";
 
 function markVersion(extra) {
   const el = document.getElementById("appVersion");
@@ -4739,7 +4742,7 @@ function buildRatingForm(slug) {
           <label>感想・おすすめポイント（任意）</label>
           <textarea name="memo" rows="3" maxlength="400" placeholder="どこが良かったか、どんな人に合うか、気をつけること など">${mine && mine.memo ? mine.memo : ratingMemoPrefill}</textarea>
         </div>
-        <button type="submit">${mine ? "評価を直す" : "評価を送る"}</button>
+        <button type="submit">保存する</button>
       </form>
     </div>`;
 }
@@ -4948,6 +4951,8 @@ function quickRefData(g) {
     winCondition: e.winCondition !== undefined && e.winCondition !== "" ? e.winCondition : (r.winCondition || ""),
     setup: Array.isArray(e.setup) && e.setup.length ? e.setup : (r.setup || []),
     rules: Array.isArray(e.rules) && e.rules.length ? e.rules : (r.rules || []),
+    exceptions: Array.isArray(e.exceptions) ? e.exceptions : (r.exceptions || []),   // 例外処理（みんなで書き足す欄）
+    worldview: r.worldview || "",
     scoreNote: e.scoreNote !== undefined && e.scoreNote !== "" ? e.scoreNote : "",
     scoreTable: e.scoreNote ? null : (r.scoreTable || null),
     scoreFormula: e.scoreNote ? "" : (r.scoreFormula || ""),
@@ -4998,7 +5003,7 @@ function buildQuickRef(g) {
   // 情報が無いゲームでも、直すボタンだけは出しておく
   if (!hasAny) {
     const ph = getPhotos(slug, "quickref");
-    return `<div class="review-count">まだ情報がありません。右上の「編集」から書けます。</div>
+    return `<div class="review-count">まだ情報がありません。「編集」から書けます。</div>
       ${ph.length ? `<div class="photo-strip" style="margin-top:10px;">
         ${ph.map(p => `<div class="photo-thumb"><img src="${p.data}" alt="早見表" data-photo-view="${p.id}" data-photo-slug="${slug}"></div>`).join("")}
       </div>` : ""}`;
@@ -5023,8 +5028,11 @@ function buildQuickRef(g) {
       <div class="quickref-win">${d.winCondition}</div>` : ""}
       ${scoreHtml}
       ${d.rules.length ? `
-      <div class="quickref-sub">自分の手番でできること</div>
+      <div class="quickref-sub">自分の手番でやること</div>
       <ul class="quickref-list">${d.rules.map(s => `<li>${s}</li>`).join("")}</ul>` : ""}
+      ${d.exceptions.length ? `
+      <div class="quickref-sub">例外処理</div>
+      <ul class="quickref-list">${d.exceptions.map(s => `<li>${s}</li>`).join("")}</ul>` : ""}
       ${(() => {
         const ph = getPhotos(slug, "quickref");
         return ph.length ? `<div class="photo-strip" style="margin-top:10px;">
@@ -5063,15 +5071,26 @@ function buildSectionEditor(g, kind) {
     <div class="sec-editor">
       <form class="review-form" data-rule-form="setup" data-slug="${slug}">
         <textarea name="lines" rows="5" placeholder="1行に1項目">${d.setup.join("\n")}</textarea>
-        <button type="submit">準備を保存</button>
+        <button type="submit">保存する</button>
       </form>
       ${photoEdit(slug, "setup", "準備")}
     </div>`;
   if (kind === "rules") return `
     <div class="sec-editor">
       <form class="review-form" data-rule-form="rules" data-slug="${slug}">
-        <textarea name="lines" rows="6" placeholder="1行に1項目">${d.rules.join("\n")}</textarea>
-        <button type="submit">ルールを保存</button>
+        <div class="review-form-field">
+          <label>終了条件（どうなったら決着がつくか・勝ち方）</label>
+          <textarea name="winCondition" rows="3" maxlength="300">${d.winCondition}</textarea>
+        </div>
+        <div class="review-form-field">
+          <label>基本ルール（1行に1項目）</label>
+          <textarea name="rules" rows="6" maxlength="1200">${d.rules.join("\n")}</textarea>
+        </div>
+        <div class="review-form-field">
+          <label>例外処理・迷いやすいところ（1行に1項目）</label>
+          <textarea name="exceptions" rows="4" maxlength="800" placeholder="例: 同点のときは手札が少ない方が勝ち">${d.exceptions.join("\n")}</textarea>
+        </div>
+        <button type="submit">保存する</button>
       </form>
     </div>`;
   return `
@@ -5089,7 +5108,7 @@ function buildSectionEditor(g, kind) {
           <label>自分の手番でできること（1行に1つ）</label>
           <textarea name="rules" rows="5" maxlength="1200">${d.rules.join("\n")}</textarea>
         </div>
-        <button type="submit">早見表を保存</button>
+        <button type="submit">保存する</button>
         ${d.edited ? `<button type="button" class="section-toggle-btn" data-quickref-reset style="margin-top:8px;">元の内容に戻す</button>` : ""}
       </form>
       ${photoEdit(slug, "quickref", "早見表")}
@@ -5214,6 +5233,23 @@ function buildSetupSection(g) {
   `;
 }
 
+// ルール欄：1.世界観 2.終了条件 3.基本ルール 4.例外処理 の順に見せる
+function buildRulesBody(g, d) {
+  const slug = slugOf(g);
+  const part = (n, title, inner) => `
+    <div class="rule-part">
+      <div class="rule-part-title"><b>${n}</b>${title}</div>
+      ${inner}
+    </div>`;
+  const empty = `<div class="review-count">まだ書かれていません。「編集」から足せます。</div>`;
+  return `
+    <div class="rule-block">
+      ${part(1, "世界観", d.worldview ? `<p class="detail-worldview" style="margin:0;">${d.worldview}</p>` : empty)}
+      ${part(2, "終了条件（決着のつき方）", d.winCondition ? `<div class="quickref-win">${d.winCondition}</div>` : empty)}
+      ${part(3, "基本ルール", d.rules.length ? `<ol class="detail-list">${d.rules.map(x => `<li>${x}</li>`).join("")}</ol>` : empty)}
+      ${part(4, "例外処理・迷いやすいところ", d.exceptions.length ? `<ul class="quickref-list">${d.exceptions.map(x => `<li>${x}</li>`).join("")}</ul>` : `<div class="review-count">まだ書かれていません。遊んでいて迷ったことを「編集」から残しておくと次が楽です。</div>`)}
+    </div>`;
+}
 function buildRuleBlock(slug, kind, label, lines) {
   const photos = kind === "rules" ? [] : getPhotos(slug, kind);
   return `
@@ -5327,7 +5363,7 @@ function showDetail(g) {
       const hasS = d.setup.length || getPhotos(slug, "setup").length;
       const hasR = d.rules.length || getPhotos(slug, "rules").length;
       return collapsibleSection("prep", "🧩 準備", `<div class="sec-edit-bar">${secEditLink("setup")}</div>` + (secEdit.setup ? buildSectionEditor(g, "setup") : buildRuleBlock(slug, "setup", "ゲームの準備", d.setup)), !!hasS || secEdit.setup)
-        + collapsibleSection("rules", "📕 ルール", `<div class="sec-edit-bar">${secEditLink("rules")}</div>` + (secEdit.rules ? buildSectionEditor(g, "rules") : buildRuleBlock(slug, "rules", "ルール", d.rules)) + `
+        + collapsibleSection("rules", "📕 ルール", `<div class="sec-edit-bar">${secEditLink("rules")}</div>` + (secEdit.rules ? buildSectionEditor(g, "rules") : buildRulesBody(g, d)) + `
           <div class="tag-edit-bar" style="margin-top:8px;">
             <a class="link-btn" href="${ruleVideoUrl(g)}" target="_blank" rel="noopener">▶ 動画で確認</a>
             <a class="link-btn" href="${g.url}" target="_blank" rel="noopener" style="margin-left:12px;">ボドゲーマで見る</a>
@@ -5401,8 +5437,10 @@ document.getElementById("detailView").addEventListener("submit", async e => {
       winCondition: qrForm.elements.winCondition.value.trim(),
       scoreNote: qrForm.elements.scoreNote.value.trim(),
       setup: cur0.setup,
-      rules: qrForm.elements.rules.value.split("\n").map(x => x.trim()).filter(Boolean)
+      rules: qrForm.elements.rules.value.split("\n").map(x => x.trim()).filter(Boolean),
+      exceptions: cur0.exceptions
     }, getMyName() || "");
+    secEdit.quickref = false;
     const g = games.find(x => slugOf(x) === slug);
     if (g) showDetail(g);
     toast("早見表を保存しました");
@@ -5415,15 +5453,18 @@ document.getElementById("detailView").addEventListener("submit", async e => {
     const slug = ruleForm.dataset.slug;
     const name = ensureMyName();
     if (!name) return;
-    const lines = ruleForm.elements.lines.value.split("\n").map(x => x.trim()).filter(Boolean);
+    const toLines = v => (v || "").split("\n").map(x => x.trim()).filter(Boolean);
     ruleForm.querySelector("button[type=submit]").disabled = true;
     const cur = quickRefData(games.find(x => slugOf(x) === slug));
-    await saveRuleEdit(slug, {
-      winCondition: cur.winCondition,
-      scoreNote: cur.scoreNote,
-      setup: kind === "setup" ? lines : cur.setup,
-      rules: kind === "rules" ? lines : cur.rules
-    }, name);
+    const data = { winCondition: cur.winCondition, scoreNote: cur.scoreNote, setup: cur.setup, rules: cur.rules, exceptions: cur.exceptions };
+    if (kind === "setup") data.setup = toLines(ruleForm.elements.lines.value);
+    if (kind === "rules") {
+      data.winCondition = (ruleForm.elements.winCondition.value || "").trim();
+      data.rules = toLines(ruleForm.elements.rules.value);
+      data.exceptions = toLines(ruleForm.elements.exceptions.value);
+    }
+    await saveRuleEdit(slug, data, name);
+    secEdit[kind] = false;
     const g = games.find(x => slugOf(x) === slug);
     if (g) showDetail(g);
     toast(kind === "setup" ? "準備を保存しました" : "ルールを保存しました");
