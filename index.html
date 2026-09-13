@@ -775,14 +775,17 @@
   .rating-slider-block { margin: 14px 0 4px; }
   .rating-slider-head {
     display: flex;
-    align-items: baseline;
+    align-items: flex-start;
     justify-content: space-between;
+    gap: 8px;
     font-size: 13.5px;
     font-weight: 700;
     margin-bottom: 4px;
   }
-  .rating-slider-val { font-size: 12.5px; font-weight: 500; color: var(--text-sub); }
-  .rating-slider-val b { font-size: 19px; margin-right: 6px; }
+  .rating-slider-head > span:first-child { flex: 1 1 auto; min-width: 0; }
+  /* 右側は幅を固定して、言葉の長さが変わっても左のラベルが動かないようにする */
+  .rating-slider-val { flex: 0 0 172px; text-align: right; white-space: nowrap; font-size: 12.5px; font-weight: 500; color: var(--text-sub); line-height: 24px; }
+  .rating-slider-val b { display: inline-block; min-width: 24px; text-align: right; font-size: 19px; margin-right: 6px; line-height: 24px; vertical-align: -1px; }
   .rating-slider {
     width: 100%;
     accent-color: var(--accent);
@@ -3119,7 +3122,7 @@ try {
 // ── 自動更新 ───────────────────────────────
 // iPhoneはHTMLを長く握るので、新しい版が出ていたらURLを変えて読み直す。
 // （同じURLの再読み込みだとキャッシュが返ってきてしまうため）
-const APP_BUILD = "2026-09-13-1925";
+const APP_BUILD = "2026-09-13-2010";
 
 function markVersion(extra) {
   const el = document.getElementById("appVersion");
@@ -4956,8 +4959,8 @@ function buildRatingForm(slug) {
   const cur = key => (mine ? (axisValue(mine, key) ?? 5) : 5);
   const hint = {
     like: "純粋にどれだけ好きか",
-    addict: "終わった直後に「もう1回」が出るか",
-    everyone: "初めての人・慣れていない人でも一緒に楽しめるか"
+    addict: "もう1回やりたくなるか",
+    everyone: "初めての人でも楽しめるか"
   };
   const slider = (name, label, value, words) => `
     <div class="rating-slider-block">
