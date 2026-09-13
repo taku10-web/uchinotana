@@ -3133,7 +3133,7 @@ try {
 // ── 自動更新 ───────────────────────────────
 // iPhoneはHTMLを長く握るので、新しい版が出ていたらURLを変えて読み直す。
 // （同じURLの再読み込みだとキャッシュが返ってきてしまうため）
-const APP_BUILD = "2026-09-13-2029";
+const APP_BUILD = "2026-09-13-2149";
 
 function markVersion(extra) {
   const el = document.getElementById("appVersion");
@@ -7165,9 +7165,10 @@ let matchPickMode = "play";   // 相性ゲーム：play=この人数で遊べる
 function typedNames() {
   return getAllKnownNames().filter(n => isType16(getProfile(n)));
 }
+// 診断の点は「どちらかといえば」が混ざると±0.3〜0.7に収まりがちなので、相性の計算では1.4倍して幅を使い切る
 function axisVal(name, key) {
   const p = getProfile(name);
-  return Math.max(-1, Math.min(1, (p && p.scores && p.scores[key]) || 0));
+  return Math.max(-1, Math.min(1, ((p && p.scores && p.scores[key]) || 0) * 1.4));
 }
 // その文字（E/I/S/N/T/F/J/P）への寄り 0〜1
 function letterStrength(name, letter) {
@@ -7194,11 +7195,11 @@ function pairSimilarity(a, b) {
 function pairBase(a, b) {
   const d = k => Math.abs(axisVal(a, k) - axisVal(b, k)) / 2;
   const sn = 1 - d("SN");
-  const ei = 0.55 + 0.45 * (1 - Math.abs(d("EI") - 0.5) * 2);
+  const ei = 0.3 + 0.7 * (1 - Math.abs(d("EI") - 0.5) * 2);
   const tf = 1 - d("TF") * 0.6;
   const jp = 0.6 + 0.4 * d("JP");
   const raw = sn * 0.3 + ei * 0.25 + tf * 0.25 + jp * 0.2;
-  return Math.max(0, Math.min(1, (raw - 0.55) / 0.4));   // 実際に出る幅（0.57〜0.92あたり）を1〜5段階に広げる
+  return Math.max(0, Math.min(1, (raw - 0.5) / 0.4));   // 実際に出る幅（0.5〜0.9あたり）を1〜5段階に広げる
 }
 const MATCH_OVERALL = [
   null,
