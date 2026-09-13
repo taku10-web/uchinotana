@@ -3090,7 +3090,7 @@ try {
 // ── 自動更新 ───────────────────────────────
 // iPhoneはHTMLを長く握るので、新しい版が出ていたらURLを変えて読み直す。
 // （同じURLの再読み込みだとキャッシュが返ってきてしまうため）
-const APP_BUILD = "2026-09-13-1630";
+const APP_BUILD = "2026-09-13-1643";
 
 function markVersion(extra) {
   const el = document.getElementById("appVersion");
@@ -4787,8 +4787,8 @@ function buildRatingSummary(slug) {
 
 // 好み・リプレイ性はスライダーで入れる。目盛りの意味を必ず添える。
 const LIKE_WORDS     = { 10: "これ以上無い", 9: "遊ばないと気がすまない", 8: "大好き", 7: "好き", 6: "けっこう良い", 5: "普通", 4: "いまいち", 3: "気が進まない", 2: "苦手", 1: "二度とやらない" };
-const ADDICT_WORDS   = { 10: "終わった瞬間もう1回", 9: "続けて何回でも", 8: "また近いうちに", 7: "たまに無性に", 6: "誘われたら喜んで", 5: "普通", 4: "しばらくいい", 3: "1回で十分", 2: "もういい", 1: "二度と" };
-const EVERYONE_WORDS = { 10: "誰と遊んでも盛り上がる", 9: "初めての人でも楽しめる", 8: "たいていの人はOK", 7: "説明すれば大丈夫", 6: "少し人を選ぶ", 5: "普通", 4: "慣れた人向け", 3: "好みが分かれる", 2: "ボドゲ好き限定", 1: "身内だけ" };
+const ADDICT_WORDS   = { 10: "終わった瞬間もう一度", 9: "続けて何回でも", 8: "また近いうちに", 7: "たまに無性に", 6: "誘われたら喜んで", 5: "普通", 4: "しばらくいい", 3: "1回で十分", 2: "最後まで持たない", 1: "途中で飽きる" };
+const EVERYONE_WORDS = { 10: "誰と遊んでも盛り上がる", 9: "初めての人でも楽しめる", 8: "たいていの人はOK", 7: "説明すれば大丈夫", 6: "少し人を選ぶ", 5: "普通", 4: "慣れた人向け", 3: "好みが分かれる", 2: "ボドゲ好き限定", 1: "マジで人を選ぶ" };
 const AXIS_WORDS = { like: LIKE_WORDS, addict: ADDICT_WORDS, everyone: EVERYONE_WORDS };
 
 function buildRatingForm(slug) {
@@ -4823,7 +4823,7 @@ function buildRatingForm(slug) {
         ${slider("everyone", "みんな向け", cur("everyone"), EVERYONE_WORDS)}
         <div class="rating-avg-preview">総合（3つの平均） <b data-rating-total>${Math.round((cur("like") + cur("addict") + cur("everyone")) / 3 * 10) / 10}</b></div>
         <div class="review-form-field">
-          <label>感想・おすすめポイント（任意）</label>
+          <label>感想（任意）</label>
           <textarea name="memo" rows="3" maxlength="400" placeholder="どこが良かったか、どんな人に合うか、気をつけること など">${mine && mine.memo ? mine.memo : ratingMemoPrefill}</textarea>
         </div>
         <button type="submit">保存する</button>
