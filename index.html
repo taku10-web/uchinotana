@@ -1866,7 +1866,13 @@
     font-size: 17px;
     font-weight: 700;
     line-height: 1.35;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
+  .card-title-jp.c-md { font-size: 15px; }
+  .card-title-jp.c-sm { font-size: 13.5px; }
+  .card-title-jp.c-xs { font-size: 12px; }
   .detail-badge-mini {
     display: inline-block;
     vertical-align: middle;
@@ -3009,7 +3015,7 @@ try {
 // ── 自動更新 ───────────────────────────────
 // iPhoneはHTMLを長く握るので、新しい版が出ていたらURLを変えて読み直す。
 // （同じURLの再読み込みだとキャッシュが返ってきてしまうため）
-const APP_BUILD = "2026-09-12-2352";
+const APP_BUILD = "2026-09-13-1121";
 
 function markVersion(extra) {
   const el = document.getElementById("appVersion");
@@ -3619,7 +3625,7 @@ function render() {
     const { genreTags } = getGameTags(g);
     const r = rulesData[slug];
     const worldview = (r && r.worldview) || "";
-    // 感想は評価が高い人のものを先頭に。2人以上いれば1人目だけ見せて残りは畳む
+    // 感想は評価が高い人から2人分（1人なら2行、2人なら1行ずつ）。3人目以降は畳む
     const memos = gameMemos(slug);
     const cardTags = hashChips(g, true);
     const iLike = myName && getInterests(slug).some(i => i.name === myName);
@@ -3629,7 +3635,7 @@ function render() {
     return `
     <div class="card">
       <a class="card-main" href="#game/${encodeURIComponent(slug)}">
-        <div class="card-title-jp">${g.jp}</div>
+        <div class="card-title-jp ${cardTitleClass(g.jp)}">${g.jp}</div>
         <div class="card-row">
           <img src="${gameImg(g, "card")}" alt="${g.jp}" loading="lazy" data-slug="${slug}" data-fb="${coverFallback(g, "card")}" onerror="if(this.dataset.fb){this.src=this.dataset.fb;this.dataset.fb='';}else{this.style.visibility='hidden';}">
           <div class="card-body">
@@ -3651,8 +3657,8 @@ function render() {
         ${cardTags ? `<div class="card-sec"><span class="card-sec-label">ゲームタグ</span><div class="card-sec-body"><div class="tag-row card-tags">${cardTags}</div></div></div>` : ""}
         ${wanters.length ? `<div class="card-sec"><span class="card-sec-label">遊びたい人</span><div class="card-sec-body card-wanters">${wanters.map(w => `<b>${w.name}</b>`).join("")}</div></div>` : ""}
         ${memos.length ? `<div class="card-sec"><span class="card-sec-label">みんなの感想</span><div class="card-sec-body card-memos">
-          ${memos.map((m, i) => `<div class="card-memo ${i === 0 ? "two" : "one folded"}"><i>${m.name}</i>「${m.memo}」</div>`).join("")}
-          ${memos.length > 1 ? `<button type="button" class="card-more-about" data-toggle-memos="1">ほか${memos.length - 1}件の感想</button>` : ""}
+          ${memos.map((m, i) => `<div class="card-memo ${memos.length === 1 ? "two" : "one"} ${i >= 2 ? "folded" : ""}"><i>${m.name}</i>「${m.memo}」</div>`).join("")}
+          ${memos.length > 2 ? `<button type="button" class="card-more-about" data-toggle-memos="1">ほか${memos.length - 2}件の感想</button>` : ""}
         </div></div>` : ""}
       </a>
     </div>
@@ -5390,6 +5396,11 @@ function showDetail(g) {
 }
 
 // 作品名が長いときは自動で字を詰めて、1行に収まるようにする
+// カードのゲーム名は1行に収める。長さに応じて字を小さくし、それでも溢れる分は…で切る
+function cardTitleClass(jp) {
+  const n = (jp || "").length;
+  return n >= 24 ? "c-xs" : n >= 19 ? "c-sm" : n >= 15 ? "c-md" : "";
+}
 function titleSizeClass(jp) {
   const n = (jp || "").length;
   return n >= 22 ? "t-xs" : n >= 16 ? "t-sm" : n >= 11 ? "t-md" : "";
