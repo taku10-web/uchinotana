@@ -38,6 +38,9 @@
   }
   * { box-sizing: border-box; }
   html, body { touch-action: manipulation; }   /* ダブルタップでの拡大を止める（ピンチは残す） */
+  /* iPhoneは文字が16px未満の入力欄にフォーカスすると画面全体を拡大するので、入力欄は必ず16px以上にする */
+  input, select, textarea { font-size: 16px !important; }
+  input[type="range"], input[type="checkbox"], input[type="file"] { font-size: inherit !important; }
   body {
     margin: 0;
     font-size: 15px;
@@ -3130,7 +3133,7 @@ try {
 // ── 自動更新 ───────────────────────────────
 // iPhoneはHTMLを長く握るので、新しい版が出ていたらURLを変えて読み直す。
 // （同じURLの再読み込みだとキャッシュが返ってきてしまうため）
-const APP_BUILD = "2026-09-13-2023";
+const APP_BUILD = "2026-09-13-2029";
 
 function markVersion(extra) {
   const el = document.getElementById("appVersion");
