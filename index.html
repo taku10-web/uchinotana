@@ -2537,6 +2537,59 @@
     gap: 8px;
     margin-bottom: 10px;
   }
+  /* ── 相性占い ── */
+  .match-entry {
+    display: flex; align-items: center; gap: 12px;
+    background: var(--card); border: 1px solid var(--border); border-radius: 14px;
+    padding: 12px 14px; margin-bottom: 12px; text-decoration: none; color: var(--text);
+    box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+  }
+  .match-entry-ico { font-size: 26px; }
+  .match-entry-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+  .match-entry-body b { font-size: 16px; }
+  .match-entry-body small { font-size: 12px; color: var(--text-sub); line-height: 1.4; }
+  .match-entry-arrow { font-size: 22px; color: var(--text-sub); }
+  .match-stars { color: #e0a600; letter-spacing: 1px; font-size: 15px; white-space: nowrap; }
+  .match-stars i { color: var(--border); font-style: normal; }
+  .match-hero { text-align: center; }
+  .match-hero-label { font-size: 13px; color: var(--text-sub); }
+  .match-hero-stars .match-stars { font-size: 26px; letter-spacing: 3px; }
+  .match-hero-name { font-size: 22px; font-weight: 800; margin: 2px 0 6px; }
+  .match-hero-text { margin: 0; font-size: 13.5px; line-height: 1.7; text-align: left; }
+  .match-kind { display: flex; justify-content: center; gap: 10px; align-items: baseline; margin-top: 10px; }
+  .match-kind b { font-size: 15px; }
+  .match-kind span { font-size: 12px; color: var(--text-sub); }
+  .match-metric { padding: 8px 0; border-top: 1px solid var(--border); }
+  .match-metric:first-of-type { border-top: none; }
+  .match-metric-head { display: flex; justify-content: space-between; align-items: baseline; font-weight: 700; font-size: 14px; }
+  .match-bar { height: 7px; background: var(--bg); border-radius: 999px; overflow: hidden; margin: 6px 0 5px; }
+  .match-bar i { display: block; height: 100%; background: linear-gradient(90deg, var(--accent), #6fc3e6); border-radius: 999px; }
+  .match-bar.slim { flex: 1; margin: 0; }
+  .match-metric-note { font-size: 13px; line-height: 1.65; color: var(--text); }
+  .match-axis { padding: 10px 0; border-top: 1px solid var(--border); }
+  .match-axis:first-of-type { border-top: none; padding-top: 0; }
+  .match-axis-title { font-weight: 700; font-size: 14.5px; display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+  .match-axis-sub { font-size: 11.5px; font-weight: 500; color: var(--text-sub); }
+  .match-axis-people { display: flex; gap: 6px; flex-wrap: wrap; margin: 6px 0; }
+  .match-side { font-size: 12.5px; font-weight: 600; padding: 3px 9px; border-radius: 999px; background: var(--bg); border: 1px solid var(--border); }
+  .match-side small { font-weight: 500; color: var(--text-sub); margin-left: 4px; }
+  .match-side.a { border-color: var(--accent); }
+  .match-axis p { margin: 0; font-size: 13px; line-height: 1.65; }
+  .match-roles { display: flex; flex-direction: column; gap: 8px; }
+  .match-role { display: flex; gap: 10px; align-items: flex-start; text-decoration: none; color: var(--text); background: var(--bg); border-radius: 12px; padding: 10px 12px; }
+  .match-role-emoji { font-size: 24px; line-height: 1.2; }
+  .match-role-body { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+  .match-role-body b { font-size: 15px; display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; }
+  .match-role-body b small { font-size: 11.5px; font-weight: 500; color: var(--text-sub); }
+  .match-role-name { font-size: 13.5px; font-weight: 700; color: var(--accent); }
+  .match-role-text { font-size: 12.5px; color: var(--text-sub); }
+  .match-genre { display: flex; align-items: center; gap: 10px; padding: 6px 0; }
+  .match-genre .tag-chip { flex: 0 0 auto; min-width: 96px; text-align: center; }
+  .match-weak { font-size: 12.5px; color: var(--text-sub); margin-top: 8px; display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+  .match-pair { display: flex; align-items: baseline; gap: 10px; padding: 7px 0; border-top: 1px solid var(--border); flex-wrap: wrap; }
+  .match-pair:first-of-type { border-top: none; }
+  .match-pair-names { font-weight: 700; font-size: 14px; }
+  .match-pair-name { font-size: 12px; color: var(--text-sub); }
   .rec-pick {
     border: 1px solid var(--border);
     background: var(--bg);
@@ -2970,7 +3023,7 @@
   <div id="playerView" style="display:none;"></div>
   <div id="membersView" style="display:none;"></div>
   <div id="recommendView" style="display:none;"></div>
-  <div id="todayView" style="display:none;"></div>
+  <div id="matchView" style="display:none;"></div>
   <div id="logView" style="display:none;"></div>
   <div id="quizView" style="display:none;"></div>
 </main>
@@ -3037,7 +3090,7 @@ try {
 // ── 自動更新 ───────────────────────────────
 // iPhoneはHTMLを長く握るので、新しい版が出ていたらURLを変えて読み直す。
 // （同じURLの再読み込みだとキャッシュが返ってきてしまうため）
-const APP_BUILD = "2026-09-13-1610";
+const APP_BUILD = "2026-09-13-1630";
 
 function markVersion(extra) {
   const el = document.getElementById("appVersion");
@@ -5353,7 +5406,7 @@ function showDetail(g) {
   document.getElementById("playerView").style.display = "none";
   document.getElementById("membersView").style.display = "none";
   document.getElementById("recommendView").style.display = "none";
-  document.getElementById("todayView").style.display = "none";
+  document.getElementById("matchView").style.display = "none";
   document.getElementById("logView").style.display = "none";
   document.getElementById("quizView").style.display = "none";
   const dv = document.getElementById("detailView");
@@ -5903,7 +5956,7 @@ function showListView(opts = {}) {
   document.getElementById("playerView").style.display = "none";
   document.getElementById("membersView").style.display = "none";
   document.getElementById("recommendView").style.display = "none";
-  document.getElementById("todayView").style.display = "none";
+  document.getElementById("matchView").style.display = "none";
   document.getElementById("logView").style.display = "none";
   document.getElementById("quizView").style.display = "none";
   if (games.length) render();
@@ -5938,7 +5991,16 @@ function buildMembersTab() {
     if (b === me) return 1;
     return calcExp(b).total - calcExp(a).total;
   });
+  const typed = names.filter(n => isType16(getProfile(n)));
   return `
+    <a href="#match" class="match-entry">
+      <span class="match-entry-ico">🔮</span>
+      <span class="match-entry-body">
+        <b>相性占い</b>
+        <small>${typed.length >= 2 ? `タイプ診断ずみの${typed.length}人から2人以上を選ぶと、卓の相性・役回り・得意ジャンルを占います` : "タイプ診断をした人が2人以上になると占えます"}</small>
+      </span>
+      <span class="match-entry-arrow">›</span>
+    </a>
     <div class="review-count" style="margin:0 0 10px 2px;">カードをタップするとその人のマイページが開きます。</div>
     ${ordered.map(n => {
       const { total, level } = calcExp(n);
@@ -5970,8 +6032,6 @@ function buildMembersTab() {
           </div>
         </a>`;
     }).join("")}
-    <a href="#recommend" class="recommend-btn" style="margin-top:14px;">👥 メンバーで選んでおすすめしてもらう</a>
-    <p class="cta-note">今いる人をタップするだけ。全員の好みを混ぜて、その人数で遊べるゲームを提案します。誰かが苦手なゲームは自動で外れます。</p>
   `;
 }
 
@@ -6555,7 +6615,7 @@ function buildRecommendView() {
   if (known.length === 0) {
     return `
       <button type="button" class="detail-back" data-back>← 戻る</button>
-      <h1 class="detail-title">今日のおすすめ</h1>
+      <h1 class="detail-title">今日はなにする？</h1>
       <div class="detail-underline"></div>
       <div class="review-card">
         <div class="review-count">まだ誰も登録されていません。評価・履歴・遊んでみたいを送るとメンバーとして選べるようになります。</div>
@@ -6595,7 +6655,7 @@ function buildRecommendView() {
 
   if (selected.length === 0) return `
     <button type="button" class="detail-back" data-back>← 戻る</button>
-    <h1 class="detail-title">今日のおすすめ</h1>
+    <h1 class="detail-title">今日はなにする？</h1>
     <div class="detail-underline"></div>
     ${picker}
     ${moodCard}
@@ -6624,7 +6684,7 @@ function buildRecommendView() {
 
   return `
     <button type="button" class="detail-back" data-back>← 戻る</button>
-    <h1 class="detail-title">今日のおすすめ</h1>
+    <h1 class="detail-title">今日はなにする？</h1>
     <div class="detail-underline"></div>
     ${picker}
     ${moodCard}
@@ -6649,401 +6709,410 @@ function buildRecommendView() {
   `;
 }
 
-// ── 今日はなにする？ ─────────────────────────────
-// 人数 → 今いるメンバー → 遊び方 → 気分 の順に選んで、3本にしぼる。
-let todayPick = { count: 0, members: [], kind: "", freshness: "" };
-
-const TODAY_KINDS = [
-  { id: "versus", label: "勝ち負けあり", note: "競って遊びたい" },
-  { id: "coop", label: "協力", note: "みんなで一緒に" },
-  { id: "any", label: "どちらでも", note: "こだわらない" }
-];
-const TODAY_FRESH = [
-  { id: "new", label: "新しいゲーム", note: "まだ遊んでいないもの" },
-  { id: "again", label: "もう一回", note: "遊んだことがあるもの" },
-  { id: "any", label: "なんでも", note: "こだわらない" }
-];
-
-function buildTodayView() {
-  const names = getAllKnownNames();
-  // メンバーは選ばなくても先へ進める（人数だけでも出せるようにする）
-  const step = !todayPick.count ? 0
-    : !todayPick.kind ? 2
-    : !todayPick.freshness ? 3
-    : 4;
-  const counts = [2, 3, 4, 5, 6, 7, 8];
-  return `
-    <button type="button" class="detail-back" data-back>← 戻る</button>
-    <h1 class="detail-title">今日はなにする？</h1>
-    <div class="detail-underline"></div>
-
-    <div class="review-card">
-      <div class="review-header"><div class="review-title">① 何人で遊ぶ？</div></div>
-      <div class="rec-pick-grid">
-        ${counts.map(n => `<button type="button" class="rec-pick ${todayPick.count === n ? "on" : ""}" data-today-count="${n}">${n}人</button>`).join("")}
-      </div>
-    </div>
-
-    ${step >= 2 ? `
-    <div class="review-card">
-      <div class="review-header"><div class="review-title">② 今いるメンバーは？</div></div>
-      ${names.length
-        ? `<div class="rec-pick-grid">
-            ${names.map(n => `<button type="button" class="rec-pick ${todayPick.members.includes(n) ? "on" : ""}" data-today-member="${n}">${n}</button>`).join("")}
-          </div>
-          <div class="rec-status">${todayPick.members.length
-            ? `${todayPick.members.length}人を選択中${todayPick.members.length < todayPick.count
-                ? `（あとの${todayPick.count - todayPick.members.length}人は好みのデータなしとして扱います）` : ""}`
-            : "登録している人だけ選べます。選ばなくても人数だけで出せます。"}</div>`
-        : `<div class="review-count">まだ誰も登録されていません。評価や戦績を入れると選べるようになります。</div>`}
-    </div>` : ""}
-
-    ${step >= 2 ? `
-    <div class="review-card">
-      <div class="review-header"><div class="review-title">③ どう遊ぶ？</div></div>
-      <div class="rec-pick-grid">
-        ${TODAY_KINDS.map(k => `<button type="button" class="rec-pick ${todayPick.kind === k.id ? "on" : ""}" data-today-kind="${k.id}">${k.label}</button>`).join("")}
-      </div>
-      <div class="review-count">${(TODAY_KINDS.find(k => k.id === todayPick.kind) || {}).note || ""}</div>
-    </div>` : ""}
-
-    ${step >= 3 ? `
-    <div class="review-card">
-      <div class="review-header"><div class="review-title">④ どんな気分？</div></div>
-      <div class="rec-pick-grid">
-        ${TODAY_FRESH.map(k => `<button type="button" class="rec-pick ${todayPick.freshness === k.id ? "on" : ""}" data-today-fresh="${k.id}">${k.label}</button>`).join("")}
-      </div>
-      <div class="review-count">${(TODAY_FRESH.find(k => k.id === todayPick.freshness) || {}).note || ""}</div>
-    </div>` : ""}
-
-    ${step >= 4 ? buildTodayResult() : ""}
-  `;
-}
-
-function buildTodayResult() {
-  const picks = todayRecommend();
-  if (!picks.length) {
-    return `<div class="review-card"><div class="review-count">条件に合うゲームが見つかりませんでした。人数や遊び方をゆるめてみてください。</div></div>`;
-  }
-  return `
-    <div class="review-card">
-      <div class="review-header"><div class="review-title">今日の3本</div></div>
-      ${picks.map((e, i) => `
-        <a class="rec-item" href="#game/${encodeURIComponent(e.slug)}">
-          <div class="rec-rank">${i + 1}</div>
-          <img src="${gameImg(e.g, "mini")}" alt="${e.g.jp}" data-fb="${coverFallback(e.g, "mini")}" onerror="if(this.dataset.fb){this.src=this.dataset.fb;this.dataset.fb='';}else{this.style.visibility='hidden';}">
-          <div class="rec-body">
-            <div class="rec-title">${e.g.jp}</div>
-            <div class="rec-spec">${e.g.playersRaw || "人数不明"} ・ ${e.g.timeRaw || "時間不明"}</div>
-            <div class="rec-reason">${e.reasons.map(r => `<span class="${r.hot ? "hot" : ""}">${r.text}</span>`).join("")}</div>
-          </div>
-        </a>`).join("")}
-      <button type="button" class="section-toggle-btn" data-today-reroll style="margin-top:10px;">ほかの3本を見る</button>
-      <button type="button" class="link-btn" data-today-reset style="margin-top:10px;">条件をやり直す</button>
-    </div>
-  `;
-}
-
-let todaySeen = new Set();
-
-function todayRecommend() {
-  const { count, members, kind, freshness } = todayPick;
-  const affinity = {}, rated = {}, stats = {};
-  members.forEach(m => {
-    affinity[m] = getPlayerTagAffinity(m);
-    rated[m] = {};
-    getPlayerRatings(m).forEach(pr => { rated[m][pr.slug] = pr.level != null ? pr.level : pr.legacy; });
-    stats[m] = getPlayStats(m);
-  });
-  const interested = {};
-  members.forEach(m => { interested[m] = new Set(getPlayerInterests(m).map(pi => pi.slug)); });
-
-  const scored = [];
-  games.forEach(g => {
-    const slug = slugOf(g);
-    const tags = getGameTags(g);
-    // 単体で遊べないもの・続き物は今日の候補から外す
-    if (tags.all.includes("拡張") || tags.all.includes("レガシー・キャンペーン系")) return;
-    if (g.playersMin != null && count < g.playersMin) return;
-    if (g.playersMax != null && count > g.playersMax) return;
-
-    const isCoop = tags.genreTags.includes("協力系") || tags.allMechanics.includes("協力");
-    if (kind === "coop" && !isCoop) return;
-    if (kind === "versus" && isCoop) return;
-
-    // 誰か1人でも遊んだことがあるか
-    const playedBy = members.filter(m => stats[m].playedSlugs.has(slug));
-    if (freshness === "new" && playedBy.length) return;
-    if (freshness === "again" && !playedBy.length) return;
-
-    const reasons = [], per = [], wantBy = [];
-    let evidence = 0, veto = false;
-    members.forEach(m => {
-      if (interested[m].has(slug)) wantBy.push(m);
-      const lv = rated[m][slug];
-      let sc = null, k = 0;
-      if (lv != null) {
-        sc = lv; k = 4;
-        if (lv <= RATING_VETO_MAX) veto = true;
-      } else {
-        const vals = tags.all.map(t => affinity[m][t]).filter(v => v != null);
-        if (vals.length) { sc = vals.reduce((a, b) => a + b, 0) / vals.length; k = vals.length; }
-      }
-      evidence += k;
-      per.push(sc == null ? RATING_NEUTRAL : (k * sc + 2 * RATING_NEUTRAL) / (k + 2));
-    });
-    if (veto) return;
-
-    // 得意不得意：そのジャンルの勝率が偏りすぎていないほうが盛り上がる
-    let spread = 0;
-    if (members.length > 1) {
-      tags.genreTags.forEach(t => {
-        const rates = members
-          .map(m => (stats[m].genreStats.find(x => x.genre === t) || {}).winRate)
-          .filter(v => v != null);
-        if (rates.length > 1) {
-          spread = Math.max(spread, Math.max(...rates) - Math.min(...rates));
-        }
-      });
-    }
-    const balance = spread ? -(spread / 100) * 0.8 : 0;   // 差が大きいほど少し下げる
-    if (spread && spread <= 25) reasons.push({ hot: false, text: "実力が近くていい勝負になりそう" });
-
-    if (wantBy.length) reasons.unshift({ hot: true, text: `🌟 ${wantBy.join("・")} が遊んでみたい` });
-    if (playedBy.length && freshness !== "new") {
-      reasons.push({ hot: false, text: `${playedBy.join("・")} が経験あり` });
-    }
-    if (!playedBy.length) reasons.push({ hot: false, text: "全員はじめて" });
-
-    const hits = tags.all.map(t => ({ t, v: members.map(m => affinity[m][t]).filter(v => v != null) }))
-      .filter(x => x.v.length)
-      .map(x => ({ t: x.t, avg: x.v.reduce((a, b) => a + b, 0) / x.v.length }))
-      .sort((a, b) => b.avg - a.avg);
-    hits.filter(h => h.avg >= 7).slice(0, 2).forEach(h => {
-      reasons.push({ hot: false, text: `${h.t} が好み（★${Math.round(h.avg * 10) / 10}）` });
-    });
-
-    const base = per.length ? per.reduce((a, b) => a + b, 0) / per.length : RATING_NEUTRAL;
-    scored.push({
-      g, slug, evidence,
-      score: base + wantBy.length * 1.6 + balance,
-      reasons: reasons.slice(0, 3)
-    });
-  });
-
-  scored.sort((a, b) => b.score - a.score);
-  const fresh = scored.filter(x => !todaySeen.has(x.slug));
-  const use = fresh.length >= 3 ? fresh : (todaySeen.clear(), scored);
-  const picks = use.slice(0, 3);
-  picks.forEach(x => todaySeen.add(x.slug));
-  return picks;
-}
-
-// 「今日やる！」は入り切り。もう一度押したら誤タップとみなして取り消す。
-async function toggleTodayTable(slug, me) {
-  const sess = sessionsCache.find(x => x.date === todayStr());
-  const mine = getDayTables(todayStr()).filter(h => h.slug === slug);
-  const undoable = mine.filter(h => !historyHasResult(h));
-  if (undoable.length) {
-    const h = undoable[undoable.length - 1];
-    await deleteHistory(h.slug, h.id);
-    return "removed";
-  }
-  if (mine.length) return "hasResult";   // 結果が入っているものは消さない
-  const ok = await ensureTodayTable(slug, me);
-  return ok ? "added" : null;
-}
-
-// 今日の会を用意して、そこに卓を1つ足す（結果は後から入れる）
-async function ensureTodayTable(slug, me) {
-  const today = todayStr();
-  let sess = sessionsCache.find(x => x.date === today);
-  if (!sess) {
-    const id = await createSession({ date: today, members: [me], createdBy: me });
-    if (!id) return null;
-    sess = getSession(id) || { id, date: today, members: [me] };
-  }
-  await addTableToSession(sess, slug, (sess.members || [me]).slice(), me);
-  return sess;
-}
-
-// 今日の記録を開いた状態で みんな/ゲーム記録 へ移動する
-function openTodayLog() {
-  logDate = "";                 // 常に今日から見せる
-  editingId = ""; editDraft = null;
-  const sess = sessionOf(todayStr());
-  logMembersOpen = (sess && (sess.members || []).length < 2) ? todayStr() : "";
-  location.hash = "#log";
-}
-
-// その場に留まる操作は、何が起きたか分からないと不安なので短く知らせる
-function toast(msg) {
-  let el = document.getElementById("toast");
-  if (!el) {
-    el = document.createElement("div");
-    el.id = "toast";
-    el.className = "toast";
-    document.body.appendChild(el);
-  }
-  el.textContent = msg;
-  el.classList.add("on");
-  clearTimeout(toast._t);
-  toast._t = setTimeout(() => el.classList.remove("on"), 2200);
-}
-
-// 写真を選んだら、その場で縮めて保存する
-document.getElementById("detailView").addEventListener("change", async e => {
-  const classPick = e.target.closest("[data-class-pick]");
-  if (classPick && classPick.value) {
-    const kind = classPick.dataset.classPick, slug = classPick.dataset.slug, tag = classPick.value;
-    classPick.disabled = true;
-    await addCustomTag(slug, tag, getMyName() || "", kind === "tag" ? "" : kind);
-    const g = games.find(x => slugOf(x) === slug);
-    if (g) showDetail(g);
-    renderTagCloud(); renderGenreOptions(); renderMechanicOptions(); renderSearchSuggest();
-    toast(`${tag} を追加しました`);
-    return;
-  }
-  const tagPick = e.target.closest("[data-tag-pick]");
-  if (tagPick && tagPick.value) {
-    const slug = tagPick.dataset.tagPick, tag = tagPick.value;
-    tagPick.disabled = true;
-    await addCustomTag(slug, tag, getMyName() || "");
-    const g = games.find(x => slugOf(x) === slug);
-    if (g) showDetail(g);
-    renderTagCloud(); renderGenreOptions();
-    toast(`#${tag} を追加しました`);
-    return;
-  }
-  const coverInput = e.target.closest("[data-cover-add]");
-  if (coverInput && coverInput.files && coverInput.files[0]) {
-    const file = coverInput.files[0];
-    const slug = coverInput.dataset.coverAdd;
-    const name = ensureMyName();
-    coverInput.value = "";
-    if (!name) return;
-    toast("写真を用意しています…");
-    try {
-      let data = await shrinkImage(file, 800);
-      // 白い余白は保存前に落としておく（棚や一覧で箱が小さく見えないように）
-      try {
-        const im = await new Promise((res, rej) => { const x = new Image(); x.onload = () => res(x); x.onerror = rej; x.src = data; });
-        const o = trimWhiteImage(im);
-        if (o) data = o.toDataURL("image/jpeg", 0.85);
-      } catch (e) { /* 失敗しても元の画像で続ける */ }
-      const oldId = coverOverrideId[slug];
-      const id = await addPhoto(slug, "cover", data, name);
-      if (id) {
-        coverOverride[slug] = data; coverOverrideId[slug] = id;
-        if (oldId) await deletePhoto(slug, oldId);   // 先に足してから古いほうを消す
-        toast("表紙を差し替えました");
-      }
-      const g = currentDetailGame();
-      if (g) showDetail(g);
-    } catch (err) {
-      console.error("表紙の処理に失敗", err);
-      toast(err.message || "この写真は使えませんでした");
-    }
-    return;
-  }
-  const input = e.target.closest("[data-photo-add]");
-  if (!input || !input.files || !input.files[0]) return;
-  const file = input.files[0];
-  const slug = input.dataset.photoSlug;
-  const kind = input.dataset.photoAdd;
-  const name = ensureMyName();
-  input.value = "";
-  if (!name) return;
-  toast("写真を用意しています…");
-  try {
-    const data = await shrinkImage(file);
-    const id = await addPhoto(slug, kind, data, name);
-    const g = currentDetailGame();
-    if (g) showDetail(g);
-    if (id) toast("写真を追加しました");
-  } catch (err) {
-    console.error("写真の処理に失敗", err);
-    toast(err.message || "この写真は使えませんでした");
-  }
-});
-
-// 写真は原寸で見られるようにする
-function openLightbox(src) {
-  let el = document.getElementById("lightbox");
-  if (!el) {
-    el = document.createElement("div");
-    el.id = "lightbox";
-    el.className = "lightbox";
-    el.addEventListener("click", () => el.classList.remove("on"));
-    document.body.appendChild(el);
-  }
-  el.innerHTML = `<img src="${src}" alt="写真"><div class="lightbox-hint">タップで閉じる</div>`;
-  el.classList.add("on");
-}
-
-// スライダーの数字と言葉、平均をその場で更新する
-document.getElementById("detailView").addEventListener("input", e => {
-  if (!e.target.classList.contains("rating-slider")) return;
-  const form = e.target.closest("form");
-  const words = AXIS_WORDS[e.target.name] || {};
-  const v = parseInt(e.target.value, 10);
-  const out = form.querySelector(`[data-val-for="${e.target.name}"]`);
-  if (out) out.innerHTML = `<b style="color:${ratingColor(v)}">${v}</b>${words[v] || ""}`;
-  const tot = form.querySelector("[data-rating-total]");
-  if (tot) tot.textContent = Math.round(RATING_AXES.reduce((a, ax) => a + parseInt(form.elements[ax.key].value, 10), 0) / RATING_AXES.length * 10) / 10;
-});
-
-// 卓が無いまま日付をまたいだ会は残す意味が無いので、起動時に片付ける
-function cleanupEmptySessions() {
-  if (!firebaseReady) return Promise.resolve();
-  const today = todayStr();
-  const empty = sessionsCache.filter(x => x.date && x.date < today && !getDayTables(x.date).length);
-  if (!empty.length) return Promise.resolve();
-  return Promise.all(empty.map(x => db.collection("sessions").doc(x.id).delete().catch(() => {})))
-    .then(() => fetchSessions().then(c => { sessionsCache = c; }));
-}
-
 function hideAllViews() {
-  ["controls", "listView", "detailView", "playerView", "membersView", "recommendView", "quizView", "todayView", "logView"]
+  ["controls", "listView", "detailView", "playerView", "membersView", "recommendView", "quizView", "matchView", "logView"]
     .forEach(id => { const el = document.getElementById(id); if (el) el.style.display = "none"; });
 }
 
-function showTodayView() {
+// ── 相性占い ─────────────────────────────
+// タイプ診断（16タイプ）をした人同士の相性。4軸の寄り具合と、実際に一緒に遊んだ記録の両方から占う。
+// 恋愛の相性ではなく「一緒に卓を囲むメンバーとして」の見立て。
+let matchPick = [];
+let matchPickMode = "all";   // 相性ゲーム：all=総合 / new=全員未経験
+
+function typedNames() {
+  return getAllKnownNames().filter(n => isType16(getProfile(n)));
+}
+function axisVal(name, key) {
+  const p = getProfile(name);
+  return Math.max(-1, Math.min(1, (p && p.scores && p.scores[key]) || 0));
+}
+// その文字（E/I/S/N/T/F/J/P）への寄り 0〜1
+function letterStrength(name, letter) {
+  const ax = AXES.find(a => a.a === letter || a.b === letter);
+  const v = axisVal(name, ax.key);
+  return ax.a === letter ? 0.5 + v / 2 : 0.5 - v / 2;
+}
+function groupLetter(names, letter) {
+  return names.reduce((sum, n) => sum + letterStrength(n, letter), 0) / names.length;
+}
+// 0〜1 を 1〜5 段階に
+function toLevel(x) {
+  return Math.max(1, Math.min(5, Math.round(Math.max(0, Math.min(1, x)) * 4) + 1));
+}
+function stars(level) {
+  return `<span class="match-stars">${"★".repeat(level)}<i>${"★".repeat(5 - level)}</i></span>`;
+}
+function pairSimilarity(a, b) {
+  return AXES.reduce((sum, ax) => sum + (1 - Math.abs(axisVal(a, ax.key) - axisVal(b, ax.key)) / 2), 0) / AXES.length;
+}
+// タイプだけから見た2人の相性 0〜1。
+// 情報の取り方(S/N)は近いほど話が早い。ワイワイ/じっくりはほどよく違うのが理想。
+// 勝負への温度(T/F)は離れすぎると冷める。計画/即興(J/P)は違うほど補い合う。
+function pairBase(a, b) {
+  const d = k => Math.abs(axisVal(a, k) - axisVal(b, k)) / 2;
+  const sn = 1 - d("SN");
+  const ei = 0.55 + 0.45 * (1 - Math.abs(d("EI") - 0.5) * 2);
+  const tf = 1 - d("TF") * 0.6;
+  const jp = 0.6 + 0.4 * d("JP");
+  const raw = sn * 0.3 + ei * 0.25 + tf * 0.25 + jp * 0.2;
+  return Math.max(0, Math.min(1, (raw - 0.55) / 0.4));   // 実際に出る幅（0.57〜0.92あたり）を1〜5段階に広げる
+}
+// 実際の記録から見た2人：一緒に遊んだ回数・日数、共通で評価したゲーム、2人とも高評価のゲーム、評価のズレ
+function pairData(a, b) {
+  const all = Object.keys(historyCache).flatMap(slug => (historyCache[slug] || []).map(h => Object.assign({ slug }, h)));
+  const together = all.filter(h => { const ps = historyParticipants(h); return ps.includes(a) && ps.includes(b); });
+  const days = new Set(together.map(h => h.date).filter(Boolean)).size;
+  const rate = name => { const o = {}; getPlayerRatings(name).forEach(r => { const v = r.level != null ? r.level : r.legacy; if (v != null) o[r.slug] = v; }); return o; };
+  const ra = rate(a), rb = rate(b);
+  const shared = Object.keys(ra).filter(k => k in rb);
+  const bothLove = shared.filter(k => ra[k] >= 8 && rb[k] >= 8);
+  const split = shared.filter(k => Math.abs(ra[k] - rb[k]) >= 4);
+  const diff = shared.length ? shared.reduce((sum, k) => sum + Math.abs(ra[k] - rb[k]), 0) / shared.length : null;
+  const countBy = {};
+  together.forEach(h => { countBy[h.slug] = (countBy[h.slug] || 0) + 1; });
+  const favorite = Object.entries(countBy).sort((x, y) => y[1] - x[1])[0] || null;
+  return { plays: together.length, days, shared: shared.length, bothLove, split, diff, favorite, ra, rb };
+}
+function bondLevel(d) {
+  let lv = d.plays === 0 ? 1 : d.plays <= 2 ? 2 : d.plays <= 6 ? 3 : d.plays <= 14 ? 4 : 5;
+  if (d.diff != null && d.shared >= 3 && d.diff <= 1.5) lv += 1;
+  if (d.diff != null && d.shared >= 3 && d.diff >= 3) lv -= 1;
+  return Math.max(1, Math.min(5, lv));
+}
+const MATCH_OVERALL = [
+  null,
+  { name: "異種格闘技マッチ", text: "考え方がまるで違う組み合わせ。噛み合わないぶん、遊ぶたびに新しい発見がある卓です。ルールが単純で偶然が効くゲームを間に挟むと、温度差がほどけます。" },
+  { name: "刺激し合うライバル", text: "似ていないからこそ読み合いが面白い組み合わせ。対戦系で火花が散りますが、負けた側のフォローだけは忘れずに。" },
+  { name: "いい塩梅の凸凹チーム", text: "似ているところと違うところが半々。役割が自然に分かれるので、協力でも対戦でもそれなりに形になる万能な卓です。" },
+  { name: "息の合う名コンビ", text: "テンポも勝負への温度も近く、説明が少なくて済む組み合わせ。少し難しめのゲームに一緒に挑むと、この相性が活きます。" },
+  { name: "運命の卓仲間", text: "話が早くて、しかも足りないところを補い合える理想の組み合わせ。何を出しても盛り上がるので、むしろ普段選ばないジャンルに手を伸ばしてみてください。" }
+];
+const MATCH_ROLES = [
+  { name: "仕切り役",     emoji: "📣", need: { E: 1, J: 1 },            text: "ルール説明と進行を自然に引き受ける" },
+  { name: "ムードメーカー", emoji: "🎉", need: { E: 1, F: 1, P: 0.5 },    text: "負けても場を明るくして次に進める" },
+  { name: "参謀",         emoji: "♟", need: { I: 1, N: 0.6, T: 1 },     text: "黙って盤面を読み、終盤で一気に刺す" },
+  { name: "職人",         emoji: "🔧", need: { I: 1, S: 1 },            text: "手順と得点計算を正確にこなす" },
+  { name: "火付け役",     emoji: "⚡", need: { E: 0.6, T: 1, P: 1 },     text: "仕掛けて場を荒らし、流れを変える" },
+  { name: "潤滑油",       emoji: "🤝", need: { F: 1, J: 0.7, I: 0.3 },   text: "揉めそうな場面をやんわりまとめる" },
+  { name: "ひらめき担当", emoji: "💡", need: { N: 1, P: 1 },            text: "誰も思いつかない一手を平気で出す" },
+  { name: "番人",         emoji: "📋", need: { S: 1, J: 1 },            text: "ルールの抜け漏れを見逃さない" }
+];
+function roleOf(name) {
+  let best = null;
+  MATCH_ROLES.forEach(r => {
+    const keys = Object.keys(r.need);
+    const sc = keys.reduce((sum, l) => sum + r.need[l] * letterStrength(name, l), 0) / keys.reduce((sum, l) => sum + r.need[l], 0);
+    if (!best || sc > best.sc) best = { r, sc };
+  });
+  return best.r;
+}
+// 軸ごとの「全員同じ側／割れている」で変わる見立て
+const AXIS_READINGS = {
+  EI: {
+    title: "卓の空気",
+    allA: "全員ワイワイ派。にぎやかで最高ですが、ルール説明が最後まで聞かれない危険大。インストは1人が仕切って、質問は後でまとめて受けるくらいがちょうどいい。",
+    allB: "全員じっくり派。静かでも気まずくならない卓なので、長考が許される戦略系や、会話禁止の協力系で真価を発揮します。",
+    mix:  "話す人と聞く人がそろっていて、空気のバランスは良好。ワイワイ派が場を回し、じっくり派が要所で締める形が自然にできます。"
+  },
+  SN: {
+    title: "考え方のクセ",
+    allA: "全員堅実派。ルールの理解が早く、得点計算も正確。反面、ブラフ系では全員が正直すぎて読み合いにならないことも。",
+    allB: "全員直感派。ノリと読みで進むので心理戦や正体隠匿が盛り上がります。細かい得点ルールは誰も覚えていない前提で、早見表を開いておくと安心。",
+    mix:  "堅実派と直感派が混ざる卓。ブラフ系では堅実派が読まれやすく、重量級では直感派が置いていかれがち。順番に得意分野を出し合うのが平和です。"
+  },
+  TF: {
+    title: "勝ち負けへの温度",
+    allA: "全員勝負派。手加減なしのガチ勝負が成立する貴重な卓。負けても笑えるゲームより、正面から殴り合える戦略系や2人用を。",
+    allB: "全員調和派。勝敗より過程を楽しめるので、協力系・お絵かき・ワード系が輝きます。逆に接待プレイが始まって勝負がぼやけることも。",
+    mix:  "勝負派と調和派が同居。勝負派が本気を出しすぎると調和派が冷めるので、協力ゲームを1本挟むか、チーム戦で同じ側に置くと丸く収まります。"
+  },
+  JP: {
+    title: "進行のリズム",
+    allA: "全員計画派。準備は完璧、でもルール裁判が長引きがち。「今回はこう」と決めて先に進む係を作っておくと時間を守れます。",
+    allB: "全員即興派。始まれば最高に盛り上がるのに、始まるまでが長い。誰かが箱を開ける係にならないと開始まで30分かかります。",
+    mix:  "計画派が準備して、即興派が場を回す理想の分担。計画派は「段取りが無視される」と感じやすいので、最初の1本だけは計画派に選ばせるのがコツ。"
+  }
+};
+function axisReading(names, ax) {
+  const sides = names.map(n => ({ n, a: axisVal(n, ax.key) > 0 }));
+  const na = sides.filter(x => x.a).length;
+  const r = AXIS_READINGS[ax.key];
+  const text = na === names.length ? r.allA : na === 0 ? r.allB : r.mix;
+  return { title: r.title, text, sides, na };
+}
+// ジャンルごとの寄り（0〜1）：その人の文字のうち、そのジャンルを含む文字の最大寄り
+function genreAffinityOf(name) {
+  const acc = {};
+  Object.entries(LETTER_GENRES).forEach(([letter, list]) => {
+    const w = letterStrength(name, letter);
+    list.forEach(g => { (acc[g] = acc[g] || []).push(w); });
+  });
+  // いちばん強い文字を主に、そのジャンルに関わる他の文字も少し効かせる（満点だらけにならないように）
+  const out = {};
+  Object.entries(acc).forEach(([g, ws]) => { out[g] = Math.max(...ws) * 0.7 + (ws.reduce((a, b) => a + b, 0) / ws.length) * 0.3; });
+  return out;
+}
+function groupGenres(names) {
+  const acc = {};
+  names.forEach(n => Object.entries(genreAffinityOf(n)).forEach(([g, w]) => { acc[g] = (acc[g] || 0) + w / names.length; }));
+  return Object.entries(acc).map(([g, w]) => ({ g, w })).sort((x, y) => y.w - x.w);
+}
+function avgScoresOf(names) {
+  const o = {};
+  AXES.forEach(ax => { o[ax.key] = names.reduce((sum, n) => sum + axisVal(n, ax.key), 0) / names.length; });
+  return o;
+}
+// 全員が評価していて、平均が高いゲーム
+function groupFavorites(names) {
+  const maps = names.map(n => { const o = {}; getPlayerRatings(n).forEach(r => { const v = r.level != null ? r.level : r.legacy; if (v != null) o[r.slug] = v; }); return o; });
+  const common = Object.keys(maps[0]).filter(k => maps.every(m => k in m));
+  return common.map(slug => ({ slug, g: games.find(x => slugOf(x) === slug), avg: maps.reduce((sum, m) => sum + m[slug], 0) / maps.length }))
+    .filter(x => x.g && x.avg >= 7.5).sort((a, b) => b.avg - a.avg).slice(0, 3);
+}
+// 全員そろって遊んだ回数が多いゲーム
+function groupPlayed(names) {
+  const countBy = {};
+  Object.keys(historyCache).forEach(slug => (historyCache[slug] || []).forEach(h => {
+    const ps = historyParticipants(h);
+    if (names.every(n => ps.includes(n))) countBy[slug] = (countBy[slug] || 0) + 1;
+  }));
+  return Object.entries(countBy).map(([slug, c]) => ({ slug, c, g: games.find(x => slugOf(x) === slug) })).filter(x => x.g).sort((a, b) => b.c - a.c).slice(0, 3);
+}
+function matchGameRow(g, note) {
+  return `
+    <a class="player-game-row" href="#game/${encodeURIComponent(slugOf(g))}">
+      <img src="${gameImg(g, "mini")}" alt="${g.jp}" data-fb="${coverFallback(g, "mini")}" onerror="if(this.dataset.fb){this.src=this.dataset.fb;this.dataset.fb='';}else{this.style.visibility='hidden';}">
+      <div class="player-game-row-body">
+        <div class="player-game-row-title">${g.jp}</div>
+        <div class="player-game-row-level">${g.playersRaw || ""} ・ ${g.timeRaw || ""}</div>
+        ${note ? `<div class="player-game-row-level">${note}</div>` : ""}
+      </div>
+    </a>`;
+}
+function metricRow(label, level, note) {
+  return `
+    <div class="match-metric">
+      <div class="match-metric-head"><span>${label}</span>${stars(level)}</div>
+      <div class="match-bar"><i style="width:${level * 20}%"></i></div>
+      <div class="match-metric-note">${note}</div>
+    </div>`;
+}
+
+function buildMatchView() {
+  const typed = typedNames();
+  matchPick = matchPick.filter(n => typed.includes(n));
+  const picked = matchPick;
+  const head = `
+    <button type="button" class="detail-back" data-back>← 戻る</button>
+    <h1 class="detail-title">🔮 相性占い</h1>
+    <div class="detail-underline"></div>`;
+  if (typed.length < 2) {
+    return head + `<div class="review-card"><div class="review-count">タイプ診断をした人が2人以上になると占えます。マイページの名前横のタイプから診断できます。</div></div>`;
+  }
+  const picker = `
+    <div class="review-card">
+      <div class="review-header"><div class="review-title">占うメンバーを選ぶ（2人以上）</div></div>
+      <div class="rec-pick-grid">
+        ${typed.map(n => { const f = typeInfo(getProfile(n)); return `<button type="button" class="rec-pick ${picked.includes(n) ? "on" : ""}" data-match-toggle="${n}">${f.emoji} ${n}</button>`; }).join("")}
+      </div>
+      <div class="rec-status">${picked.length >= 2 ? `${picked.length}人を選択中` : picked.length === 1 ? "あと1人選ぶと占えます" : "タイプ診断ずみの人だけ選べます"}</div>
+      ${picked.length ? `<button type="button" class="link-btn" data-match-clear style="margin-top:6px;">選び直す</button>` : ""}
+    </div>`;
+  if (picked.length < 2) return head + picker;
+  return head + picker + buildMatchResult(picked);
+}
+
+function buildMatchResult(names) {
+  const pairs = [];
+  for (let i = 0; i < names.length; i++) for (let j = i + 1; j < names.length; j++) pairs.push([names[i], names[j]]);
+  const isPair = names.length === 2;
+  const who = isPair ? `${names[0]}と${names[1]}` : `この${names.length}人`;
+
+  // ── 総合（タイプだけから）
+  const baseAvg = pairs.reduce((sum, [a, b]) => sum + pairBase(a, b), 0) / pairs.length;
+  const simAvg = pairs.reduce((sum, [a, b]) => sum + pairSimilarity(a, b), 0) / pairs.length;
+  const overallLv = toLevel(baseAvg);
+  const ov = MATCH_OVERALL[overallLv];
+  const kind = simAvg >= 0.72 ? { name: "似た者同士", text: "4つの軸のほとんどで同じ側に寄っています。以心伝心で話が早いぶん、苦手なジャンルも共通。" }
+    : simAvg <= 0.45 ? { name: "正反対で補い合う", text: "軸の多くで逆側。ぶつかることもありますが、片方の弱点をもう片方が埋める組み合わせです。" }
+    : { name: "半分似て、半分違う", text: "近い軸と遠い軸が半々。安心感と刺激の両方がある、いちばん長続きしやすい距離感です。" };
+
+  // ── 実データ（親密度）
+  const datas = pairs.map(([a, b]) => Object.assign({ a, b }, pairData(a, b)));
+  const bondLv = Math.round(datas.reduce((sum, d) => sum + bondLevel(d), 0) / datas.length);
+  const totalPlays = isPair ? datas[0].plays : groupPlayed(names).reduce((sum, x) => sum + x.c, 0);
+  const bondNote = isPair
+    ? (datas[0].plays
+        ? `一緒に遊んだ記録は${datas[0].plays}回（${datas[0].days}日）。${datas[0].shared ? `2人とも評価したゲームは${datas[0].shared}本で、点のズレは平均${datas[0].diff.toFixed(1)}点。` : "2人とも評価したゲームはまだありません。"}${datas[0].bothLove.length ? `どちらも8点以上をつけたのは${datas[0].bothLove.length}本。` : ""}${datas[0].split.length ? `逆に4点以上割れたのが${datas[0].split.length}本あります。` : ""}`
+        : "まだ一緒に遊んだ記録がありません。ここから先は、遊ぶたびに上がっていく数字です。")
+    : (totalPlays ? `全員そろって遊んだ記録は${totalPlays}回。ペアごとの親密度を平均しています。` : "全員そろって遊んだ記録はまだありません。ペアごとの記録から平均しています。");
+
+  // ── 卓としての適性
+  const L = l => groupLetter(names, l);
+  const snSim = pairs.reduce((sum, [a, b]) => sum + (1 - Math.abs(axisVal(a, "SN") - axisVal(b, "SN")) / 2), 0) / pairs.length;
+  const coop = L("F") * 0.4 + snSim * 0.35 + L("I") * 0.25;
+  const versus = L("T") * 0.5 + L("E") * 0.25 + L("J") * 0.25;
+  const party = L("E") * 0.5 + L("P") * 0.3 + L("F") * 0.2;
+  const stamina = names.reduce((sum, n) => sum + (timeLeaning(getProfile(n).scores) + 1) / 2, 0) / names.length;
+  const coopLv = toLevel(coop), versusLv = toLevel(versus), partyLv = toLevel(party), staminaLv = toLevel(stamina);
+  const coopNote = coopLv >= 4 ? "声を掛け合わなくても手が合う卓。花火やザ・クルーのような会話制限の協力系が特に向いています。" : coopLv === 3 ? "協力系は問題なく成立します。ただし仕切る人が1人に固定されがちなので、ミッションごとに交代を。" : "全員が自分の勝ちを優先するタイプ。協力系は「誰の指示で動くか」で揉めやすいので、対戦系のほうが平和です。";
+  const versusNote = versusLv >= 4 ? "手加減なしの真剣勝負が成立する卓。戦略系・陣取り・トリックテイキングで本気を出し合ってください。" : versusLv === 3 ? "対戦は盛り上がりますが、負けが続く人が出ると空気が変わります。短時間で何度も回せるゲームで巻き返しの機会を。" : "勝ち負けにこだわる人が少ない卓。対戦するなら運の要素が強いものか、勝敗がぼやけるパーティ系を。";
+  const partyNote = partyLv >= 4 ? "放っておいても盛り上がる卓。ワード系・お絵かき・大喜利系はハズレなし。むしろ静かに考えるゲームは向きません。" : partyLv === 3 ? "パーティ系は盛り上げ役がいれば問題なし。人数が増えるほど楽しい組み合わせです。" : "全員が控えめな卓。大声を出すパーティ系より、静かに笑える推理系や協力系が合います。";
+  const staminaNote = staminaLv >= 4 ? "90分超えの重量級でも集中が切れない卓。テラフォーミングマーズやワイナリーの四季に挑む日を作ってください。" : staminaLv === 3 ? "30〜60分の中量級がベスト。重量級は1日1本まで。" : "テンポ重視の卓。15分前後のゲームを何本も回すほうが満足度が高く、長考が始まるとダレます。";
+
+  // ── 軸ごとの見立て
+  const axisCards = AXES.map((ax, i) => {
+    const r = axisReading(names, ax);
+    return `
+      <div class="match-axis">
+        <div class="match-axis-title">${["①", "②", "③", "④"][i]} ${r.title}<span class="match-axis-sub">${ax.aLabel} ／ ${ax.bLabel}</span></div>
+        <div class="match-axis-people">${r.sides.map(x => `<span class="match-side ${x.a ? "a" : "b"}">${x.n}<small>${x.a ? ax.aLabel : ax.bLabel}</small></span>`).join("")}</div>
+        <p>${r.text}</p>
+      </div>`;
+  }).join("");
+
+  // ── 役回り
+  const roles = names.map(n => ({ n, r: roleOf(n), f: typeInfo(getProfile(n)), p: getProfile(n) }));
+  const roleCounts = {};
+  roles.forEach(x => { roleCounts[x.r.name] = (roleCounts[x.r.name] || 0) + 1; });
+  const dupRole = Object.entries(roleCounts).find(([, c]) => c >= 2);
+  const roleNote = dupRole
+    ? `${dupRole[0]}が${dupRole[1]}人。同じ役回りがかぶると、どちらかが手持ち無沙汰になります。かぶった人は意識して別の顔を出してみてください。`
+    : "役回りがきれいに分かれています。誰かが欠けると卓の色が変わる、バランスのいい編成です。";
+
+  // ── ジャンル
+  const genres = groupGenres(names);
+  const strong = genres.slice(0, 4);
+  const weak = genres.slice(-2).reverse();
+
+  // ── ゲーム
+  const avg = avgScoresOf(names);
+  let picks = sampleGamesForScores(avg, 12, false, null);
+  if (matchPickMode === "new") picks = picks.filter(x => !names.some(n => hasPlayed(slugOf(x.g), n)));
+  picks = picks.slice(0, 3);
+  const favs = groupFavorites(names);
+  const played = groupPlayed(names);
+
+  return `
+    <div class="review-card match-hero">
+      <div class="match-hero-label">${who}の相性</div>
+      <div class="match-hero-stars">${stars(overallLv)}</div>
+      <div class="match-hero-name">${ov.name}</div>
+      <p class="match-hero-text">${ov.text}</p>
+      <div class="match-kind"><b>${kind.name}</b><span>タイプの近さ ${Math.round(simAvg * 100)}%</span></div>
+      <p class="match-hero-text" style="margin-top:4px;">${kind.text}</p>
+    </div>
+
+    <div class="review-card">
+      <div class="review-header"><div class="review-title">卓としての適性</div></div>
+      ${metricRow("親密度（実際の記録から）", bondLv, bondNote)}
+      ${metricRow("協力ゲームの息の合い方", coopLv, coopNote)}
+      ${metricRow("真剣勝負の熱さ", versusLv, versusNote)}
+      ${metricRow("パーティの盛り上がり", partyLv, partyNote)}
+      ${metricRow("長期戦への耐久力", staminaLv, staminaNote)}
+    </div>
+
+    <div class="review-card">
+      <div class="review-header"><div class="review-title">4つの軸で見る${who}</div></div>
+      ${axisCards}
+    </div>
+
+    <div class="review-card">
+      <div class="review-header"><div class="review-title">卓での役回り</div></div>
+      <div class="match-roles">
+        ${roles.map(x => `
+          <a class="match-role" href="#type/${encodeURIComponent(x.n)}">
+            <span class="match-role-emoji">${x.r.emoji}</span>
+            <span class="match-role-body">
+              <b>${x.n}<small>${x.f.emoji} ${typeDisplay(x.p)}</small></b>
+              <span class="match-role-name">${x.r.name}</span>
+              <span class="match-role-text">${x.r.text}</span>
+            </span>
+          </a>`).join("")}
+      </div>
+      <p class="match-metric-note" style="margin-top:8px;">${roleNote}</p>
+    </div>
+
+    <div class="review-card">
+      <div class="review-header"><div class="review-title">${who}の得意ジャンル</div></div>
+      ${strong.map(x => `
+        <div class="match-genre">
+          <button type="button" class="tag-chip mini" data-class-filter="genre" data-value="${x.g}">${x.g}</button>
+          <div class="match-bar slim"><i style="width:${toLevel(x.w) * 20}%"></i></div>
+          ${stars(toLevel(x.w))}
+        </div>`).join("")}
+      <div class="match-weak">苦手かも：${weak.map(x => `<button type="button" class="tag-chip mini" data-class-filter="genre" data-value="${x.g}">${x.g}</button>`).join(" ")}</div>
+    </div>
+
+    ${pairs.length > 1 ? `
+    <div class="review-card">
+      <div class="review-header"><div class="review-title">ペアごとの相性</div></div>
+      ${datas.map(d => { const lv = toLevel(pairBase(d.a, d.b)); return `
+        <div class="match-pair">
+          <span class="match-pair-names">${d.a} × ${d.b}</span>
+          ${stars(lv)}
+          <span class="match-pair-name">${MATCH_OVERALL[lv].name}${d.plays ? `・一緒に${d.plays}回` : ""}</span>
+        </div>`; }).join("")}
+    </div>` : ""}
+
+    <div class="review-card">
+      <div class="review-header">
+        <div class="review-title">遊ぶならこの3本</div>
+        <div class="pick-toggle">
+          <button type="button" class="${matchPickMode === "all" ? "on" : ""}" data-match-mode="all">総合</button>
+          <button type="button" class="${matchPickMode === "new" ? "on" : ""}" data-match-mode="new">全員未経験</button>
+        </div>
+      </div>
+      ${picks.length ? `<div class="player-game-list">${picks.map(x => matchGameRow(x.g, getGameTags(x.g).allMechanics.slice(0, 3).map(m => "#" + m).join(" "))).join("")}</div>` : `<div class="review-count">該当するゲームがありません。</div>`}
+    </div>
+
+    ${favs.length ? `
+    <div class="review-card">
+      <div class="review-header"><div class="review-title">全員が高評価の鉄板</div></div>
+      <div class="player-game-list">${favs.map(x => matchGameRow(x.g, `${names.length}人の平均 ${x.avg.toFixed(1)}点`)).join("")}</div>
+    </div>` : ""}
+
+    ${played.length ? `
+    <div class="review-card">
+      <div class="review-header"><div class="review-title">${who}でいちばん遊んだゲーム</div></div>
+      <div class="player-game-list">${played.map(x => matchGameRow(x.g, `全員そろって${x.c}回`)).join("")}</div>
+    </div>` : ""}
+
+    <p class="cta-note">タイプ診断の4軸と、みんなの評価・戦績の記録から占っています。遊ぶほど、評価するほど内容が変わります。</p>
+  `;
+}
+
+function showMatchView() {
   hideAllViews();
-  const tv = document.getElementById("todayView");
-  tv.style.display = "block";
-  tv.innerHTML = buildTodayView();
+  const v = document.getElementById("matchView");
+  v.style.display = "block";
+  v.innerHTML = buildMatchView();
   window.scrollTo(0, 0);
 }
 
-document.getElementById("todayView").addEventListener("click", e => {
-  const c = e.target.closest("[data-today-count]");
-  if (c) {
-    todayPick.count = Number(c.dataset.todayCount);
-    todaySeen.clear();
-    showTodayView();
+document.getElementById("matchView").addEventListener("click", e => {
+  const t = e.target.closest("[data-match-toggle]");
+  if (t) {
+    const n = t.dataset.matchToggle;
+    const i = matchPick.indexOf(n);
+    if (i >= 0) matchPick.splice(i, 1); else matchPick.push(n);
+    const y = window.scrollY;
+    showMatchView();
+    window.scrollTo(0, y);
     return;
   }
-  const m = e.target.closest("[data-today-member]");
+  if (e.target.closest("[data-match-clear]")) { matchPick = []; showMatchView(); return; }
+  const m = e.target.closest("[data-match-mode]");
   if (m) {
-    const n = m.dataset.todayMember;
-    const i = todayPick.members.indexOf(n);
-    if (i >= 0) todayPick.members.splice(i, 1); else todayPick.members.push(n);
-    todaySeen.clear();
-    showTodayView();
+    matchPickMode = m.dataset.matchMode;
+    const y = window.scrollY;
+    showMatchView();
+    window.scrollTo(0, y);
     return;
   }
-  const k = e.target.closest("[data-today-kind]");
-  if (k) { todayPick.kind = k.dataset.todayKind; todaySeen.clear(); showTodayView(); return; }
-  const f = e.target.closest("[data-today-fresh]");
-  if (f) { todayPick.freshness = f.dataset.todayFresh; todaySeen.clear(); showTodayView(); return; }
-  if (e.target.closest("[data-today-reroll]")) { showTodayView(); return; }
-  if (e.target.closest("[data-today-reset]")) {
-    todayPick = { count: 0, members: [], kind: "", freshness: "" };
-    todaySeen.clear();
-    showTodayView();
-    return;
-  }
+  const cls = e.target.closest("[data-class-filter]");
+  if (cls) { goToClassFilter(cls.dataset.classFilter, cls.dataset.value); return; }
 });
 
 function showRecommendView() {
@@ -7422,7 +7491,7 @@ function showQuizView() {
   document.getElementById("playerView").style.display = "none";
   document.getElementById("membersView").style.display = "none";
   document.getElementById("recommendView").style.display = "none";
-  document.getElementById("todayView").style.display = "none";
+  document.getElementById("matchView").style.display = "none";
   document.getElementById("logView").style.display = "none";
   const qv = document.getElementById("quizView");
   qv.style.display = "block";
@@ -7894,7 +7963,7 @@ function showMembersView() {
   document.getElementById("detailView").style.display = "none";
   document.getElementById("playerView").style.display = "none";
   document.getElementById("recommendView").style.display = "none";
-  document.getElementById("todayView").style.display = "none";
+  document.getElementById("matchView").style.display = "none";
   document.getElementById("logView").style.display = "none";
   document.getElementById("quizView").style.display = "none";
   const mv = document.getElementById("membersView");
@@ -8891,7 +8960,7 @@ function showPlayerPage(name) {
   document.getElementById("detailView").style.display = "none";
   document.getElementById("membersView").style.display = "none";
   document.getElementById("recommendView").style.display = "none";
-  document.getElementById("todayView").style.display = "none";
+  document.getElementById("matchView").style.display = "none";
   document.getElementById("logView").style.display = "none";
   document.getElementById("quizView").style.display = "none";
   const pv = document.getElementById("playerView");
@@ -8958,8 +9027,12 @@ function router() {
     showRecommendView();
     return;
   }
-  if (location.hash === "#today") {
-    showTodayView();
+  if (location.hash === "#today") {   // 旧「今日はなにする？」もメンバーで選ぶ画面に統一
+    showRecommendView();
+    return;
+  }
+  if (location.hash === "#match") {
+    showMatchView();
     return;
   }
   const typeMatch = location.hash.match(/^#type\/(.+)$/);
