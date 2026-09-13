@@ -2588,6 +2588,10 @@
   .match-entry-arrow { font-size: 22px; color: var(--text-sub); }
   .match-stars { color: #e0a600; letter-spacing: 1px; font-size: 15px; white-space: nowrap; }
   .match-stars i { color: var(--border); font-style: normal; }
+  .match-stars em { font-style: normal; background: linear-gradient(90deg, #e0a600 50%, var(--border) 50%); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .match-score { margin-left: 10px; font-size: 22px; font-weight: 800; vertical-align: 3px; }
+  .match-score small { font-size: 12px; font-weight: 600; color: var(--text-sub); margin-left: 1px; }
+  .match-pair-score { font-size: 13px; font-weight: 800; margin-left: -4px; }
   .match-hero { text-align: center; }
   .match-hero-label { font-size: 13px; color: var(--text-sub); }
   .match-hero-stars .match-stars { font-size: 26px; letter-spacing: 3px; }
@@ -3149,7 +3153,7 @@ try {
 // ── 自動更新 ───────────────────────────────
 // iPhoneはHTMLを長く握るので、新しい版が出ていたらURLを変えて読み直す。
 // （同じURLの再読み込みだとキャッシュが返ってきてしまうため）
-const APP_BUILD = "2026-09-13-2220";
+const APP_BUILD = "2026-09-13-2228";
 
 function markVersion(extra) {
   const el = document.getElementById("appVersion");
@@ -7220,12 +7224,25 @@ function pairBase(a, b) {
 }
 const MATCH_OVERALL = [
   null,
-  { name: "異種格闘技マッチ", text: "考え方がまるで違う組み合わせ。噛み合わないぶん、遊ぶたびに新しい発見がある卓です。ルールが単純で偶然が効くゲームを間に挟むと、温度差がほどけます。" },
-  { name: "刺激し合うライバル", text: "似ていないからこそ読み合いが面白い組み合わせ。対戦系で火花が散りますが、負けた側のフォローだけは忘れずに。" },
+  { name: "別々の星から来た二人", text: "考え方も温度もテンポもまるで違う組み合わせ。噛み合わないぶん、相手の一手が毎回新鮮です。ルールが単純で偶然が効くゲームを間に挟むと、温度差がほどけます。" },
+  { name: "異種格闘技マッチ", text: "得意な土俵がまったく違う組み合わせ。同じゲームを遊んでも見ているところが違うので、感想戦が盛り上がります。チームを組ませると、意外と死角がありません。" },
+  { name: "火花散る卓", text: "似ていないからこそ読み合いが読めない組み合わせ。対戦系で火花が散りますが、負けた側のフォローだけは忘れずに。" },
+  { name: "刺激し合うライバル", text: "違うところが多いぶん、相手の得意なゲームで新しい遊び方を覚えられる関係。勝ったり負けたりを繰り返すうちに、いちばん成長する組み合わせです。" },
+  { name: "慣れれば噛み合う卓", text: "初回は少しぎこちなくても、回数を重ねるほど噛み合ってくる組み合わせ。最初の1本は説明が短いゲームにして、空気を作ってから本命へ。" },
   { name: "いい塩梅の凸凹チーム", text: "似ているところと違うところが半々。役割が自然に分かれるので、協力でも対戦でもそれなりに形になる万能な卓です。" },
+  { name: "頼れる相棒", text: "考え方が近く、違うところは補い合える組み合わせ。難しいゲームのインストを一緒に読める関係で、新作を開ける日に呼ぶならこの相手です。" },
   { name: "息の合う名コンビ", text: "テンポも勝負への温度も近く、説明が少なくて済む組み合わせ。少し難しめのゲームに一緒に挑むと、この相性が活きます。" },
+  { name: "阿吽の呼吸", text: "言わなくても次の一手が分かる組み合わせ。会話制限のある協力ゲームで無双しますが、対戦になると互いに手の内が読めすぎて長引きます。" },
   { name: "運命の卓仲間", text: "話が早くて、しかも足りないところを補い合える理想の組み合わせ。何を出しても盛り上がるので、むしろ普段選ばないジャンルに手を伸ばしてみてください。" }
 ];
+// 相性は10段階（1〜10点）。星は5つで、半分の星で奇数を表す
+function toLevel10(x) {
+  return Math.max(1, Math.min(10, Math.round(Math.max(0, Math.min(1, x)) * 9) + 1));
+}
+function stars10(lv) {
+  const full = Math.floor(lv / 2), half = lv % 2;
+  return `<span class="match-stars">${"★".repeat(full)}${half ? `<em>★</em>` : ""}<i>${"★".repeat(5 - full - half)}</i></span>`;
+}
 const MATCH_ROLES = [
   { name: "仕切り役",     emoji: "📣", need: { E: 1, J: 1 },            text: "ルール説明と進行を自然に引き受ける" },
   { name: "ムードメーカー", emoji: "🎉", need: { E: 1, F: 1, P: 0.5 },    text: "負けても場を明るくして次に進める" },
@@ -7468,7 +7485,7 @@ function buildMatchResult(names) {
   const pairVals = pairs.map(([a, b]) => pairBase(a, b));
   const baseAvg = isPair ? pairVals[0] : (pairVals.reduce((x, y) => x + y, 0) / pairVals.length) * 0.5 + Math.min(...pairVals) * 0.5;
   const simAvg = avgPair(pairSimilarity);
-  const overallLv = toLevel(baseAvg);
+  const overallLv = toLevel10(baseAvg);
   const ov = MATCH_OVERALL[overallLv];
   const patKey = patternOf(names);
   const pat = MATCH_PATTERNS[patKey];
@@ -7565,24 +7582,24 @@ function buildMatchResult(names) {
 
   const card = (title, inner) => `<div class="review-card"><div class="review-header"><div class="review-title">${title}</div></div>${inner}</div>`;
   const fold = (key, title, inner, open) => inner ? collapsibleSection(key, title, inner, open) : "";
-  const pairRows = pairs.map(([a, b]) => ({ a, b, lv: toLevel(pairBase(a, b)), v: pairBase(a, b), pp: MATCH_PATTERNS[patternOf([a, b])] })).sort((x, y) => y.v - x.v);
+  const pairRows = pairs.map(([a, b]) => ({ a, b, lv: toLevel10(pairBase(a, b)), v: pairBase(a, b), pp: MATCH_PATTERNS[patternOf([a, b])] })).sort((x, y) => y.v - x.v);
   const pairRow = r => `
         <div class="match-pair">
           <span class="match-pair-names">${r.a} × ${r.b}</span>
-          ${stars(r.lv)}
+          ${stars10(r.lv)}<b class="match-pair-score">${r.lv}</b>
           <span class="match-pair-name">${MATCH_OVERALL[r.lv].name}・${r.pp.name}（${colorOf([r.a, r.b]).name}）</span>
         </div>`;
   // ベストと同じ星のペアは全部、ワーストと同じ星のペアも全部（星が1種類しかなければ全部そのまま）
   const maxLv = pairRows[0].lv, minLv = pairRows[pairRows.length - 1].lv;
   const pairBlock = maxLv === minLv
     ? pairRows.map(pairRow).join("")
-    : `<div class="match-pair-head">相性のいいペア ${stars(maxLv)}</div>${pairRows.filter(r => r.lv === maxLv).map(pairRow).join("")}
-       <div class="match-pair-head" style="margin-top:10px;">むずかしいペア ${stars(minLv)}</div>${pairRows.filter(r => r.lv === minLv).map(pairRow).join("")}`;
+    : `<div class="match-pair-head">相性のいいペア（${maxLv}点）</div>${pairRows.filter(r => r.lv === maxLv).map(pairRow).join("")}
+       <div class="match-pair-head" style="margin-top:10px;">むずかしいペア（${minLv}点）</div>${pairRows.filter(r => r.lv === minLv).map(pairRow).join("")}`;
 
   return `
     <div class="review-card match-hero">
       <div class="match-hero-label">${who}の相性</div>
-      <div class="match-hero-stars">${stars(overallLv)}</div>
+      <div class="match-hero-stars">${stars10(overallLv)}<b class="match-score">${overallLv}<small>/10</small></b></div>
       <div class="match-hero-name">${ov.name}</div>
       <p class="match-hero-text">${ov.text}</p>
       <div class="match-kind"><b>${pat.name}<small>${color.name}${split ? "・" + split.short : ""}</small></b><span>合言葉「${pat.word}」・タイプの近さ ${Math.round(simAvg * 100)}%</span></div>
