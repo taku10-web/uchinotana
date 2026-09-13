@@ -3148,7 +3148,7 @@ try {
 // ── 自動更新 ───────────────────────────────
 // iPhoneはHTMLを長く握るので、新しい版が出ていたらURLを変えて読み直す。
 // （同じURLの再読み込みだとキャッシュが返ってきてしまうため）
-const APP_BUILD = "2026-09-13-2210";
+const APP_BUILD = "2026-09-13-2215";
 
 function markVersion(extra) {
   const el = document.getElementById("appVersion");
@@ -7379,8 +7379,13 @@ const MATCH_PATTERNS = {
   DDDS: { name: "テンポだけ同じ卓", word: "同時進行", text: "進め方だけが一致。準備と片付けの相性は良いので、始まってしまえば意外と回ります。ゲーム中の会話は噛み合わない前提で、同時進行系や紙ペンなど、各自が黙々と遊ぶゲームが向いています。" },
   DDDD: { name: "正反対の鏡", word: "呉越同舟", text: "4つの軸すべてが逆。噛み合わないぶん、相手の一手が毎回新鮮です。対戦すると読み合いが成立しにくいのに、チームを組むと死角がなくなる。組ませるか、戦わせるかで別のゲームになります。" }
 };
+// 2人なら「同じ側か」。3人以上は「4人中3人以上が同じ側」ならSとみなす（人数が増えても全部Dに潰れないように）
 function patternOf(names) {
-  return AXES.map(ax => { const sides = names.map(n => axisVal(n, ax.key) > 0); return sides.every(x => x === sides[0]) ? "S" : "D"; }).join("");
+  return AXES.map(ax => {
+    const na = names.filter(n => axisVal(n, ax.key) > 0).length;
+    const share = Math.max(na, names.length - na) / names.length;
+    return share >= 0.75 ? "S" : "D";
+  }).join("");
 }
 // 寄りの強さの言い方
 function leanWord(v) {
@@ -7423,7 +7428,9 @@ function buildMatchResult(names) {
   const avgPair = f => pairs.reduce((sum, [a, b]) => sum + f(a, b), 0) / pairs.length;
 
   // ── 総合とパターン
-  const baseAvg = avgPair(pairBase);
+  // 総合：2人ならそのまま。3人以上は「平均」と「いちばん噛み合わないペア」を半々で見る（卓の空気は一番合わない2人で決まる）
+  const pairVals = pairs.map(([a, b]) => pairBase(a, b));
+  const baseAvg = isPair ? pairVals[0] : (pairVals.reduce((x, y) => x + y, 0) / pairVals.length) * 0.5 + Math.min(...pairVals) * 0.5;
   const simAvg = avgPair(pairSimilarity);
   const overallLv = toLevel(baseAvg);
   const ov = MATCH_OVERALL[overallLv];
