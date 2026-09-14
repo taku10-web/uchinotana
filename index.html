@@ -2582,7 +2582,7 @@
     gap: 8px;
     margin-bottom: 10px;
   }
-  /* ── 相性占い ── */
+  /* ── 相性診断 ── */
   .match-entry {
     display: flex; align-items: center; gap: 12px;
     background: var(--card); border: 1px solid var(--border); border-radius: 14px;
@@ -2659,6 +2659,20 @@
   .match-scene-name small { font-size: 11.5px; font-weight: 500; color: var(--text-sub); }
   .match-axis-count { font-size: 12px; color: var(--text-sub); margin: 4px 0 6px; }
   .match-pair-head { font-size: 12px; font-weight: 700; color: var(--text-sub); letter-spacing: .04em; }
+  .match-ov-pick { border-radius: 12px; padding: 10px 12px; margin-bottom: 8px; background: var(--bg); }
+  .match-ov-pick.best { background: var(--accent-soft); }
+  .match-ov-pick.worst { background: #fdecea; }
+  .match-ov-tag { display: block; font-size: 11.5px; font-weight: 700; color: var(--text-sub); letter-spacing: .04em; }
+  .match-ov-pick b { font-size: 18px; margin-right: 8px; }
+  .match-ov-pick > span:not(.match-ov-tag) { font-size: 12.5px; color: var(--text-sub); }
+  .match-ov-pick p { margin: 4px 0 0; font-size: 13px; line-height: 1.6; }
+  .match-ov-label { font-size: 12px; font-weight: 700; color: var(--text-sub); margin: 12px 0 4px; letter-spacing: .04em; }
+  .match-ov-row { display: block; width: 100%; text-align: left; background: none; border: none; border-top: 1px solid var(--border); padding: 9px 0; font-family: inherit; color: var(--text); cursor: pointer; }
+  .match-ov-head { display: flex; align-items: baseline; gap: 6px; flex-wrap: wrap; }
+  .match-ov-head b { font-size: 15px; }
+  .match-ov-head i { font-style: normal; font-weight: 800; font-size: 13px; }
+  .match-ov-head small { font-size: 11.5px; color: var(--text-sub); }
+  .match-ov-line { display: block; font-size: 13px; line-height: 1.6; margin-top: 3px; }
   .match-pair { display: flex; align-items: baseline; gap: 10px; padding: 7px 0; border-top: 1px solid var(--border); flex-wrap: wrap; }
   .match-pair:first-of-type { border-top: none; }
   .match-pair-names { font-weight: 700; font-size: 14px; }
@@ -3164,7 +3178,7 @@ try {
 // ── 自動更新 ───────────────────────────────
 // iPhoneはHTMLを長く握るので、新しい版が出ていたらURLを変えて読み直す。
 // （同じURLの再読み込みだとキャッシュが返ってきてしまうため）
-const APP_BUILD = "2026-09-14-0103";
+const APP_BUILD = "2026-09-14-1117";
 
 function markVersion(extra) {
   const el = document.getElementById("appVersion");
@@ -6222,8 +6236,8 @@ function buildMembersTab() {
     <a href="#match" class="match-entry">
       <span class="match-entry-ico">🔮</span>
       <span class="match-entry-body">
-        <b>相性占い</b>
-        <small>${typed.length >= 2 ? `タイプ診断ずみの${typed.length}人から2人以上を選ぶと、卓の相性・役回り・得意ジャンルを占います` : "タイプ診断をした人が2人以上になると占えます"}</small>
+        <b>相性診断</b>
+        <small>${typed.length >= 2 ? `タイプ診断ずみの${typed.length}人から2人以上を選ぶと、卓の相性・役回り・得意ジャンルを診断します` : "タイプ診断をした人が2人以上になると診断できます"}</small>
       </span>
       <span class="match-entry-arrow">›</span>
     </a>
@@ -7192,8 +7206,8 @@ function hideAllViews() {
     .forEach(id => { const el = document.getElementById(id); if (el) el.style.display = "none"; });
 }
 
-// ── 相性占い ─────────────────────────────
-// タイプ診断（16タイプ）をした人同士の相性。4軸の寄り具合と、実際に一緒に遊んだ記録の両方から占う。
+// ── 相性診断 ─────────────────────────────
+// タイプ診断（16タイプ）をした人同士の相性。4軸の寄り具合から診断する。
 // 恋愛の相性ではなく「一緒に卓を囲むメンバーとして」の見立て。
 let matchPick = [];
 let matchNamesOpen = false;   // 4つの軸の「だれがどっち」を開いているか
@@ -7376,22 +7390,130 @@ function buildMatchView() {
   const picked = matchPick;
   const head = `
     <button type="button" class="detail-back" data-back>← 戻る</button>
-    <h1 class="detail-title">🔮 相性占い</h1>
+    <h1 class="detail-title">🔮 相性診断</h1>
     <div class="detail-underline"></div>`;
   if (typed.length < 2) {
-    return head + `<div class="review-card"><div class="review-count">タイプ診断をした人が2人以上になると占えます。マイページの名前横のタイプから診断できます。</div></div>`;
+    return head + `<div class="review-card"><div class="review-count">タイプ診断をした人が2人以上になると使えます。マイページの名前横のタイプから診断できます。</div></div>`;
   }
   const picker = `
     <div class="review-card">
-      <div class="review-header"><div class="review-title">占うメンバーを選ぶ（2人以上）</div></div>
+      <div class="review-header"><div class="review-title">診断するメンバーを選ぶ（2人以上）</div></div>
       <div class="rec-pick-grid">
         ${typed.map(n => { const f = typeInfo(getProfile(n)); return `<button type="button" class="rec-pick ${picked.includes(n) ? "on" : ""}" data-match-toggle="${n}">${f.emoji} ${n}</button>`; }).join("")}
       </div>
-      <div class="rec-status">${picked.length >= 2 ? `${picked.length}人を選択中` : picked.length === 1 ? "あと1人選ぶと占えます" : "タイプ診断ずみの人だけ選べます"}</div>
+      <div class="rec-status">${picked.length >= 2 ? `${picked.length}人を選択中` : picked.length === 1 ? "あと1人選ぶと診断できます" : "タイプ診断ずみの人だけ選べます"}</div>
       ${picked.length ? `<button type="button" class="link-btn" data-match-clear style="margin-top:6px;">選び直す</button>` : ""}
     </div>`;
+  if (picked.length === 0) return head + picker + buildMatchOverview(typed);
   if (picked.length < 2) return head + picker;
   return head + picker + buildMatchResult(picked);
+}
+
+// 誰も選んでいないとき：自分から見た全員との相性を、ひと言ずつ面白おかしく
+const MATCH_WITH = {
+  SSSS: ["{t}とは、説明ゼロで始まって二人とも同じ手を打つ。鏡に向かって遊んでいる気分になり、勝っても負けても「わかる」で終わる。",
+         "{t}とは、選ぶゲームも避けるゲームも一致する。楽なぶん新しい体験が起きにくいので、たまに苦手ジャンルを一緒に開けると化学反応が出る。",
+         "{t}とは、相手の次の一手が読めすぎて、読み合いが「知ってた」の応酬になる。協力ゲームでは最強、対戦では長引く。"],
+  SSSD: ["{t}とは、片方が箱を開けている間にもう片方がルールを読んでいる理想の分業。ただし「まだ説明終わってない」は毎回言われる。",
+         "{t}とは、準備する人と回す人が自然に決まる。計画側が段取りを飛ばされて一瞬むっとする、までが様式美。",
+         "{t}とは、遊び始めれば息ぴったり。問題は始まるまでで、「今日なにやる？」の温度差だけは永遠に埋まらない。"],
+  SSDS: ["{t}とは、協力ゲームなら無敵、対戦になると片方だけ本気になって気まずくなる。チーム戦で同じ側に座るのが正解。",
+         "{t}とは、勝負がついた瞬間の表情が真逆。片方はガッツポーズ、片方は「楽しかったね」。同じ卓にいたとは思えない。",
+         "{t}とは、考え方も進め方も同じなので作戦会議は一瞬。ただ勝ち負けの話になると急に話が噛み合わなくなる。"],
+  SSDD: ["{t}とは、読み合いが噛み合いすぎてブラフ系が長引く。負けたほうがむきになって「もう1回」、気づけば3回目。",
+         "{t}とは、同じ言葉で煽り合えるライバル。心理戦が最高に盛り上がり、終わったあとの反省会も長い。",
+         "{t}とは、空気と考え方が同じだから遠慮がない。勝負観とテンポが違うぶん、毎回どちらかが「それはずるい」と言う。"],
+  SDSS: ["{t}とは、片方がルールを暗記し、もう片方が「なんとなく」で勝つ。勝ったほうが理由を説明できないのが一番悔しい。",
+         "{t}とは、ルール解釈で意見が割れたとき、どちらも譲らない。それ以外は全部同じなので、割れたときだけ妙に長い。",
+         "{t}とは、堅実派が地図を描き、直感派が近道を見つける。役割を決めておけば、二人でどんなゲームも攻略できる。"],
+  SDSD: ["{t}とは、得意なゲームがきれいに分かれる。相手のゲームでは置いていかれるが、自分のゲームで仕返しできる。",
+         "{t}とは、交互にゲームを選ぶと長続きする関係。片方が選んだ日は、もう片方が「今日は勉強の日」と割り切っている。",
+         "{t}とは、空気と熱は同じなのに攻め方が真逆。同じゲームを遊んでも、見ているところがまるで違って感想戦が面白い。"],
+  SDDS: ["{t}とは、ルール解釈で毎回ひと議論。でもチームを組むと直感と堅実がそろって、なぜか負けない。",
+         "{t}とは、対戦するとぶつかり、組むと最強。敵にするか味方にするかで、その日の楽しさが決まる。",
+         "{t}とは、議論の多い二人。ただその議論がゲームを深くしていて、二人で遊んだあとのルール理解が一番進む。"],
+  SDDD: ["{t}とは、盛り上がり方だけ同じで、あとは全部違う。パーティ系なら最高の相方、戦略系だと別の星の人。",
+         "{t}とは、同じテンションで笑えるのに、同じゲームで同じところを楽しんでいない。パーティ系に逃げれば全部解決。",
+         "{t}とは、空気だけが噛み合う不思議な関係。重量級を一緒に開けると、途中で片方が別のことを始める。"],
+  DSSS: ["{t}とは、片方が喋り、片方が聞く。読みは同じなので協力系で無双するが、長考中にスマホを見られる。",
+         "{t}とは、にぎやかさ以外は全部同じ。ワイワイ派が場を回し、じっくり派が要所で締める、卓に一組は欲しいコンビ。",
+         "{t}とは、話す量は10対1なのに、出す手はほぼ同じ。会話制限の協力ゲームをやると、二人の強さが露呈する。"],
+  DSSD: ["{t}とは、静かな計画派と騒がしい即興派。土台と花火の関係で、噛み合った日はその日いちばんの卓になる。",
+         "{t}とは、考え方と勝負観は同じなのに、外から見るとまるで違う二人。計画派が準備した舞台で、即興派が暴れる。",
+         "{t}とは、準備の丁寧さと本番の勢いが分業されている。「準備したのに」と「重い」が交互に出るのはご愛嬌。"],
+  DSDS: ["{t}とは、ルールの理解は一瞬でそろうのに、勝ち負けの受け止め方が真逆。終盤に片方だけ静かになる。",
+         "{t}とは、頭の使い方は同じで、心の使い方が違う。協力系や、勝敗のぼやけるゲームだと相性の良さだけが残る。",
+         "{t}とは、段取りと読みは噛み合うのに、対戦の終わり方でいつも温度差が出る。チーム戦で同じ側に置くのが平和。"],
+  DSDD: ["{t}とは、説明だけは一発で通じる。それ以外は全部違うので、「何やる？」で毎回30分かかる。",
+         "{t}とは、考え方だけが同じ二人。ルールの飲み込みは早いのに、好きなゲームが全然かぶらない。持ち寄り制が正解。",
+         "{t}とは、情報の取り方が同じなので、説明した内容は完璧に伝わる。伝わった上で、遊びたいものが違う。"],
+  DDSS: ["{t}とは、作戦会議は噛み合わないのに、始まった瞬間に同じ方向を向く。チーム戦向き、協力ゲームは事故る。",
+         "{t}とは、勝負への熱と段取りが同じ。事前の相談は要らない、むしろしないほうがうまくいく珍しい関係。",
+         "{t}とは、空気と考え方が違うので雑談は噛み合わないが、ゲームが始まると同じ勝ち筋を見ている。無言のコンビ。"],
+  DDSD: ["{t}とは、勝ち負けの温度だけ同じ。対戦系だけが共通言語で、パーティ系だと「何が楽しいの？」の顔をされる。",
+         "{t}とは、2人用の対戦だけで成立する関係。バトルラインやガイスターを挟めば、あとは何も要らない。",
+         "{t}とは、勝負観だけ握手している。それ以外はぶつかるので、殴り合える戦略系に限って最高の相手になる。"],
+  DDDS: ["{t}とは、進め方だけ同じ。準備は完璧、ゲーム中の会話はゼロ。同時進行系なら平和に終わる。",
+         "{t}とは、片付けと準備の相性だけ抜群。始まってからは別々の世界にいるので、紙ペンや同時進行のゲームが向く。",
+         "{t}とは、テンポだけが一致する二人。会話はすれ違うのに、ゲームの終了時刻だけはぴったり同じ。"],
+  DDDD: ["{t}とは、4つとも真逆。対戦すると読み合いにならず、組むと死角がない。敵にするか味方にするかで別のゲームになる。",
+         "{t}とは、相手の一手が毎回予想外。理解はできないが退屈はしない、この卓でいちばん名場面を生む相手。",
+         "{t}とは、正反対の鏡。二人で協力ゲームをやると、片方が見落としたものをもう片方が必ず拾う。"]
+};
+function matchWithLine(me, them) {
+  const list = MATCH_WITH[patternOf([me, them])];
+  // 同じ関係名の人が並んでも文が変わるように、相手の名前で言い回しを振り分ける
+  let h = 0; for (const ch of them) h = (h * 7 + ch.charCodeAt(0)) % 9973;
+  return list[h % list.length].replace("{t}", them);
+}
+const MATCH_BEST_LINES = [
+  "困ったらこの人を呼べば大体うまくいく。新作を開ける日の一人目。",
+  "説明が半分で通じる相手。重めのゲームに挑む日は、この人を確保してから。",
+  "勝っても負けても後味がいい相手。ここぞの協力ゲームはこの人と。"
+];
+const MATCH_WORST_LINES = [
+  "噛み合わないぶん、いちばん名場面が生まれる相手。同じチームに入れると化ける。",
+  "対戦すると読み合いにならない。だから逆に、運が効くゲームで遊ぶと妙に盛り上がる。",
+  "この人と遊んだ日は感想戦が長い。見ているところが違うので、話が尽きない。"
+];
+function buildMatchOverview(typed) {
+  const me = getMyName();
+  if (!me || !typed.includes(me)) {
+    return `<div class="review-card"><div class="review-title" style="margin-bottom:6px;">あなたの相性表</div>
+      <div class="review-count">${me ? "タイプ診断をすると、ここに「誰と一番相性がいいか」「誰とやるとどうなるか」が出ます。" : "名前を登録してタイプ診断をすると、ここにあなたの相性表が出ます。"}</div>
+      ${me ? `<a class="recommend-btn" href="#quiz" style="margin-top:10px;">タイプ診断をする</a>` : ""}</div>`;
+  }
+  const others = typed.filter(n => n !== me);
+  if (!others.length) return "";
+  const rows = others.map(n => {
+    const v = pairBase(me, n), lv = toLevel10(v), key = patternOf([me, n]);
+    return { n, v, lv, name: MATCH_OVERALL[lv].name, pat: MATCH_PATTERNS[key].name, line: matchWithLine(me, n), f: typeInfo(getProfile(n)) };
+  }).sort((a, b) => b.v - a.v);
+  const best = rows[0], worst = rows[rows.length - 1];
+  const bestLine = MATCH_BEST_LINES[dailyIndex(me + best.n, MATCH_BEST_LINES.length)];
+  const worstLine = MATCH_WORST_LINES[dailyIndex(me + worst.n, MATCH_WORST_LINES.length)];
+  const rowHtml = r => `
+    <button type="button" class="match-ov-row" data-match-pair="${r.n}">
+      <span class="match-ov-head"><b>${r.f.emoji} ${r.n}</b>${stars10(r.lv)}<i>${r.lv}</i><small>${r.name}・${r.pat}</small></span>
+      <span class="match-ov-line">${r.line}</span>
+    </button>`;
+  return `
+    <div class="review-card">
+      <div class="review-header"><div class="review-title">${me}の相性表</div><span class="review-count">タップで詳しく</span></div>
+      ${rows.length >= 2 ? `
+      <div class="match-ov-pick best">
+        <span class="match-ov-tag">🥇 いちばん噛み合う</span>
+        <b>${best.n}</b><span>${best.lv}点・${best.name}</span>
+        <p>${bestLine}</p>
+      </div>
+      <div class="match-ov-pick worst">
+        <span class="match-ov-tag">💥 いちばん噛み合わない</span>
+        <b>${worst.n}</b><span>${worst.lv}点・${worst.name}</span>
+        <p>${worstLine}</p>
+      </div>` : ""}
+      <div class="match-ov-label">誰とやるとどうなるか</div>
+      ${rows.map(rowHtml).join("")}
+    </div>`;
 }
 
 // 4軸それぞれ「同じ側(S)か違う側(D)か」の16パターン。組み合わせの名前と、そのチームの性格
@@ -7779,7 +7901,7 @@ function buildMatchResult(names) {
 
     ${fold("m-played", `${who}でいちばん遊んだゲーム`, played.length ? `<div class="player-game-list">${played.map(x => matchGameRow(x.g, `全員そろって${x.c}回`)).join("")}</div>` : "", false)}
 
-    <p class="cta-note">タイプ診断の4軸から占っています。おすすめのゲームは、みんなの評価・本人の評価・ジャンル・メカニクス・ゲームタグも合わせて選んでいます。ラッキーゲームは日替わりです。</p>
+    <p class="cta-note">タイプ診断の4軸から診断しています。おすすめのゲームは、みんなの評価・本人の評価・ジャンル・メカニクス・ゲームタグも合わせて選んでいます。ラッキーゲームは日替わりです。</p>
   `;
 }
 
@@ -7803,6 +7925,14 @@ document.getElementById("matchView").addEventListener("click", e => {
     return;
   }
   if (e.target.closest("[data-match-clear]")) { matchPick = []; showMatchView(); return; }
+  const pr = e.target.closest("[data-match-pair]");
+  if (pr) {
+    matchPick = [getMyName(), pr.dataset.matchPair];
+    showMatchView();
+    const hero = document.querySelector(".match-hero");
+    if (hero) setTimeout(() => { hero.scrollIntoView({ behavior: "smooth", block: "start" }); window.scrollBy(0, -60); }, 60);
+    return;
+  }
   const m = e.target.closest("[data-match-mode]");
   if (m) {
     matchPickMode = m.dataset.matchMode;
