@@ -3178,7 +3178,7 @@ try {
 // ── 自動更新 ───────────────────────────────
 // iPhoneはHTMLを長く握るので、新しい版が出ていたらURLを変えて読み直す。
 // （同じURLの再読み込みだとキャッシュが返ってきてしまうため）
-const APP_BUILD = "2026-09-14-1117";
+const APP_BUILD = "2026-09-14-1142";
 
 function markVersion(extra) {
   const el = document.getElementById("appVersion");
@@ -7460,11 +7460,23 @@ const MATCH_WITH = {
          "{t}とは、相手の一手が毎回予想外。理解はできないが退屈はしない、この卓でいちばん名場面を生む相手。",
          "{t}とは、正反対の鏡。二人で協力ゲームをやると、片方が見落としたものをもう片方が必ず拾う。"]
 };
-function matchWithLine(me, them) {
+// 点数ごとの締めの一言（同じ関係名でも点が違えば読み味が変わるように）
+const MATCH_SCORE_TAIL = [null,
+  "1点。もはや別のゲームを遊んでいるが、それはそれで話のネタになる。",
+  "2点。噛み合わない前提で遊ぶと、逆に気が楽。",
+  "3点。同じ卓に座るだけで一波乱ある、退屈しない相手。",
+  "4点。ぶつかる回と噛み合う回が半々。当たり日は当たり。",
+  "5点。慣れてくると化けるタイプの組み合わせ。",
+  "6点。文句のない相棒ではないが、いないと寂しい。",
+  "7点。頼れる。難しいゲームの日に隣にいてほしい。",
+  "8点。息が合う。あとは相手のゲームを尊重できるかだけ。",
+  "9点。ほぼ言うことなし。強いて言えば、似すぎて新鮮味が減る日がある。",
+  "10点。運命。この人と遊べない日が損。"
+];
+// 同じ関係名の人が並んでも文がかぶらないように、関係名ごとに何人目かで言い回しを変える
+function matchWithLine(me, them, nth, lv) {
   const list = MATCH_WITH[patternOf([me, them])];
-  // 同じ関係名の人が並んでも文が変わるように、相手の名前で言い回しを振り分ける
-  let h = 0; for (const ch of them) h = (h * 7 + ch.charCodeAt(0)) % 9973;
-  return list[h % list.length].replace("{t}", them);
+  return list[nth % list.length].replace("{t}", them) + " " + MATCH_SCORE_TAIL[lv];
 }
 const MATCH_BEST_LINES = [
   "困ったらこの人を呼べば大体うまくいく。新作を開ける日の一人目。",
@@ -7485,10 +7497,12 @@ function buildMatchOverview(typed) {
   }
   const others = typed.filter(n => n !== me);
   if (!others.length) return "";
+  const seenPat = {};
   const rows = others.map(n => {
     const v = pairBase(me, n), lv = toLevel10(v), key = patternOf([me, n]);
-    return { n, v, lv, name: MATCH_OVERALL[lv].name, pat: MATCH_PATTERNS[key].name, line: matchWithLine(me, n), f: typeInfo(getProfile(n)) };
+    return { n, v, lv, key, name: MATCH_OVERALL[lv].name, pat: MATCH_PATTERNS[key].name, f: typeInfo(getProfile(n)) };
   }).sort((a, b) => b.v - a.v);
+  rows.forEach(r => { const nth = seenPat[r.key] || 0; seenPat[r.key] = nth + 1; r.line = matchWithLine(me, r.n, nth, r.lv); });
   const best = rows[0], worst = rows[rows.length - 1];
   const bestLine = MATCH_BEST_LINES[dailyIndex(me + best.n, MATCH_BEST_LINES.length)];
   const worstLine = MATCH_WORST_LINES[dailyIndex(me + worst.n, MATCH_WORST_LINES.length)];
